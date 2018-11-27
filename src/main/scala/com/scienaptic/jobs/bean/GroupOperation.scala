@@ -28,7 +28,7 @@ object GroupOperation {
       }
     }
   }
-
+  //TODO: Check renaming aggregated columns
   def performSumAggration(dataFrame: RelationalGroupedDataset, cols: List[String]): Try[DataFrame] = {
     Try{
       dataFrame.sum(cols: _*)
