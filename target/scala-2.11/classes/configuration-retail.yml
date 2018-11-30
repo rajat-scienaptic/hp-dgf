@@ -1,0 +1,20 @@
+sparkConfig:
+  master: local
+  appName: hp-retail
+
+sources:
+    aux:
+      select:
+        - "SKU"
+        - "SKU.Name"
+        - "Account"
+        - "Hardware.Rev"
+        - "Rev"
+        - "Hardware.GM_Orignal"
+        - "Fixed.Cost"
+
+
+file:
+  path:
+    aux: "/home/leroy/Downloads/IFS2_most_recent.csv"
+    abc: "/home/leroy/Downloads/IFS2_most_recent.csv"

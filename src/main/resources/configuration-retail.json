@@ -1,0 +1,61 @@
+{
+  "sparkConfig": {
+    "master": "local",
+    "appName": "hp-retail"
+  },
+  "sources": {
+    "aux": {
+      "name": "aux",
+      "filePath": "/home/avik/Scienaptic/RnD/data/IFS2_most_recent.csv",
+      "select": {
+        "select01": {
+          "cols": ["Account","Fixed"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    }
+  }
+}

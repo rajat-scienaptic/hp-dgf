@@ -1,0 +1,43 @@
+{
+  "sparkConfig": {
+    "master": "local",
+    "appName": "hp-retail"
+  },
+  "sources": [
+    {
+      "name" : "aux",
+      "operations":[
+        {
+          "type" : "select",
+          "cols": [
+            ["Account","Fixed"]
+          ]
+        },
+        {
+          "type" : "joinAndSelect",
+          "joins" : [
+            {
+              "leftTableAlias" : "left",
+              "rightTableAlias" : "right",
+              "typeOfJoin" : "left",
+              "joinCriteria" : {
+                "left" : ["Account", "Fixed"],
+                "right" :["Account", "Fixed"]
+              },
+              "selectCriteria" : {
+                "left" : ["Account"],
+                "right" : ["Fixed"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "file": {
+    "path": {
+      "aux": "/home/avik/Scienaptic/RnD/data/IFS2_most_recent.csv",
+      "abc": "/home/avik/Scienaptic/RnD/data/IFS2_most_recent.csv"
+    }
+  }
+}
