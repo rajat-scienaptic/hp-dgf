@@ -13,7 +13,7 @@ case class FilterOperation(@JsonProperty("conditionTypes") conditionTypes: List[
 object FilterOperation {
 
   def doFilter(dataFrame: DataFrame, conditions: List[String], conditionType: String) = {
-    val getColumnList = generateFIlterCondition(dataFrame, conditions)
+    val getColumnList = generateFilterCondition(dataFrame, conditions)
     val filterConditions = reduceWithType(conditionType, getColumnList)
 
     dataFrame.filter(filterConditions)
@@ -27,7 +27,7 @@ object FilterOperation {
     }
   }
 
-  private def generateFIlterCondition(dataFrame: DataFrame, conditions: List[String]) = {
+  private def generateFilterCondition(dataFrame: DataFrame, conditions: List[String]) = {
     conditions.map(cond => {
       val arr = cond.split("\\s+")
       if (arr.size != 3) throw new Exception("Invalid join conditions!") else

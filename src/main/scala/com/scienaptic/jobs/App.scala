@@ -22,6 +22,7 @@ class App(args: Array[String]) extends ConfigurationFactory[AppConfiguration](ar
       .getOrCreate
     val executionContext = ExecutionContext(spark, configuration)
     try {
+      //TODO: Based on cli options, call appropriate Transformation.
       RetailTransform.execute(executionContext)
     } finally {
       spark.close()

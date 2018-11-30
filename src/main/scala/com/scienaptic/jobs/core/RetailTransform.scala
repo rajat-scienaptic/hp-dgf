@@ -12,6 +12,8 @@ object RetailTransform {
 
     print("Source Name " + sourceMap("aux").name)
     //TODO: Check if argument lists empty. Don't call utility if empty!
+    //TODO: Implement Logger
+    //TODO: Implement Custom Exceptions
 
     // Load
     val dfAux = Utils.loadCSV(executionContext, sourceMap("aux").filePath)
@@ -24,20 +26,15 @@ object RetailTransform {
     // Join01
     val joins = sourceMap("aux").joinOperation
     val joinDF = JoinAndSelectOperation.doJoinAndSelect(selectDF, selectDF, joins("join01"))
-    joinDF.show()
 
     // filter01
     val filterOperation = sourceMap("aux").filterOperation("filter01")
     val filterDF = FilterOperation.doFilter(joinDF, filterOperation.conditions, filterOperation.conditionTypes(0))
-    filterDF.show()
 
     val sortOperation = sourceMap("aux").sortOperation("sort01")
-    val sortedDF = SortOperation.doSort(filterDF, sortOperation.asc, sortOperation.desc).get
+    val sortedDF = SortOperation.doSort(filterDF, sortOperation.ascending, sortOperation.descending).get
 
-    val unionOperation = sourceMap("aux").unionOperation("union01")
-    val unionDF = UnionOperation.doUnion(sortedDF, filterDF).get
-    val unionDF
-    .show()
+    val _ = UnionOperation.doUnion(sortedDF, filterDF).get
   }
 
 }

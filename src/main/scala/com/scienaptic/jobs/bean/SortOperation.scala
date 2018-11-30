@@ -6,7 +6,7 @@ import org.apache.spark.sql.DataFrame
 
 import scala.util.Try
 
-class SortOperation(@JsonProperty("asc") asc: List[String], @JsonProperty("desc") desc: List[String]) extends Operation {
+case class SortOperation(@JsonProperty("asc") ascending: List[String], @JsonProperty("desc") descending: List[String]) extends Operation {
   override def scienapticDef() = {
     println("Sorting initiated")
   }
@@ -21,10 +21,7 @@ object SortOperation {
   }
 
   private def convertListToDFColumnDesc(columnList: List[String], dataFrame: DataFrame) = {
-    columnList.map(name => dataFrame.col(name).desc /*.as(s"renamed_$name")*/)
+    columnList.map(name => dataFrame.col(name).desc)
   }
 
 }
-
-//df.orderBy(desc("columnname1"),desc("columnname2"),"columnname3")
-//.orderBy(col(top_value).desc)

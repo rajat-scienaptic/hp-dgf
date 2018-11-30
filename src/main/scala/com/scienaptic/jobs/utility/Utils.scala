@@ -2,27 +2,18 @@ package com.scienaptic.jobs.utility
 
 import com.scienaptic.jobs.ExecutionContext
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions._
 
 import scala.util.Try
 
 object Utils {
 
-  val toDouble = udf[Double, String](_.toDouble)
-
-  /*def applyFormula(dataFrame: DataFrame, column: String, formula: String) : Try[DataFrame] = {
-    Try{
-
-      dataFrame.withColumn("fixed", toDouble(dataFrame("Fixed"))).select(dataFrame(column) + 100 )
-    }
-  }*/
-
   def convertListToDFColumn(columnList: List[String], dataFrame: DataFrame) = {
     columnList.map(name => dataFrame.col(name) /*.as(s"renamed_$name")*/)
   }
 
+  //TODO: Accept newname as List[String] and merge with 'name' to rename the column
   def convertListToDFColumnWithRename(columnList: List[String], dataFrame: DataFrame, newName: String) = {
-    columnList.map(name => dataFrame.col(name).as(s"$newName$name"))
+    columnList.map(name => dataFrame.col(name).as(s"$newName"))
   }
 
   def loadCSV(context: ExecutionContext, file: String): Try[DataFrame] = {
@@ -39,6 +30,7 @@ object Utils {
         }
         else x
       })
+      scienapticDataframe
     }
   }
 }

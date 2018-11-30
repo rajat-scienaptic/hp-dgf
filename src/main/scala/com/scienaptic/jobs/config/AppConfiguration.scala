@@ -16,11 +16,4 @@ case class Source(@JsonProperty("name") name: String,
                   @JsonProperty("select") selectOperation: Map[String, SelectOperation],
                   @JsonProperty("join") joinOperation: Map[String, JoinAndSelectOperation],
                   @JsonProperty("filter") filterOperation: Map[String, FilterOperation],
-                  @JsonProperty("sort") sortOperation: Map[String, SortOperation],
-                  @JsonProperty("union") unionOperation: Map[String, UnionOperation])
-
-case class Join(@JsonProperty("leftTableAlias") leftTableAlias: String,
-                @JsonProperty("rightTableAlias") rightTableAlias: String,
-                @JsonProperty("typeOfJoin") typeOfJoin: String,
-                @JsonProperty("joinCriteria") joinCriteria: Map[String, List[String]],
-                @JsonProperty("selectCriteria") selectCriteria: Map[String, List[String]])
+                  @JsonProperty("sort") sortOperation: Map[String, SortOperation])
