@@ -16,4 +16,5 @@ case class Source(@JsonProperty("name") name: String,
                   @JsonProperty("select") selectOperation: Map[String, SelectOperation],
                   @JsonProperty("join") joinOperation: Map[String, JoinAndSelectOperation],
                   @JsonProperty("filter") filterOperation: Map[String, FilterOperation],
-                  @JsonProperty("sort") sortOperation: Map[String, SortOperation])
+                  @JsonProperty("sort") sortOperation: Map[String, SortOperation],
+                  @JsonProperty("group") groupOperation: Map[String, GroupOperation])

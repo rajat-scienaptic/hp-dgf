@@ -2,7 +2,6 @@ package com.scienaptic.jobs.bean
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.apache.spark.sql.{Column, DataFrame}
-
 import scala.util.Try
 
 case class FilterOperation(@JsonProperty("conditionTypes") conditionTypes: List[String],
