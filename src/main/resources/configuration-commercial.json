@@ -1,0 +1,47 @@
+{
+  "sparkConfig": {
+    "master": "local",
+    "appName": "hp-retail"
+  },
+  "sources": {
+    "iec_claims": {
+      "name": "iec_claims",
+      "filePath": "/home/avik/Scienaptic/RnD/data/iec_claims.csv",
+      "select": {
+        "select01": {
+          "cols": ["Big Deal ID","Deal Description","Business Model Description","Partner Desc","Partner Ship Calendar Date","Product ID","Claim Quantity","Claim Partner Unit Rebate"]
+        },
+        "select02": {
+          "cols": [""]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "",
+          "joinCriteria": {
+            "left": [""],
+            "right": [""]
+          },
+          "selectCriteria": {
+            "left": [""],
+            "right": [""]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": ["and"],
+          "conditions": ["Partner Ship Calendar Date > 31-Oct-2018"]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    }
+  }
+}
