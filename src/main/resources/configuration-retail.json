@@ -4,12 +4,542 @@
     "appName": "hp-retail"
   },
   "sources": {
-    "aux": {
-      "name": "aux",
-      "filePath": "/home/avik/Scienaptic/RnD/data/IFS2_most_recent.csv",
+    "ODOM_ONLINE_ORCA": {
+      "name": "ODOM_ONLINE_ORCA",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
-          "cols": ["Account","Fixed"]
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "STAPLES_COM_UNITS": {
+      "name": "STAPLES_COM_UNITS",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "HP_COM": {
+      "name": "HP_COM",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "AMAZON_ARAP": {
+      "name": "AMAZON_ARAP",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "S_PRINT_HISTORICAL_UNITS": {
+      "name": "S_PRINT_HISTORICAL_UNITS",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "ORCA_2014_16_ARCHIVE": {
+      "name": "ORCA_2014_16_ARCHIVE",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "ORCA_QRY_2017_TO_DATE": {
+      "name": "ORCA_QRY_2017_TO_DATE",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "AUX_TABLES_WEEKEND": {
+      "name": "AUX_TABLES_WEEKEND",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "AUX_TABLES_ONLINE": {
+      "name": "AUX_TABLES_ONLINE",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "AUX_TABLES_SKU_HIERARCHY": {
+      "name": "AUX_TABLES_SKU_HIERARCHY",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+        }
+      },
+      "join": {
+        "join01": {
+          "leftTableAlias": "left",
+          "rightTableAlias": "right",
+          "typeOfJoin": "left",
+          "joinCriteria": {
+            "left": [
+              "Account",
+              "Fixed"
+            ],
+            "right": [
+              "Account",
+              "Fixed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [
+              "Account"
+            ],
+            "right": [
+              "Fixed"
+            ]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "BBY_BUNDLE_INFO": {
+      "name": "BBY_BUNDLE_INFO",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
       "join": {
