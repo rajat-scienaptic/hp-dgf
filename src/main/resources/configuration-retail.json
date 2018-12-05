@@ -57,12 +57,19 @@
         }
       }
     },
-    "STAPLES_COM_UNITS": {
+    "STAPLES_COM_UNITS":  {
       "name": "STAPLES_COM_UNITS",
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+          "cols": ["WED", "HP SKU", "Units"]
+        }
+      },
+      "rename" : {
+        "rename01" : {
+          "WED" : "wed",
+          "HP SKU" : "Base SKU",
+          "Units" : "Online Units"
         }
       },
       "join": {
@@ -380,7 +387,7 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+          "cols": ["fy_week", "wed", "season", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_years"]
         }
       },
       "join": {
