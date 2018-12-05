@@ -25,8 +25,13 @@ object JoinAndSelectOperation {
     val column_names_right = Utils.convertListToDFColumn(joinOperation.selectCriteria("right"), dataFrame1)
 
     val selectAll: List[Column] = column_names_left ::: column_names_right
-
-    dataFrame1.join(dataFrame2, joinExpr, typeOfJoin).select(selectAll: _*)
+    if(selectAll.size == 0){
+      dataFrame1.join(dataFrame2, joinExpr, typeOfJoin)
+    } else {
+      dataFrame1.join(dataFrame2, joinExpr, typeOfJoin).select(selectAll: _*)
+    }
+    //TODO: Check if joining criteria is same and column mentioned in left and right select lists
+    //TODO: Check if select criteria is blank and joining column is same.
   }
 
   private def generateJoinExpression(join: JoinAndSelectOperation, dataFrame1: DataFrame, dataFrame2: DataFrame) = {
