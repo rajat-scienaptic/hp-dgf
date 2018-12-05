@@ -83,8 +83,8 @@ object CommercialTransform {
     val iecXSJoin01 = xsClaimsSource.joinOperation(JOIN01)
     var iecXSJoinMap = Map[String,DataFrame]()
     val typesList = iecXSJoin01.typeOfJoin
-    typesList.foreach(types => {    //TODO: Rename this to 'joinType'
-        iecXSJoinMap(types) = JoinAndSelectOperation.doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, iecXSJoin01, types)
+    typesList.foreach(typ => {    //TODO: Rename this to 'joinType'
+        iecXSJoinMap(typ) = JoinAndSelectOperation.doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, iecXSJoin01, typ)
     })
     val iecXSLeftJoinDF = iecXSJoinMap("left")
     val iecXSInnerJoinDF = iecXSJoinMap("inner")
@@ -106,8 +106,8 @@ object CommercialTransform {
     val xsAuxSkuHierJoin03 = xsClaimsSource.joinOperation(JOIN03)
     var xsAuxSkuJoinMap = Map[String, DataFrame]()
     val xsAuxSkuJointypeList = xsAuxSkuHierJoin03.typeOfJoin
-    xsAuxSkuJointypeList.foreach(types => {
-      xsAuxSkuJoinMap(types) = JoinAndSelectOperation.doJoinAndSelect(xsInnerJoinAuxWEDDF, auxSKUHierDF, xsAuxSkuHierJoin03, types)
+    xsAuxSkuJointypeList.foreach(typ => {
+      xsAuxSkuJoinMap(typ) = JoinAndSelectOperation.doJoinAndSelect(xsInnerJoinAuxWEDDF, auxSKUHierDF, xsAuxSkuHierJoin03, typ)
     })
     val xsAuxSkuLeftJoinDF = xsAuxSkuJoinMap("left")
     val xsAuxSkuInnerJoinDF = xsAuxSkuJoinMap("inner")
@@ -120,8 +120,8 @@ object CommercialTransform {
     val rawCalendarJoin01 = rawCalendarSource.joinOperation(JOIN01)
     var rawXSJoinMap = Map[String, DataFrame]()
     val rawXSJoin01TypeList = rawCalendarJoin01.typeOfJoin
-    rawXSJoin01TypeList.foreach(types => {
-      rawXSJoinMap(types) = JoinAndSelectOperation.doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, rawCalendarJoin01, types)
+    rawXSJoin01TypeList.foreach(typ => {
+      rawXSJoinMap(typ) = JoinAndSelectOperation.doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, rawCalendarJoin01, typ)
     })
     //val rawXSLeftJoin01 = rawXSJoinMap("left")   //Being used for Dump!
     val rawXSInnerJoin01DF = rawXSJoinMap("inner")
