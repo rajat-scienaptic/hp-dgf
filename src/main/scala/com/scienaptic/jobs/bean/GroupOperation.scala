@@ -2,8 +2,7 @@ package com.scienaptic.jobs.bean
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.scienaptic.jobs.utility.Utils
-import org.apache.spark.sql.{Column, DataFrame}
-import org.apache.spark.sql.RelationalGroupedDataset
+import org.apache.spark.sql.DataFrame
 
 import scala.util.Try
 
@@ -23,7 +22,7 @@ object GroupOperation {
       for ((operation, operationMap) <- aggregations) {
         for ((aggrCol,aggrRenameColumn) <- operationMap) {
           //aggColumns :+ aggrCol
-          val aggregatedColumnName = s"$operation" + "(" + s"$groupCol" + ")"
+          val aggregatedColumnName = s"$operation" + "(" + s"$aggrCol" + ")"
           renameMap(aggregatedColumnName) = aggrRenameColumn
           if (aggrRenameColumn=="") renameMap(aggregatedColumnName)=aggregatedColumnName
           aggregationMap(aggrCol) = operation
