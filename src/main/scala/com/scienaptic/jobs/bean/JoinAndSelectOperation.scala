@@ -1,6 +1,7 @@
 package com.scienaptic.jobs.bean
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.google.common.base.Preconditions
 import com.scienaptic.jobs.utility.Utils
 import org.apache.spark.sql.{Column, DataFrame}
 
