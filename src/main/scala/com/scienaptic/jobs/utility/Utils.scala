@@ -12,8 +12,10 @@ object Utils {
   }
 
   //TODO: Accept newname as List[String] and merge with 'name' to rename the column
-  def convertListToDFColumnWithRename(columnList: List[String], dataFrame: DataFrame, newName: String) = {
-    columnList.map(name => dataFrame.col(name).as(s"$newName"))
+  def convertListToDFColumnWithRename(renameMap: Map[String, String], dataFrame: DataFrame) = {
+    renameMap.keySet.toList.foldLeft(dataFrame){ (df, col) =>
+      df.withColumnRenamed(col, renameMap.getOrElse(col, col))
+    }
   }
 
   def loadCSV(context: ExecutionContext, file: String): Try[DataFrame] = {

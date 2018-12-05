@@ -7,43 +7,33 @@ import org.apache.spark.sql.RelationalGroupedDataset
 
 import scala.util.Try
 
-case class GroupOperation(@JsonProperty("cols") cols: List[String], @JsonProperty("aggreg") aggregation: String, @JsonProperty("aggrColumns") aggColumns: List[String]) extends Operation {
+case class GroupOperation(@JsonProperty("cols") cols: List[String], @JsonProperty("aggregations") aggregations: Map[String, Map[String, String]]) extends Operation {
   override def scienapticDef() = {
     //Do Nothing
   }
 }
 
 object GroupOperation {
-  def doGroup(dataFrame: DataFrame, cols: List[String], operation: String, aggColumns: List[String]) : Try[DataFrame] = {
-    val groupedDataSet = dataFrame.groupBy(Utils.convertListToDFColumn(cols, dataFrame): _*)
-    operation match {
-      case "sum" => {
-        performSumAggration(groupedDataSet, aggColumns)
-      }
-      case "avg" => {
-        performAvgAggregation(groupedDataSet, aggColumns)
-      }
-      case "max" => {
-        performMaxAggregation(groupedDataSet, aggColumns)
-      }
-    }
-  }
-  //TODO: Check renaming aggregated columns
-  def performSumAggration(dataFrame: RelationalGroupedDataset, cols: List[String]): Try[DataFrame] = {
+  def doGroup(dataFrame: DataFrame, cols: List[String], aggregations: Map[String, Map[String, String]]) : Try[DataFrame] = {
     Try{
-      dataFrame.sum(cols: _*)
-    }
-  }
+      //var aggColumns = List[String]()
+      var renameMap = scala.collection.mutable.Map[String, String]()
+      var aggregationMap = scala.collection.mutable.Map[String, String]()
 
-  def performAvgAggregation(dataFrame: RelationalGroupedDataset, cols: List[String]): Try[DataFrame] = {
-    Try{
-      dataFrame.avg(cols: _*)
-    }
-  }
-
-  def performMaxAggregation(dataFrame: RelationalGroupedDataset, cols: List[String]): Try[DataFrame] = {
-    Try{
-      dataFrame.max(cols: _*)
+      for ((operation, operationMap) <- aggregations) {
+        for ((aggrCol,aggrRenameColumn) <- operationMap) {
+          //aggColumns :+ aggrCol
+          val aggregatedColumnName = s"$operation" + "(" + s"$groupCol" + ")"
+          renameMap(aggregatedColumnName) = aggrRenameColumn
+          if (aggrRenameColumn=="") renameMap(aggregatedColumnName)=aggregatedColumnName
+          aggregationMap(aggrCol) = operation
+        }
+      }
+      val aggMap = aggregationMap.toMap
+      println(s"Aggregation Map:  $aggMap")
+      val groupedDataSet = dataFrame.groupBy(Utils.convertListToDFColumn(cols, dataFrame): _*)
+      var aggregatedDataSet = groupedDataSet.agg(aggMap)
+      Utils.convertListToDFColumnWithRename(renameMap.toMap, aggregatedDataSet)
     }
   }
 }

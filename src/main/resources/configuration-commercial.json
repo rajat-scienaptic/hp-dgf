@@ -159,13 +159,11 @@
       "group" : {
         "group01": {
           "cols" : ["C2B Promo Code","SKU","Start Date","End Date"],
-          "aggreg": "sum",
-          "aggrColumns":["dummy"]
+          "aggregations": {"sum" : {"dummy":"dummy"}}
         },
         "group02": {
           "cols": ["Base SKU","C2B Promo Code"],
-          "aggreg": "avg",
-          "aggrColumns":["Sum_Sum_Claim Quantity"]
+          "aggregations": {"avg": {"Sum_Sum_Claim Quantity": ""}}
         }
       }
     },

@@ -7,7 +7,7 @@ import com.scienaptic.jobs.bean._
 import com.scienaptic.jobs.utility.Utils
 import com.scienaptic.jobs.utility.CommercialUtility
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.functions._
 
 
 object CommercialTransform {
@@ -55,19 +55,19 @@ object CommercialTransform {
     /* Union XS Claims and IEC Claims DF TODO: Check if both Dataframes have same number of columns*/
     val xsClaimsUnionDF = UnionOperation.doUnion(iecFiltered01DF.get, xsClaimsSelect01DF).get
 
-    val baseSKUproductDF = xsClaimsUnionDF.withColumn("Base SKU",CommercialUtility.createBaseSKUFromProductIDUDF($"Product ID"))
-    val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String",CommercialUtility.extractWeekFromDateUDF($"Partner Ship Calendar Date", "week"))
-    val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",CommercialUtility.addDaystoDateStringUDF($"Partner Ship Calendar Date", "day"))
-    val xsClaimsBaseSKUDF = weekEndDateDF.withColumn("Base SKU",CommercialUtility.baseSKUFormulaUDF($"Base SKU"))
+    val baseSKUproductDF = xsClaimsUnionDF.withColumn("Base SKU",CommercialUtility.createBaseSKUFromProductIDUDF(col("Product ID")))
+    val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String",CommercialUtility.extractWeekFromDateUDF(col("Partner Ship Calendar Date"), col("week")))
+    val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",CommercialUtility.addDaystoDateStringUDF(col("Partner Ship Calendar Date"), col("day")))
+    val xsClaimsBaseSKUDF = weekEndDateDF.withColumn("Base SKU",CommercialUtility.baseSKUFormulaUDF(col("Base SKU")))
 
     //127
     val xsClaimsGroup01 = xsClaimsSource.groupOperation("group01")
-    val xsClaimsGroupedClaimQuanAggDF = GroupOperation.doGroup(xsClaimsBaseSKUDF,xsClaimsGroup01.cols,xsClaimsGroup01.aggregation, xsClaimsGroup01.aggColumns).get
+    val xsClaimsGroupedClaimQuanAggDF = GroupOperation.doGroup(xsClaimsBaseSKUDF,xsClaimsGroup01.cols,xsClaimsGroup01.aggregations).get
       .withColumnRenamed("Claim Quantity","Sum_Claim Quantity")
 
     //172
     val xsClaimsGroup02 = xsClaimsSource.groupOperation("group02")
-    var xsClaimsGroupSumClaimQuanAggDF = GroupOperation.doGroup(xsClaimsGroupedClaimQuanAggDF, xsClaimsGroup02.cols, xsClaimsGroup02.aggregation, xsClaimsGroup02.aggColumns).get
+    var xsClaimsGroupSumClaimQuanAggDF = GroupOperation.doGroup(xsClaimsGroupedClaimQuanAggDF, xsClaimsGroup02.cols, xsClaimsGroup02.aggregations).get
       .withColumnRenamed("Sum_Claim Quantity","Claim Quantity")
 
     val rawCalendarSelect01= rawCalendarSource.selectOperation(SELECT01)
@@ -76,14 +76,14 @@ object CommercialTransform {
 
     //124
     val rawCalendarGroup01 = rawCalendarSource.groupOperation("group01")
-    var rawCalendarGroupDF = GroupOperation.doGroup(rawCalendarSelectDF, rawCalendarGroup01.cols, rawCalendarGroup01.aggregation, rawCalendarGroup01.aggColumns).get
-    rawCalendarGroupDF = rawCalendarGroupDF.drop("dummy").drop("sum") //TODO: check what is name of sum aggregated column
+    var rawCalendarGroupDF = GroupOperation.doGroup(rawCalendarSelectDF, rawCalendarGroup01.cols, rawCalendarGroup01.aggregations).get
+    rawCalendarGroupDF = rawCalendarGroupDF.drop("dummy")//.drop("sum") //TODO: check what is name of sum aggregated column
 
     //243 - Join
     val iecXSJoin01 = xsClaimsSource.joinOperation(JOIN01)
     var iecXSJoinMap = Map[String,DataFrame]()
     val typesList = iecXSJoin01.typeOfJoin
-    typesList.foreach(types => {
+    typesList.foreach(types => {    //TODO: Rename this to 'joinType'
         iecXSJoinMap(types) = JoinAndSelectOperation.doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, iecXSJoin01, types)
     })
     val iecXSLeftJoinDF = iecXSJoinMap("left")
@@ -91,10 +91,10 @@ object CommercialTransform {
 
     //245 - Formula
     val iecXSLeftJoinPromoAmountDF = iecXSLeftJoinDF.withColumn("Promo",lit("N"))
-      .withColumn("Total Amount",$"Claim Partner Unit Rebate"*$"Sum_Claim Quantity")
+      .withColumn("Total Amount",col("Claim Partner Unit Rebate")*col("Sum_Claim Quantity"))
     //244 - Formula
     val iecXSInnerJoinPromoAmountDF = iecXSInnerJoinDF.withColumn("Promo",lit("Y"))
-      .withColumn("Total Amount",$"Claim Partner Unit Rebate"*$"Sum_Claim Quantity")
+      .withColumn("Total Amount",col("Claim Partner Unit Rebate")*col("Sum_Claim Quantity"))
     //246 - Union
     val iecXSUnionDF = UnionOperation.doUnion(iecXSLeftJoinPromoAmountDF, iecXSInnerJoinPromoAmountDF).get
 
@@ -127,7 +127,7 @@ object CommercialTransform {
     val rawXSInnerJoin01DF = rawXSJoinMap("inner")
 
     //129
-    val rawXSJoinChkOutsidePromoDF = rawXSInnerJoin01DF.withColumn("Outside Promo Date", CommercialUtility.checkOutsidePromoDateUDF($"Partner Ship Calendar Date",$"End Date"))
+    val rawXSJoinChkOutsidePromoDF = rawXSInnerJoin01DF.withColumn("Outside Promo Date", CommercialUtility.checkOutsidePromoDateUDF(col("Partner Ship Calendar Date"),col("End Date")))
 
     //131
     val rawCalendarFilter01 = rawCalendarSource.filterOperation(FILTER01)
@@ -139,7 +139,7 @@ object CommercialTransform {
 
     //133
     val rawCalendarGroup02 = rawCalendarSource.groupOperation(GROUP02)
-    var rawCalendarGroup02DF = GroupOperation.doGroup(rawXSJoinOutsidePromoTrueDF, rawCalendarGroup02.cols, rawCalendarGroup02.aggregation, rawCalendarGroup02.aggColumns).get
+    var rawCalendarGroup02DF = GroupOperation.doGroup(rawXSJoinOutsidePromoTrueDF, rawCalendarGroup02.cols, rawCalendarGroup02.aggregations).get
     rawCalendarGroup02DF = rawCalendarGroup02DF.withColumnRenamed("Sum_Sum_Claim Quantity","Avg_Sum_Sum_Claim Quantity")
 
     //135 - Join
@@ -148,6 +148,7 @@ object CommercialTransform {
     val rawCalendarJoin02DF = JoinAndSelectOperation.doJoinAndSelect(rawXSJoinOutsidePromoFalseDF, rawCalendarGroup02DF, rawCalendarJoin02, "inner")
 
     //136 - Formula
+    //val rawCalendarIncludeVarDF = rawCalendarJoin02DF.withColumn("Include")
 
 
 
