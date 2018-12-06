@@ -65,8 +65,7 @@
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
+          "isUnknown" : "N",
           "typeOfJoin": "left",
           "joinCriteria": {
             "left": [
@@ -113,13 +112,13 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "N",
           "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
+          "isUnknown" : "N",
           "typeOfJoin": "left",
           "joinCriteria": {
             "left": [
@@ -166,13 +165,13 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "N",
           "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
+          "isUnknown" : "N",
           "typeOfJoin": "left",
           "joinCriteria": {
             "left": [
@@ -219,13 +218,13 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "N",
           "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
+          "isUnknown" : "N",
           "typeOfJoin": "left",
           "joinCriteria": {
             "left": [
@@ -272,13 +271,13 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "N",
           "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
+          "isUnknown" : "N",
           "typeOfJoin": "left",
           "joinCriteria": {
             "left": [
@@ -325,13 +324,13 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "N",
           "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
+          "isUnknown" : "N",
           "typeOfJoin": "left",
           "joinCriteria": {
             "left": [
@@ -378,13 +377,13 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "N",
           "cols": ["fy_week", "wed", "season", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_years"]
         }
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
+          "isUnknown" : "N",
           "typeOfJoin": "left",
           "joinCriteria": {
             "left": [
@@ -431,13 +430,13 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "N",
           "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
+          "isUnknown" : "N",
           "typeOfJoin": "left",
           "joinCriteria": {
             "left": [
@@ -484,13 +483,13 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "N",
           "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
+          "isUnknown" : "N",
           "typeOfJoin": "left",
           "joinCriteria": {
             "left": [
@@ -537,13 +536,13 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "N",
           "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
+          "isUnknown" : "N",
           "typeOfJoin": "left",
           "joinCriteria": {
             "left": [
