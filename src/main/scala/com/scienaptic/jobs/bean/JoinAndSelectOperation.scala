@@ -1,7 +1,6 @@
 package com.scienaptic.jobs.bean
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.google.common.base.Preconditions
 import com.scienaptic.jobs.utility.Utils
 import org.apache.spark.sql.{Column, DataFrame}
 
@@ -37,7 +36,7 @@ object JoinAndSelectOperation {
     val column_names_right = Utils.convertListToDFColumn(joinOperation.selectCriteria("right"), dataFrame2)
 
     val selectAll: List[Column] = if (checkIfNullColumns(column_names_left, column_names_right)) {
-      generateColumnsFromJoinDF(joinOperation.joinCriteria("left"), joinOperation.joinCriteria("right"), dataFrame1, dataFrame2)
+      generateColumnsFromJoinDF(dataFrame1, dataFrame2)
     } else {
       column_names_left ::: column_names_right
     }
