@@ -5,7 +5,7 @@ import java.util.Date
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.bean._
 import com.scienaptic.jobs.utility.Utils
-import com.scienaptic.jobs.utility.CommercialUtility
+import com.scienaptic.jobs.utility.CommercialUtility._
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 
@@ -16,7 +16,7 @@ object CommercialTransform {
   val FILTER01="filter01"; val FILTER02="filter02"; val FILTER03="filter03"; val FILTER04="filter04"; val FILTER05="filter05"; val FILTER06="filter06";
   val JOIN01="join01"; val JOIN02="join02"; val JOIN03="join03"; val JOIN04="join04"; val JOIN05="join05"; val JOIN06="join06"; val JOIN07="join07";
   val NUMERAL0=0; val NUMERAL1=1;
-  val GROUP01="group01"; val GROUP02="group02"; val GROUP03="group03";
+  val GROUP01="group01"; val GROUP02="group02"; val GROUP03="group03";val GROUP04="group04";
 
   val IECSOURCE="IEC_CLAIMS"; val XSCLAIMSSOURCE="XS_CLAIMS"; val RAWCALENDARSOURCE="RAW_MASTER_CALENDAR";
   val AUXWEDSOURCE="AUX_WEEK_END_DATE"; val AUXSKUHIERARCHY="AUX_SKU_HIERARCHY";
@@ -55,10 +55,10 @@ object CommercialTransform {
     /* Union XS Claims and IEC Claims DF TODO: Check if both Dataframes have same number of columns*/
     val xsClaimsUnionDF = UnionOperation.doUnion(iecFiltered01DF.get, xsClaimsSelect01DF).get
 
-    val baseSKUproductDF = xsClaimsUnionDF.withColumn("Base SKU",CommercialUtility.createBaseSKUFromProductIDUDF(col("Product ID")))
-    val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String",CommercialUtility.extractWeekFromDateUDF(col("Partner Ship Calendar Date"), col("week")))
-    val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",CommercialUtility.addDaystoDateStringUDF(col("Partner Ship Calendar Date"), col("day")))
-    val xsClaimsBaseSKUDF = weekEndDateDF.withColumn("Base SKU",CommercialUtility.baseSKUFormulaUDF(col("Base SKU")))
+    val baseSKUproductDF = xsClaimsUnionDF.withColumn("Base SKU",createBaseSKUFromProductIDUDF(col("Product ID")))
+    val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String",extractWeekFromDateUDF(col("Partner Ship Calendar Date"), col("week")))
+    val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",addDaystoDateStringUDF(col("Partner Ship Calendar Date"), col("day")))
+    val xsClaimsBaseSKUDF = weekEndDateDF.withColumn("Base SKU",baseSKUFormulaUDF(col("Base SKU")))
 
     //127
     val xsClaimsGroup01 = xsClaimsSource.groupOperation("group01")
@@ -127,7 +127,7 @@ object CommercialTransform {
     val rawXSInnerJoin01DF = rawXSJoinMap("inner")
 
     //129
-    val rawXSJoinChkOutsidePromoDF = rawXSInnerJoin01DF.withColumn("Outside Promo Date", CommercialUtility.checkOutsidePromoDateUDF(col("Partner Ship Calendar Date"),col("End Date")))
+    val rawXSJoinChkOutsidePromoDF = rawXSInnerJoin01DF.withColumn("Outside Promo Date", checkOutsidePromoDateUDF(col("Partner Ship Calendar Date"),col("End Date")))
 
     //131
     val rawCalendarFilter01 = rawCalendarSource.filterOperation(FILTER01)
@@ -139,8 +139,8 @@ object CommercialTransform {
 
     //133
     val rawCalendarGroup02 = rawCalendarSource.groupOperation(GROUP02)
-    var rawCalendarGroup02DF = GroupOperation.doGroup(rawXSJoinOutsidePromoTrueDF, rawCalendarGroup02.cols, rawCalendarGroup02.aggregations).get
-    rawCalendarGroup02DF = rawCalendarGroup02DF.withColumnRenamed("Sum_Sum_Claim Quantity","Avg_Sum_Sum_Claim Quantity")
+    val rawCalendarGroup02DF = GroupOperation.doGroup(rawXSJoinOutsidePromoTrueDF, rawCalendarGroup02.cols, rawCalendarGroup02.aggregations).get
+    //rawCalendarGroup02DF = rawCalendarGroup02DF.withColumnRenamed("Sum_Sum_Claim Quantity","Avg_Sum_Sum_Claim Quantity")
 
     //135 - Join
     val rawCalendarJoin02 = rawCalendarSource.joinOperation(JOIN02)
@@ -148,11 +148,35 @@ object CommercialTransform {
     val rawCalendarJoin02DF = JoinAndSelectOperation.doJoinAndSelect(rawXSJoinOutsidePromoFalseDF, rawCalendarGroup02DF, rawCalendarJoin02, "inner")
 
     //136 - Formula
-    //val rawCalendarIncludeVarDF = rawCalendarJoin02DF.withColumn("Include")
+    val rawCalendarIncludeVarDF = rawCalendarJoin02DF.withColumn("Include",
+      when(col("Sum_Sum_Claim Quantity") > lit(0.2)*col("Avg_Sum_Sum_Claim Quantity"),"Y")
+      .otherwise("N"))
 
+    //138 - Filter
+    val rawCalendarFilter03 = rawCalendarSource.filterOperation(FILTER03)
+    val rawCalendarFilterIncldeDF = FilterOperation.doFilter(rawCalendarIncludeVarDF,rawCalendarFilter03.conditions,rawCalendarFilter03.conditionTypes(0)).get
 
+    //144 - Summarize
+    val rawCalendarGroup03 = rawCalendarSource.groupOperation(GROUP04)
+    val rawCalendarPromonSKUGroupDF = GroupOperation.doGroup(rawCalendarFilterIncldeDF,rawCalendarGroup03.cols, rawCalendarGroup03.aggregations).get
 
+    //146 - Join
+    /*TODO: Suppose joining criteria is same but in select nothing given,
+      in that case, Join Utility should exclude same columns*/
+    val rawCalendarJoin03 = rawCalendarSource.joinOperation(JOIN03)
+    var rawCalendarJoin03Map = Map[String, DataFrame]()
+    val rawCalendarJoin03TypeList = rawCalendarJoin03.typeOfJoin
+    rawCalendarJoin03TypeList.foreach(typ => {
+      rawCalendarJoin03Map(typ) = JoinAndSelectOperation.doJoinAndSelect(rawCalendarSelectDF,rawCalendarPromonSKUGroupDF,rawCalendarJoin03, typ)
+    })
+    val rawCalendarLeftJoin03DF = rawCalendarJoin03Map("left")
+    val rawCalendarInnerJoin03DF = rawCalendarJoin03Map("inner")
 
+    //151 - Formula
+    val rawCalendarLftJNewEndDateDF = rawCalendarLeftJoin03DF.withColumn("New End Date",col("End Date"))
+
+    //148
+    //val rawCalendarInnJNewEndDateDF = rawCalendarInnerJoin03DF.withColumn("New End Date", )
 
 
 
