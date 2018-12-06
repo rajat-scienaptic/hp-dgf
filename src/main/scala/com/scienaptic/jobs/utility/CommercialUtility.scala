@@ -4,9 +4,14 @@ import java.util.Date
 import java.text.SimpleDateFormat
 import org.apache.spark.sql.functions.udf
 import java.time._
+import java.time.format.DateTimeFormatter
 
 
 object CommercialUtility {
+
+  val ddmmyyyyFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy")
+  val ddmmyyyySimpleFormat = new SimpleDateFormat("dd-MM-yyyy")
+
   val createBaseSKUFromProductIDUDF = udf((productID: String) => {
     //TODO: IF Left(Right([Product ID], 4),1)="#" THEN Left([Product ID],Length([Product ID])-4) ELSE [Product ID] ENDIF
     "Sample String"
@@ -23,7 +28,7 @@ object CommercialUtility {
     new Date()
   })
 
-  val baseSKUFormulaUDF = udf((baseSKU) => {
+  val baseSKUFormulaUDF = udf((baseSKU: String) => {
     baseSKU match {
       case "M9L74A" => "M9L75A"
       case "J9V91A" => "J9V90A"
@@ -44,25 +49,41 @@ object CommercialUtility {
     //DateTimeAdd  - Adds 2nd to 1st where 2nd is in 3rd's format (Here adds 14 days to End Date)
   })
 
+  val dateTimeDiff = udf((startDate: String, endDate: String) => {
+    returnDiffBetweenDates(startDate,endDate,"days")
+  })
+
+
+
+
+  /* Private functions */
   def returnDiffBetweenDates(firstDateString: String, secDateString: String, intFormat: String): Int = {
-    val firstDate = convertStringToDate(firstDateString)
+    val firstDate = convertStringToLocalDate(firstDateString)
+    val secondDate = convertStringToLocalDate(secDateString)
+    val per = Period.between(firstDate, secondDate)
     intFormat match {
       case "days" => {
-
+        per.getDays()
       }
       case "month" => {
-
+        per.getMonths()
       }
     }
-    14
   }
 
   def addIntervalToDate(dateStr: String, interval: Int, intFormat: String): String = {
+    val dateVal = convertStringToSimpleDate(dateStr)
+    val dattime = Date
+
     "test"
   }
 
-  def convertStringToDate(dateStr: String/*, format: String*/): LocalDate = {
-    LocalDate.parse("2012-05-31")
+  def convertStringToSimpleDate(dateStr: String/*, format: String*/): Date = {
+    ddmmyyyySimpleFormat.parse(dateStr)
+  }
+
+  def convertStringToLocalDate(dateStr: String/*, format: String*/): LocalDate = {
+    LocalDate.parse(dateStr, ddmmyyyyFormat)
   }
 
   /* SAMPLE

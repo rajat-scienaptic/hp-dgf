@@ -2,7 +2,7 @@ package com.scienaptic.jobs.core
 
 import java.util.Date
 
-import com.scienaptic.jobs.ExecutionContext
+import com.scienaptic.jobs.{ExecutionContext, bean}
 import com.scienaptic.jobs.bean._
 import com.scienaptic.jobs.utility.Utils
 import com.scienaptic.jobs.utility.CommercialUtility._
@@ -81,11 +81,7 @@ object CommercialTransform {
 
     //243 - Join
     val iecXSJoin01 = xsClaimsSource.joinOperation(JOIN01)
-    var iecXSJoinMap = Map[String,DataFrame]()
-    val typesList = iecXSJoin01.typeOfJoin
-    typesList.foreach(typ => {    //TODO: Rename this to 'joinType'
-        iecXSJoinMap(typ) = JoinAndSelectOperation.doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, iecXSJoin01, typ)
-    })
+    var iecXSJoinMap = JoinAndSelectOperation.doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, iecXSJoin01)
     val iecXSLeftJoinDF = iecXSJoinMap("left")
     val iecXSInnerJoinDF = iecXSJoinMap("inner")
 
@@ -100,29 +96,22 @@ object CommercialTransform {
 
     //252 - Join
     val iecXsClaimsJoin02 = xsClaimsSource.joinOperation(JOIN02)
-    val xsInnerJoinAuxWEDDF = JoinAndSelectOperation.doJoinAndSelect(iecXSUnionDF, auxWEDSelectDF, iecXsClaimsJoin02, "inner")
-
+    val xsInnerJoinAuxWEDMap = JoinAndSelectOperation.doJoinAndSelect(iecXSUnionDF, auxWEDSelectDF, iecXsClaimsJoin02)
+    val xsInnerJoinAuxWEDDF = xsInnerJoinAuxWEDMap("inner")
     //254 - join
     val xsAuxSkuHierJoin03 = xsClaimsSource.joinOperation(JOIN03)
-    var xsAuxSkuJoinMap = Map[String, DataFrame]()
-    val xsAuxSkuJointypeList = xsAuxSkuHierJoin03.typeOfJoin
-    xsAuxSkuJointypeList.foreach(typ => {
-      xsAuxSkuJoinMap(typ) = JoinAndSelectOperation.doJoinAndSelect(xsInnerJoinAuxWEDDF, auxSKUHierDF, xsAuxSkuHierJoin03, typ)
-    })
+    var xsAuxSkuJoinMap = JoinAndSelectOperation.doJoinAndSelect(xsInnerJoinAuxWEDDF, auxSKUHierDF, xsAuxSkuHierJoin03)
     val xsAuxSkuLeftJoinDF = xsAuxSkuJoinMap("left")
     val xsAuxSkuInnerJoinDF = xsAuxSkuJoinMap("inner")
-    val xsAuxSKUHierUnionDF = UnionOperation.doUnion(xsAuxSkuLeftJoinDF, xsAuxSkuInnerJoinDF) //TODO: Check if both dataframe have same number of columns
+    //TODO: Check if both dataframe have same number of columns
+    val xsAuxSKUHierUnionDF = UnionOperation.doUnion(xsAuxSkuLeftJoinDF, xsAuxSkuInnerJoinDF)
 
     //TODO: create WriteCSV utility and make changes to Source bean to accept 'outFilePath' attribute
     // Utils.writeCSV(xsAuxSKUHierUnionDF,"/home/Avik/Scienaptic/RnD/OutData/claims_consolidated.csv")
 
     //121 - Join
     val rawCalendarJoin01 = rawCalendarSource.joinOperation(JOIN01)
-    var rawXSJoinMap = Map[String, DataFrame]()
-    val rawXSJoin01TypeList = rawCalendarJoin01.typeOfJoin
-    rawXSJoin01TypeList.foreach(typ => {
-      rawXSJoinMap(typ) = JoinAndSelectOperation.doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, rawCalendarJoin01, typ)
-    })
+    var rawXSJoinMap = JoinAndSelectOperation.doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, rawCalendarJoin01)
     //val rawXSLeftJoin01 = rawXSJoinMap("left")   //Being used for Dump!
     val rawXSInnerJoin01DF = rawXSJoinMap("inner")
 
@@ -144,9 +133,8 @@ object CommercialTransform {
 
     //135 - Join
     val rawCalendarJoin02 = rawCalendarSource.joinOperation(JOIN02)
-    //val xsInnerJoinAuxWEDDF = JoinAndSelectOperation.doJoinAndSelect(iecXSUnionDF, auxWEDSelectDF, iecXsClaimsJoin02, "inner")
-    val rawCalendarJoin02DF = JoinAndSelectOperation.doJoinAndSelect(rawXSJoinOutsidePromoFalseDF, rawCalendarGroup02DF, rawCalendarJoin02, "inner")
-
+    val rawCalendarJoin02Map = JoinAndSelectOperation.doJoinAndSelect(rawXSJoinOutsidePromoFalseDF, rawCalendarGroup02DF, rawCalendarJoin02)
+    val rawCalendarJoin02DF = rawCalendarJoin02Map("inner")
     //136 - Formula
     val rawCalendarIncludeVarDF = rawCalendarJoin02DF.withColumn("Include",
       when(col("Sum_Sum_Claim Quantity") > lit(0.2)*col("Avg_Sum_Sum_Claim Quantity"),"Y")
@@ -164,19 +152,45 @@ object CommercialTransform {
     /*TODO: Suppose joining criteria is same but in select nothing given,
       in that case, Join Utility should exclude same columns*/
     val rawCalendarJoin03 = rawCalendarSource.joinOperation(JOIN03)
-    var rawCalendarJoin03Map = Map[String, DataFrame]()
-    val rawCalendarJoin03TypeList = rawCalendarJoin03.typeOfJoin
-    rawCalendarJoin03TypeList.foreach(typ => {
-      rawCalendarJoin03Map(typ) = JoinAndSelectOperation.doJoinAndSelect(rawCalendarSelectDF,rawCalendarPromonSKUGroupDF,rawCalendarJoin03, typ)
-    })
+    val rawCalendarJoin03Map =JoinAndSelectOperation.doJoinAndSelect(rawCalendarSelectDF,rawCalendarPromonSKUGroupDF,rawCalendarJoin03)
     val rawCalendarLeftJoin03DF = rawCalendarJoin03Map("left")
     val rawCalendarInnerJoin03DF = rawCalendarJoin03Map("inner")
 
     //151 - Formula
     val rawCalendarLftJNewEndDateDF = rawCalendarLeftJoin03DF.withColumn("New End Date",col("End Date"))
 
-    //148
-    val rawCalendarInnJNewEndDateDF = rawCalendarInnerJoin03DF.withColumn("New End Date", )
+    //148 - Formula
+    val rawCalendarInnJNewEndDateDF = rawCalendarInnerJoin03DF.withColumn("New End Date", newEndDateFromMaxWED(col("Max_Week.End.Date"), col("End Date")))
+
+    //150 - Union
+    //TODO: Check if both dataframes have same number of columns and data type is same
+    val rawCalendarEndDateUnionDF = UnionOperation.doUnion(rawCalendarLftJNewEndDateDF,rawCalendarInnJNewEndDateDF).get
+
+    //155 & 157 - Formula
+    val rawCalendarEndDateChangeDF = rawCalendarEndDateUnionDF.withColumn("End Date Change",
+      when(col("End Date")===col("New End Date"),"N")
+          .otherwise("Y")).distinct()
+
+    //158 - Append (Outer join)
+    // MAJOR MAJOR DOUBT!!!!
+    //TODO: Check how it is doing catesian join
+    val rawCalendarJoin04= rawCalendarSource.joinOperation(JOIN04)
+    val rawCalendarnAuxWEDAppendMap = JoinAndSelectOperation.doJoinAndSelect(rawCalendarEndDateChangeDF, auxWEDSelectDF, rawCalendarJoin04)
+    val rawCalendarnAuxWEDAppendDF = rawCalendarnAuxWEDAppendMap("outer")
+
+    //159 - Formula
+    val rawCalStartsubWEDDF = rawCalendarnAuxWEDAppendDF.withColumn("Start - Week End", dateTimeDiff(col("Start Date"),col("Week.End.Date")))
+      .withColumn("Week End - End",dateTimeDiff(col("Week.End.Date"),col("New End Date")))
+      .withColumn("Option Type",
+        when(col("Promo Name").contains("Option B"),"Option B")
+        .when(col("Promo Name").contains("Option C"),"Option C")
+        .otherwise("All"))
+
+    //160 - Filter
+    val rawCalendarAUXWEDAppendDF = rawCalStartsubWEDDF.join(auxWEDDF)
+
+
+
 
 
 

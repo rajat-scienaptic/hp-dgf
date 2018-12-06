@@ -45,7 +45,7 @@ object RetailTransform {
 
     // join
     val odomOrcaJoin01 = sourceMap("ODOM_ONLINE_ORCA").joinOperation("join01")
-    var odomOrcaJoin01Map = JoinAndSelectOperation.doJoinAndSelect(odomOrcaGroupByColsDF, auxTablesWeekendselect01DF, odomOrcaJoin01)
+    var odomOrcaJoin01Map = JoinAndSelectOperation.doJoinAndSelect(odomOrcaGroupByColsDF, auxTablesWeekendselect01DF, odeomOrcaJoin01)
     val odomOrcaJoinRightDF = odomOrcaJoin01Map("inner").cache()
 
     // STAPLESDOTCOM UNITS
