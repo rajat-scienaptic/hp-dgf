@@ -12,7 +12,7 @@ object Utils {
   }
 
   def convertListToDFColumnWithRename(renameMap: Map[String, String], dataFrame: DataFrame) = {
-     renameMap.keySet.toList.foldLeft(dataFrame){ (df, col) =>
+    renameMap.keySet.toList.foldLeft(dataFrame) { (df, col) =>
       df.withColumnRenamed(col, renameMap.getOrElse(col, col))
     }
   }
