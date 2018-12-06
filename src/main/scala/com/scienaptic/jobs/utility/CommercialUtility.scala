@@ -3,6 +3,7 @@ package com.scienaptic.jobs.utility
 import java.util.Date
 import java.text.SimpleDateFormat
 import org.apache.spark.sql.functions.udf
+import java.time._
 
 
 object CommercialUtility {
@@ -38,12 +39,21 @@ object CommercialUtility {
   })
 
   val newEndDateFromMaxWED = udf((maxWED: String, endDate: String) => {
-    //IF DateTimeDiff([Max_Week.End.Date],[End Date],"days") > 14 THEN DateTimeAdd([End Date],14,"days") ELSEIF [Max_Week.End.Date] > [End Date] THEN [Max_Week.End.Date] ELSE [End Date] ENDIF
+    //TODO: IF DateTimeDiff([Max_Week.End.Date],[End Date],"days") > 14 THEN DateTimeAdd([End Date],14,"days") ELSEIF [Max_Week.End.Date] > [End Date] THEN [Max_Week.End.Date] ELSE [End Date] ENDIF
     //DateTimeDiff - subtracts 2nd from 1st and returns different in 3rd format (here number of days)
     //DateTimeAdd  - Adds 2nd to 1st where 2nd is in 3rd's format (Here adds 14 days to End Date)
   })
 
-  def returnDiffBetweenDates(firstDate: String, secDate: String, intFormat: String): Int = {
+  def returnDiffBetweenDates(firstDateString: String, secDateString: String, intFormat: String): Int = {
+    val firstDate = convertStringToDate(firstDateString)
+    intFormat match {
+      case "days" => {
+
+      }
+      case "month" => {
+
+      }
+    }
     14
   }
 
@@ -51,8 +61,8 @@ object CommercialUtility {
     "test"
   }
 
-  def convertStringToDate(dateStr: String, format: String): Date = {
-    new Date()
+  def convertStringToDate(dateStr: String/*, format: String*/): LocalDate = {
+    LocalDate.parse("2012-05-31")
   }
 
   /* SAMPLE
