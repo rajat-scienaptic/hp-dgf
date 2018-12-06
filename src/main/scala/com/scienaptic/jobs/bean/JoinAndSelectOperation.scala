@@ -1,7 +1,6 @@
 package com.scienaptic.jobs.bean
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.google.common.base.Preconditions
 import com.scienaptic.jobs.utility.Utils
 import org.apache.spark.sql.{Column, DataFrame}
 
@@ -17,21 +16,36 @@ case class JoinAndSelectOperation(@JsonProperty("leftTableAlias") leftTableAlias
 }
 
 object JoinAndSelectOperation {
-  def doJoinAndSelect(dataFrame1: DataFrame, dataFrame2: DataFrame, joinOperation: JoinAndSelectOperation, typeOfJoin: String) = {
 
+  def checkIfNullColumns(column_names_left: List[Column], column_names_right: List[Column]) = {
+    column_names_left.isEmpty && column_names_right.isEmpty
+  }
+
+  def generateColumnsFromJoinDF(dataFrame1: DataFrame, dataFrame2: DataFrame): scala.List[_root_.org.apache.spark.sql.Column] = {
+    val leftColumnSet = Utils.convertListToDFColumn(dataFrame1.columns.toList, dataFrame1).toSet
+    val rightColumnSet = Utils.convertListToDFColumn(dataFrame2.columns.toList, dataFrame2).toSet
+    leftColumnSet union rightColumnSet toList
+  }
+
+  def doJoinAndSelect(dataFrame1: DataFrame, dataFrame2: DataFrame, joinOperation: JoinAndSelectOperation) = {
+
+    var joinMap = Map[String, DataFrame]()
+    val joinTypes = joinOperation.typeOfJoin
     val joinExpr = generateJoinExpression(joinOperation, dataFrame1, dataFrame2)
-
     val column_names_left = Utils.convertListToDFColumn(joinOperation.selectCriteria("left"), dataFrame1)
-    val column_names_right = Utils.convertListToDFColumn(joinOperation.selectCriteria("right"), dataFrame1)
+    val column_names_right = Utils.convertListToDFColumn(joinOperation.selectCriteria("right"), dataFrame2)
 
-    val selectAll: List[Column] = column_names_left ::: column_names_right
-    if(selectAll.size == 0){
-      dataFrame1.join(dataFrame2, joinExpr, typeOfJoin)
+    val selectAll: List[Column] = if (checkIfNullColumns(column_names_left, column_names_right)) {
+      generateColumnsFromJoinDF(dataFrame1, dataFrame2)
     } else {
-      dataFrame1.join(dataFrame2, joinExpr, typeOfJoin).select(selectAll: _*)
+      column_names_left ::: column_names_right
     }
-    //TODO: Check if joining criteria is same and column mentioned in left and right select lists
-    //TODO: Check if select criteria is blank and joining column is same.
+
+    joinTypes.foreach(joinType => {
+      joinMap(joinType) = dataFrame1.join(dataFrame2, joinExpr, joinType).select(selectAll: _*)
+    })
+
+    joinMap
   }
 
   private def generateJoinExpression(join: JoinAndSelectOperation, dataFrame1: DataFrame, dataFrame2: DataFrame) = {
