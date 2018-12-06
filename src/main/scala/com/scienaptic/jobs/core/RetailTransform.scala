@@ -3,6 +3,7 @@ package com.scienaptic.jobs.core
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.bean._
 import com.scienaptic.jobs.utility.Utils
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 
 object RetailTransform {
@@ -39,14 +40,26 @@ object RetailTransform {
     val odomOrcaSubsStrFormalaDF = odomOrcaselect01DF.withColumn("Base SKU", substring(col("Vendor Product Code"),
       0, 6)).withColumn("Account Major", lit("Office Depot-Max"))
 
+    // TODO
+    val odomOrcaGroupByColsDF = odomOrcaSubsStrFormalaDF
+
+    // join
+    val odomOrcaJoin01 = sourceMap("ODOM_ONLINE_ORCA").joinOperation("join01")
+    var odomOrcaJoin01Map = JoinAndSelectOperation.doJoinAndSelect(odomOrcaGroupByColsDF, auxTablesWeekendselect01DF, odomOrcaJoin01)
+    val odomOrcaJoinRightDF = odomOrcaJoin01Map("inner").cache()
 
     // STAPLESDOTCOM UNITS
     // Select01
-    val staplesComUnitsselect01DF = SelectOperation.doSelect(odomOrcaDF, sourceMap("STAPLES_COM_UNITS").selectOperation("select01").cols).get
+    val staplesComUnitsselect01DF = Utils.convertListToDFColumnWithRename(sourceMap("STAPLES_COM_UNITS").renameOperation("rename01"),
+      SelectOperation.doSelect(odomOrcaDF, sourceMap("STAPLES_COM_UNITS").selectOperation("select01").cols)
+        .get)
 
-
+    // TODO : create Utils
     // formula
     val staplesComUnitsFormula01DF = staplesComUnitsselect01DF.withColumn("Account Major", lit("staples"))
+
+    // union
+    val staplesComUnitsUnionDF = UnionOperation.doUnion(odomOrcaJoinRightDF, staplesComUnitsFormula01DF)
 
 
 

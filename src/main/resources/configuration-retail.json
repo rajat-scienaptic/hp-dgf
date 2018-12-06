@@ -12,42 +12,33 @@
           "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
+      "group" : {
+        "group01": {
+          "cols" : ["Account Major", "Week", "Base SKU"],
+          "aggregations": {
+            "sum" : {
+              "Units" : "Online Units"
+            }
+          }
+        }
+      },
       "join": {
         "join01": {
-          "leftTableAlias": "left",
-          "rightTableAlias": "right",
-          "typeOfJoin": "left",
+          "leftTableAlias": "left", "rightTableAlias": "right",
+          "typeOfJoin": ["inner"],
           "joinCriteria": {
-            "left": [
-              "Account",
-              "Fixed"
-            ],
-            "right": [
-              "Account",
-              "Fixed"
-            ]
+            "left": ["Big Deal ID","C2B Promo Code"],
+            "right": ["Base SKU","SKU"]
           },
           "selectCriteria": {
-            "left": [
-              "Account"
-            ],
-            "right": [
-              "Fixed"
-            ]
+            "left": ["Account Major", "Base SKU", "Online Units"], "right": ["wed", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"]
           }
         }
       },
       "filter": {
         "filter01": {
-          "conditionTypes": [
-            "and",
-            "or",
-            "if-else"
-          ],
-          "conditions": [
-            "Account = Amazon",
-            "Fixed < 40.0"
-          ]
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["Account = Amazon","Fixed < 40.0"]
         }
       },
       "sort" : {

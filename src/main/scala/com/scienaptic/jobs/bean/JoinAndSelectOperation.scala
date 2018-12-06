@@ -17,16 +17,36 @@ case class JoinAndSelectOperation(@JsonProperty("leftTableAlias") leftTableAlias
 }
 
 object JoinAndSelectOperation {
-  def doJoinAndSelect(dataFrame1: DataFrame, dataFrame2: DataFrame, joinOperation: JoinAndSelectOperation, typeOfJoin: String) = {
 
+  def checkIfNullColumns(column_names_left: List[Column], column_names_right: List[Column]) = {
+    column_names_left.isEmpty && column_names_right.isEmpty
+  }
+
+  def generateColumnsFromJoinDF(dataFrame1: DataFrame, dataFrame2: DataFrame): scala.List[_root_.org.apache.spark.sql.Column] = {
+    val leftColumnSet = Utils.convertListToDFColumn(dataFrame1.columns.toList, dataFrame1).toSet
+    val rightColumnSet = Utils.convertListToDFColumn(dataFrame2.columns.toList, dataFrame2).toSet
+    leftColumnSet union rightColumnSet toList
+  }
+
+  def doJoinAndSelect(dataFrame1: DataFrame, dataFrame2: DataFrame, joinOperation: JoinAndSelectOperation) = {
+
+    var joinMap = Map[String, DataFrame]()
+    val joinTypes = joinOperation.typeOfJoin
     val joinExpr = generateJoinExpression(joinOperation, dataFrame1, dataFrame2)
-
     val column_names_left = Utils.convertListToDFColumn(joinOperation.selectCriteria("left"), dataFrame1)
-    val column_names_right = Utils.convertListToDFColumn(joinOperation.selectCriteria("right"), dataFrame1)
+    val column_names_right = Utils.convertListToDFColumn(joinOperation.selectCriteria("right"), dataFrame2)
 
-    val selectAll: List[Column] = column_names_left ::: column_names_right
+    val selectAll: List[Column] = if (checkIfNullColumns(column_names_left, column_names_right)) {
+      generateColumnsFromJoinDF(joinOperation.joinCriteria("left"), joinOperation.joinCriteria("right"), dataFrame1, dataFrame2)
+    } else {
+      column_names_left ::: column_names_right
+    }
 
-    dataFrame1.join(dataFrame2, joinExpr, typeOfJoin).select(selectAll: _*)
+    joinTypes.foreach(joinType => {
+      joinMap(joinType) = dataFrame1.join(dataFrame2, joinExpr, joinType).select(selectAll: _*)
+    })
+
+    joinMap
   }
 
   private def generateJoinExpression(join: JoinAndSelectOperation, dataFrame1: DataFrame, dataFrame2: DataFrame) = {
