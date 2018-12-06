@@ -138,6 +138,17 @@
             "left": ["Week End Date","Base SKU","Claim Partner Unit Rebate","C2B Promo Code","Sum_Sum_Claim Quantity"],
             "right": ["Avg_Sum_Sum_Claim Quantity"]
           }
+        },
+        "join03": {
+          "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["SKU","C2B Promo Code"],
+            "right": ["Base SKU","C2B Promo Code"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": []
+          }
         }
       },
       "filter": {
@@ -148,12 +159,10 @@
         "filter02": {
           "conditionTypes": ["and"],
           "conditions": ["Outside Promo Date = Y"]
-        }
-      },
-      "sort" : {
-        "sort01": {
-          "asc": [""],
-          "desc": [""]
+        },
+        "filter03": {
+          "conditionTypes": ["and"],
+          "conditions": ["Include = Y"]
         }
       },
       "group" : {
@@ -163,7 +172,11 @@
         },
         "group02": {
           "cols": ["Base SKU","C2B Promo Code"],
-          "aggregations": {"avg": {"Sum_Sum_Claim Quantity": ""}}
+          "aggregations": {"avg": {"Sum_Sum_Claim Quantity": "Avg_Sum_Sum_Claim Quantity"}}
+        },
+        "group03": {
+          "cols": ["C2B Promo Code","Base SKU"],
+          "aggregations": {"max": {"Week End Date": "Max_Week.End.Date"}}
         }
       }
     },
