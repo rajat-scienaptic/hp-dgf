@@ -5,8 +5,7 @@ import com.scienaptic.jobs.utility.Utils
 import org.apache.spark.sql.{Column, DataFrame}
 
 
-case class JoinAndSelectOperation(@JsonProperty("leftTableAlias") leftTableAlias: String,
-                                  @JsonProperty("rightTableAlias") rightTableAlias: String,
+case class JoinAndSelectOperation(@JsonProperty("isUnknown") isUnknown: String,
                                   @JsonProperty("typeOfJoin") typeOfJoin: List[String],
                                   @JsonProperty("joinCriteria") joinCriteria: Map[String, List[String]],
                                   @JsonProperty("selectCriteria") selectCriteria: Map[String, List[String]]) extends Operation {
@@ -27,10 +26,23 @@ object JoinAndSelectOperation {
     leftColumnSet union rightColumnSet toList
   }
 
+  def getColumnsWithUnknownFilter(column_names: List[Column], isUnknownChecked: String, dataFrame: DataFrame) = {
+    isUnknownChecked match {
+      case "Y" | "y" => {
+        val allCols = Utils.convertListToDFColumn(dataFrame.columns.toList, dataFrame)
+        val removeCols = column_names
+
+        allCols diff removeCols
+      }
+      case "N" | "n" | "" => column_names
+    }
+  }
+
   def doJoinAndSelect(dataFrame1: DataFrame, dataFrame2: DataFrame, joinOperation: JoinAndSelectOperation) = {
 
     var joinMap = Map[String, DataFrame]()
     val joinTypes = joinOperation.typeOfJoin
+    val isUnknownChecked = joinOperation.isUnknown
     val joinExpr = generateJoinExpression(joinOperation, dataFrame1, dataFrame2)
     val column_names_left = Utils.convertListToDFColumn(joinOperation.selectCriteria("left"), dataFrame1)
     val column_names_right = Utils.convertListToDFColumn(joinOperation.selectCriteria("right"), dataFrame2)
@@ -38,7 +50,8 @@ object JoinAndSelectOperation {
     val selectAll: List[Column] = if (checkIfNullColumns(column_names_left, column_names_right)) {
       generateColumnsFromJoinDF(dataFrame1, dataFrame2)
     } else {
-      column_names_left ::: column_names_right
+      // if unknown flag is true then exclude the columns in select and merge both left and right column list
+      getColumnsWithUnknownFilter(column_names_left, isUnknownChecked, dataFrame1) ::: getColumnsWithUnknownFilter(column_names_right, isUnknownChecked, dataFrame2)
     }
 
     joinTypes.foreach(joinType => {
