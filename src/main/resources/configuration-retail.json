@@ -196,14 +196,18 @@
       },
       "filter": {
         "filter01": {
+          "multiWordMap" : {
+            "sum_order_units" : "Sum_Ordered Units"
+          },
           "conditionTypes": [
             "and",
             "or",
             "if-else"
           ],
           "conditions": [
-            "Account = Amazon",
-            "Fixed < 40.0"
+            "sum_order_units = 0",
+            "ASIN = 0",
+            "Title = 0"
           ]
         }
       },

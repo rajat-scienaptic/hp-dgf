@@ -114,6 +114,11 @@ object RetailTransform {
     val staplesComUnitsUnionDF = UnionOperation.doUnion(odomOrcaJoinRightDF, staplesComUnitsFormula01DF)
 
 
+    // AMAZON_ARAP
+    val amazonArapSelectDF = SelectOperation.doSelect(staplesComUnitsFormula01DF,amazomArapSource.selectOperation(SELECT01).cols).get
+
+    // filter
+    val amazonArapFilterDF = FilterOperation.doFilter(amazonArapSelectDF, amazomArapSource.filterOperation(FILTER01), amazomArapSource.filterOperation(FILTER01).conditionTypes(NUMERAL0))
   }
 
 }
