@@ -357,10 +357,13 @@ object CommercialTransform {
 
     //27 - Summarize
     val stORCAGroup03 = stORCASource.groupOperation(GROUP03)
-    val stORCAGroupDealnAccountnID = GroupOperation.doGroup(stORCAFilterBigDealDF, stORCAGroup03.cols, stORCAGroup03.aggregations).get
+    val stORCAGroupDealnAccountnIDDF = GroupOperation.doGroup(stORCAFilterBigDealDF, stORCAGroup03.cols, stORCAGroup03.aggregations).get
 
     //29 - Join
-
+    val stORCAJoin02 = stORCASource.joinOperation(JOIN02)
+    val stORCAJoin02Map = JoinAndSelectOperation.doJoinAndSelect(stORCAGroupDealnAccountnIDDF, stORCAGroupIDnAccountnWEDDF, stORCAJoin02)
+    val stORCAInnerJoin02DF = stORCAJoin02Map("inner")
+    val stORCARightJoin02DF = stORCAJoin02Map("right")
 
     //169 - Union
 
@@ -369,6 +372,7 @@ object CommercialTransform {
 
 
     //30 - Union
+    //val stORCAInnerRightJoinUnionDF =
 
 
     //171 - Join

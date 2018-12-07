@@ -29,7 +29,7 @@ object GroupOperation {
         }
       }
       val aggMap = aggregationMap.toMap
-      println(s"Aggregation Map:  $aggMap")
+      //println(s"Aggregation Map:  $aggMap")
       val groupedDataSet = dataFrame.groupBy(Utils.convertListToDFColumn(cols, dataFrame): _*)
       var aggregatedDataSet = groupedDataSet.agg(aggMap)
       Utils.convertListToDFColumnWithRename(renameMap.toMap, aggregatedDataSet)

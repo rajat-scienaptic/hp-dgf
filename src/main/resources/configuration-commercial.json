@@ -228,12 +228,14 @@
           }
         },
         "join02": {
-          "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["left","inner"],
+          "isUnknown": "y",
+          "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["right","inner"],
           "joinCriteria": {
-            "left": ["Week End Date","Product Base ID","Account Company"], "right": ["Week End Date","Product Base ID","Account Company"]
+            "left": ["Week End Date","Product Base ID","Account Company"],
+            "right": ["Week End Date","Product Base ID","Account Company"]
           },
           "selectCriteria": {
-            "left": [], "right": []
+            "left": [], "right": ["Product Base ID","Product Base Desc","Account Company","Week End Date","Week"]
           }
         }
       },
