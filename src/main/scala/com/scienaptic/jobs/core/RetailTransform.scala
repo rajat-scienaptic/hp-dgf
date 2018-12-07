@@ -83,7 +83,8 @@ object RetailTransform {
 
     // ODOOM ORCA
     // Select01
-    val odomOrcaselect01DF = SelectOperation.doSelect(odomOrcaDF, sourceMap("ODOM_ONLINE_ORCA").selectOperation("select01").cols).get
+    val odomOrcaselect01DF = SelectOperation.doSelect(odomOrcaDF, orcaOdomSource.selectOperation(SELECT01).cols,
+      orcaOdomSource.selectOperation(SELECT01).isUnknown).get
 
     // formula
     val odomOrcaSubsStrFormalaDF = odomOrcaselect01DF.withColumn("Base SKU", substring(col("Vendor Product Code"),
@@ -91,7 +92,7 @@ object RetailTransform {
 
     // group
     val odomOrcaGroup01 = sourceMap("ODOM_ONLINE_ORCA").groupOperation("group01")
-    val odomOrcaGroup01DF = GroupOperation.doGroup(rawXSJoinOutsidePromoTrueDF, rawCalendarGroup02.cols, rawCalendarGroup02.aggregations).get
+    val odomOrcaGroup01DF = GroupOperation.doGroup(odomOrcaSubsStrFormalaDF, odomOrcaGroup01.cols, odomOrcaGroup01.aggregations).get
     val odomOrcaGroupByColsDF = odomOrcaSubsStrFormalaDF
 
     // join

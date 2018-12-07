@@ -26,7 +26,7 @@ object JoinAndSelectOperation {
     leftColumnSet union rightColumnSet toList
   }
 
-  def getColumnsWithUnknownFilter(column_names: List[Column], isUnknownChecked: String, dataFrame: DataFrame) = {
+  def getColumnsWithUnknownFilter(column_names: List[Column], isUnknownChecked: String = "N", dataFrame: DataFrame) = {
     isUnknownChecked match {
       case "Y" | "y" => {
         val allCols = Utils.convertListToDFColumn(dataFrame.columns.toList, dataFrame)
