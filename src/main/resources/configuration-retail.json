@@ -9,7 +9,8 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+          "isUnknown" : "N",
+          "cols": []
         }
       },
       "group" : {
