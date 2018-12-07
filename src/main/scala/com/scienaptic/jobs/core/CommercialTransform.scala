@@ -87,7 +87,7 @@ object CommercialTransform {
     val iecSelectDF = SelectOperation.doSelect(iecDF, iecSelect01.cols, iecSelect01.isUnknown).get
 
     val iecClaimFilter01 = iecSource.filterOperation(FILTER01)
-    val iecFiltered01DF = FilterOperation.doFilter(iecSelectDF, iecClaimFilter01.conditions, iecClaimFilter01.conditionTypes(NUMERAL0))
+    val iecFiltered01DF = FilterOperation.doFilter(iecSelectDF, iecClaimFilter01, iecClaimFilter01.conditionTypes(NUMERAL0))
     //285 - Select
     val xsClaimsSelect01 = xsClaimsSource.selectOperation(SELECT01)
     val xsClaimsSelect01DF = SelectOperation.doSelect(xsClaimsDF, xsClaimsSelect01.cols,xsClaimsSelect01.isUnknown).get
@@ -162,9 +162,9 @@ object CommercialTransform {
     val rawCalendarFilter01 = rawCalendarSource.filterOperation(FILTER01)
     val rawCalendarFilter02 = rawCalendarSource.filterOperation(FILTER02)
     //132
-    val rawXSJoinOutsidePromoTrueDF = FilterOperation.doFilter(rawXSJoinChkOutsidePromoDF, rawCalendarFilter01.conditions, rawCalendarFilter01.conditionTypes(NUMERAL0)).get
+    val rawXSJoinOutsidePromoTrueDF = FilterOperation.doFilter(rawXSJoinChkOutsidePromoDF, rawCalendarFilter01, rawCalendarFilter01.conditionTypes(NUMERAL0)).get
     //134
-    val rawXSJoinOutsidePromoFalseDF = FilterOperation.doFilter(rawXSJoinChkOutsidePromoDF, rawCalendarFilter02.conditions, rawCalendarFilter02.conditionTypes(NUMERAL0)).get
+    val rawXSJoinOutsidePromoFalseDF = FilterOperation.doFilter(rawXSJoinChkOutsidePromoDF, rawCalendarFilter02, rawCalendarFilter02.conditionTypes(NUMERAL0)).get
 
     //133
     val rawCalendarGroup02 = rawCalendarSource.groupOperation(GROUP02)
@@ -182,7 +182,7 @@ object CommercialTransform {
 
     //138 - Filter
     val rawCalendarFilter03 = rawCalendarSource.filterOperation(FILTER03)
-    val rawCalendarFilterIncldeDF = FilterOperation.doFilter(rawCalendarIncludeVarDF,rawCalendarFilter03.conditions,rawCalendarFilter03.conditionTypes(0)).get
+    val rawCalendarFilterIncldeDF = FilterOperation.doFilter(rawCalendarIncludeVarDF, rawCalendarFilter03, rawCalendarFilter03.conditionTypes(NUMERAL0)).get
 
     //144 - Summarize
     val rawCalendarGroup03 = rawCalendarSource.groupOperation(GROUP04)
@@ -341,7 +341,7 @@ object CommercialTransform {
 
     //26 - Filter
     val stORCAFilter01 = stORCASource.filterOperation(FILTER01)
-    val stORCAFilterBigDealDF = FilterOperation.doFilter(stORCAUnionDF, stORCAFilter01.conditionTypes, stORCAFilter01.conditions(0)).get
+    val stORCAFilterBigDealDF = FilterOperation.doFilter(stORCAUnionDF, stORCAFilter01, stORCAFilter01.conditionTypes(NUMERAL0)).get
 
     //167 - Summarize (ST)
     val stORCAGroup01 = stORCASource.groupOperation(GROUP01)
@@ -360,7 +360,7 @@ object CommercialTransform {
     val stORCAGroupDealnAccountnID = GroupOperation.doGroup(stORCAFilterBigDealDF, stORCAGroup03.cols, stORCAGroup03.aggregations).get
 
     //29 - Join
-    
+
 
     //169 - Union
 

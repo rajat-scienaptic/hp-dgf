@@ -15,8 +15,9 @@
       },
       "filter": {
         "filter01": {
+          "multiWordMap" : { "ptnr_Date": "Partner Ship Calendar Date"},
           "conditionTypes": ["and"],
-          "conditions": ["Partner Ship Calendar Date > 31-Oct-2018"]
+          "conditions": ["ptnr_Date > 31-Oct-2018"]
         }
       }
     },
@@ -131,14 +132,17 @@
       },
       "filter": {
         "filter01": {
+          "multiWordMap": { "out_promo_date": "Outside Promo Date"},
           "conditionTypes": ["and"],
-          "conditions": ["Outside Promo Date = N"]
+          "conditions": ["out_promo_date = N"]
         },
         "filter02": {
+          "multiWordMap": { "out_promo_date": "Outside Promo Date"},
           "conditionTypes": ["and"],
           "conditions": ["Outside Promo Date = Y"]
         },
         "filter03": {
+          "multiWordMap": { "Include": "Include"},
           "conditionTypes": ["and"],
           "conditions": ["Include = Y"]
         }
@@ -249,6 +253,7 @@
       },
       "filter": {
         "filter01":{
+          "multiWordMap" : {"big_deal": "Big Deal"},
           "conditionTypes": ["and"],
           "conditions": ["Big Deal = 1"]
         }
