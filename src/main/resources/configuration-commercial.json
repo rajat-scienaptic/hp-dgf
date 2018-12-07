@@ -162,7 +162,8 @@
         },
         "group05": {
           "cols": ["SKU","Week.End.Date","Option Type"],
-          "aggregations": {"max": {"Rebate Amount": "IR"}}
+          "aggregations": {"max": {"Rebate Amount": "IR"},
+                           "first": {"C2B Promo Code":"First_C2B Promo Code"}}
         }
       },
       "sort" : {

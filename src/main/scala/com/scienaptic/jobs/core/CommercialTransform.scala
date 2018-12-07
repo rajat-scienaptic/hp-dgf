@@ -212,7 +212,7 @@ object CommercialTransform {
           .otherwise("Y"))
 
     //157 - Union
-    val rawCalendarEndDateChangeUnionDF = rawCalendarEndDateChangeDF.distinct("SKU","C2B Promo Code","Start Date","New End Date")
+    val rawCalendarEndDateChangeUnionDF = rawCalendarEndDateChangeDF.dropDuplicates(List("SKU","C2B Promo Code","Start Date","New End Date"))
 
     //158 - Append (Cartesian join)
     //TODO: Partition data with >2000 partitions before join
@@ -242,7 +242,7 @@ object CommercialTransform {
     /*  ------------- USED IN 2nd SECTION --------------*/
 
     //163 - Unique
-    val rawCalendarSortDistinctDF = rawCalendarSelectSortDF.distinct("SKU","C2B Promo Code","Week.End.Date")
+    val rawCalendarSortDistinctDF = rawCalendarSelectSortDF.dropDuplicates(List("SKU","C2B Promo Code","Week.End.Date"))
 
     //196 - Join
     val rawCalendarJoin04 = rawCalendarSource.joinOperation(JOIN04)
@@ -360,7 +360,7 @@ object CommercialTransform {
     val stORCAGroupDealnAccountnID = GroupOperation.doGroup(stORCAFilterBigDealDF, stORCAGroup03.cols, stORCAGroup03.aggregations).get
 
     //29 - Join
-
+    
 
     //169 - Union
 
