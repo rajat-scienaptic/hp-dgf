@@ -53,6 +53,10 @@ object CommercialUtility {
     returnDiffBetweenDates(startDate,endDate,"days")
   })
 
+  val dateTimeParseWithLastCharacters = udf((dateStr: String, format: String, chars: Int) => {
+    convertStringToSimpleDate(dateStr.takeRight(chars), format)
+  })
+
 
 
 
@@ -78,8 +82,9 @@ object CommercialUtility {
     "test"
   }
 
-  def convertStringToSimpleDate(dateStr: String/*, format: String*/): Date = {
-    ddmmyyyySimpleFormat.parse(dateStr)
+  def convertStringToSimpleDate(dateStr: String, format: String = "dd-MM-yyyy"): Date = {
+    val simpleFormat = new SimpleDateFormat(format)
+    simpleFormat.parse(dateStr)
   }
 
   def convertStringToLocalDate(dateStr: String/*, format: String*/): LocalDate = {
