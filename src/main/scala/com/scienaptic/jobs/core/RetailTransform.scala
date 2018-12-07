@@ -79,7 +79,7 @@ object RetailTransform {
     val bbyBundleInfo = Utils.loadCSV(executionContext, bbyBundleInfoSource.filePath).get
 
     // AUX TABLES WEEKEND
-    val auxTablesWeekendselect01DF = SelectOperation.doSelect(odomOrcaDF, auxTablesWeekendSource.selectOperation("select01").cols, ).get
+    val auxTablesWeekendselect01DF = SelectOperation.doSelect(odomOrcaDF, auxTablesWeekendSource.selectOperation("select01").cols).get
 
     // ODOOM ORCA
     // Select01
