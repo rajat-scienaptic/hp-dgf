@@ -46,7 +46,7 @@
           "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": ["Week End Date"],
-            "right": ["Week.End.Date"]
+            "right": ["Week_End_Date"]
           },
           "selectCriteria": {
             "left": [], "right": []
@@ -59,7 +59,7 @@
             "right": ["SKU"]
           },
           "selectCriteria": {
-            "left": [], "right": ["SKU","Street Price","Consol SKU","Abbreviated Name","Full Name","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category.1","Category.2","Category.3","Line","PL","Mono/Color","Category Custom","Need Big Data","Top SKU"]
+            "left": [], "right": ["SKU","Street Price","Consol SKU","Abbreviated Name","Full Name","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","Need Big Data","Top SKU"]
           }
         }
       },
@@ -84,7 +84,7 @@
         },
         "select02": {
           "isUnknown":"y",
-          "cols":["Start Date","End Date","Start - Week End","Week End - End","Season Ordered","New End Date","Max_Week.End.Date","End Date Change"]
+          "cols":["Start Date","End Date","Start - Week End","Week End - End","Season Ordered","New End Date","Max_Week_End_Date","End Date Change"]
         }
       },
       "join": {
@@ -158,21 +158,21 @@
         },
         "group03": {
           "cols": ["C2B Promo Code","Base SKU"],
-          "aggregations": {"max": {"Week End Date": "Max_Week.End.Date"}}
+          "aggregations": {"max": {"Week End Date": "Max_Week_End_Date"}}
         },
         "group04" :{
           "cols": ["C2B Promo Code"],
           "aggregations": {"sum": {"dummy": ""}}
         },
         "group05": {
-          "cols": ["SKU","Week.End.Date","Option Type"],
+          "cols": ["SKU","Week_End_Date","Option Type"],
           "aggregations": {"max": {"Rebate Amount": "IR"},
                            "first": {"C2B Promo Code":"First_C2B Promo Code"}}
         }
       },
       "sort" : {
         "sort01": {
-          "asc": ["SKU","Week.End.Date"],
+          "asc": ["SKU","Week_End_Date"],
           "desc": ["Rebate Amount"]
         }
       },
@@ -191,15 +191,44 @@
           "cols": ["fy_week","wed","season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year"]
         }
       },
+      "rename" : {
+        "rename01": {
+          "wed": "Weed_End_Date",
+          "season_ordered":"Season_Ordered",
+          "cal_month": "Cal_Month",
+          "cal_year": "Cal_Year",
+          "fiscal_quarter": "Fiscal_Qtr",
+          "fiscal_year": "Fiscsl_Year"
+        },
+        "rename02": {
+          "wed": "Weed_End_Date",
+          "season": "Season",
+          "season_ordered":"Season_Ordered",
+          "cal_month": "Cal_Month",
+          "cal_year": "Cal_Year",
+          "fiscal_quarter": "Fiscal_Qtr",
+          "fiscal_year": "Fiscsl_Year"
+        }
+      },
       "join": {
         "join01": {
           "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["inner"],
           "joinCriteria": {
-            "left": ["Week End Date"], "right": ["Week.End.Date"]
+            "left": ["Week End Date"], "right": ["Week_End_Date"]
           },
           "selectCriteria": {
             "isUnknown":"y",
             "left": [], "right": []
+          }
+        },
+        "join02": {
+          "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["Week End Date"], "right": ["Week_End_Date"]
+          },
+          "selectCriteria": {
+            "isUnknown":"y",
+            "left": ["Account Company","Week","Claim Quantity","Week End Date"], "right": []
           }
         }
       }
@@ -237,6 +266,17 @@
           "selectCriteria": {
             "left": [], "right": ["Product Base ID","Product Base Desc","Account Company","Week End Date","Week"]
           }
+        },
+        "join03": {
+          "isUnknown": "y",
+          "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["right"],
+          "joinCriteria": {
+            "left": ["Big Deal Nbr","Account Company","Product Base ID"],
+            "right": ["Big Deal ID","Partner Desc","Base SKU"]
+          },
+          "selectCriteria": {
+            "left": [], "right": []
+          }
         }
       },
       "group": {
@@ -251,6 +291,10 @@
         "group03":{
           "cols" : ["Product Base ID","Product Base Desc","Account Company","Week End Date"],
           "aggregations": {"sum" : {"Qty":"Sum_Qty"}}
+        },
+        "group04":{
+          "cols" : ["Partner Desc","Base SKU","Week End Date"],
+          "aggregations": {"sum" : {"Claim Quantity":""}}
         }
       },
       "filter": {
@@ -272,9 +316,43 @@
       },
       "join":{
         "join01": {
+          "isUnknown":"y",
           "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["Big Deal Nbr"], "right": ["C2B Promo Code"]
+          },
+          "selectCriteria": {
+            "left": [], "right": []
+          }
+        },
+        "join02": {
+          "isUnknown":"y",
+          "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["right","inner"],
+          "joinCriteria": {
+            "left": ["Week End Date","Product Base ID","Account Company"],
+            "right": ["Week End Date","Product Base ID","Account Company"]
+          },
+          "selectCriteria": {
+            "left": [], "right": ["Product Base ID","Product Base Desc","Account Company","Week End Date","Week"]
+          }
+        },
+        "join03": {
+          "isUnknown":"y",
+          "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["right","inner"],
+          "joinCriteria": {
+            "left": ["Product Base ID","Account Company","Week End Date"],
+            "right": ["Product Base ID","Account Company","Week End Date"]
+          },
+          "selectCriteria": {
+            "left": [], "right": ["Product Base ID","Product Base Desc","Account Company","Week End Date","Week"]
+          }
+        },
+        "join04": {
+          "isUnknown":"y",
+          "leftTableAlias": "left", "rightTableAlias": "right", "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["Product Base ID","Account Company","Week End Date"],
+            "right": ["Base SKU","Partner Desc","Week End Date"]
           },
           "selectCriteria": {
             "left": [], "right": []
@@ -289,6 +367,35 @@
         "group02": {
           "cols" : ["Big Deal Nbr","Account Company","Product Base ID"],
           "aggregations": {"sum" : {"Qty":"Sum_Qty"}}
+        },
+        "group03": {
+          "cols" : ["Product Base ID","Product Base Desc","Account Company","Week End Date"],
+          "aggregations": {"sum" : {"Qty":""}}
+        },
+        "group04": {
+          "cols" : ["Product Base ID","Product Base Desc","Account Company","Week End Date"],
+          "aggregations": {"sum" : {"Qty":""}}
+        },
+        "group05": {
+          "cols" : ["Account Company","Week End Date","Product Base ID","Product Base Desc"],
+          "aggregations": {"sum" : {"ST Big Deal Qty":"", "ST Qty": "", "ST Non Big Deal Qty": "", "STT Big Deal Qty": "", "STT Qty": "", "STT  Non Big Deal Qty": ""}}
+        }
+      },
+      "filter": {
+        "filter01": {
+          "multiWordMap" : { "big_deal": "Big Deal"},
+          "conditionTypes": ["and"],
+          "conditions": ["big_deal = 1"]
+        }
+      }
+    },
+    "AUX_COMM_RESELLER_OPTIONS" :{
+      "name": "aux_comm_reseller_options",
+      "filePath": "/home/avik/Scienaptic/RnD/data/stt_orca.csv",
+      "select": {
+        "select01": {
+          "isUnknown": "n",
+          "cols": ["Base Account","OPP Option","Reseller Category","season"]
         }
       }
     }
