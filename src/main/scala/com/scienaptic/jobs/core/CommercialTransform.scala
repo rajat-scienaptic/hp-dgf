@@ -57,6 +57,8 @@ object CommercialTransform {
   val ST_ORCA_SOURCE="ST_ORCA" 
   val STT_ORCA_SOURCE="STT_ORCA"
   val AUX_COMM_RESELLER_SOURCE="AUX_COMM_RESELLER_OPTIONS"
+  val AUX_ETAILER_SOURCE="AUX_ETAILER"
+  val CI_ORCA_SOURCE="CI_ORCA"
 
 
   def execute(executionContext: ExecutionContext): Unit = {
@@ -72,6 +74,8 @@ object CommercialTransform {
     val stORCASource = sourceMap(ST_ORCA_SOURCE)
     val sttORCASource = sourceMap(STT_ORCA_SOURCE)
     val auxCommResellerSource = sourceMap(AUX_COMM_RESELLER_SOURCE)
+    val auxEtailerSource = sourceMap(AUX_ETAILER_SOURCE)
+    val ciORCASource = sourceMap(CI_ORCA_SOURCE)
 
     /* Load all sources */
     val iecDF = Utils.loadCSV(executionContext, iecSource.filePath).get.cache()
@@ -82,6 +86,8 @@ object CommercialTransform {
     val stORCADF = Utils.loadCSV(executionContext, stORCASource.filePath).get.cache()
     val sttORCADF = Utils.loadCSV(executionContext, sttORCASource.filePath).get.cache()
     val auxCommResellerDF = Utils.loadCSV(executionContext, auxCommResellerSource.filePath).get.cache()
+    val auxEtailerDF = Utils.loadCSV(executionContext, auxEtailerSource.filePath).get.cache()
+    val ciORCADF = Utils.loadCSV(executionContext, ciORCASource.filePath).get.cache()
 
     val auxWEDSelect01 = auxWEDSource.selectOperation(SELECT01)
     var auxWEDSelectDF = SelectOperation.doSelect(auxWEDDF, auxWEDSelect01.cols, auxWEDSelect01.isUnknown).get
@@ -517,11 +523,61 @@ object CommercialTransform {
     val auxCommSelectDF = SelectOperation.doSelect(auxCommResellerDF, auxCommSelect01.cols, auxCommSelect01.isUnknown).get
 
     //51 - Join
+    val auxWEDJoin03 = auxWEDSource.joinOperation(JOIN03)
+    val auxWEDCommResellerJoinMap = JoinAndSelectOperation.doJoinAndSelect(auxWEDJoinResellerInnerJoinDF, auxWEDSelect01Rename02DF, auxWEDJoin03)
+    val auxWEDCommResellerLeftJoinDF = auxWEDCommResellerJoinMap("left")
+    val auxWEDCommResellerInnerJoinDF = auxWEDCommResellerJoinMap("inner")
 
+    //57 - Formula
+    val auxWEDPromoOptionDF = auxWEDCommResellerLeftJoinDF.withColumn("Promo Option",lit("Option C"))
+
+    //58 - Union
+    val auxWEDCommResellerUnionDF = UnionOperation.doUnion(auxWEDPromoOptionDF, auxWEDCommResellerInnerJoinDF).get
+
+    //68 - Formula
+    val auxWEDCommResellerClusterFeatureDF = auxWEDCommResellerUnionDF.withColumn("Reseller_Cluster",
+      when(col("Reseller Category")==="DRC",col("Reseller"))
+      .when(col("Promo Option")==="Option B",lit("Other - Option B"))
+      .otherwise(lit("Other - Option C")))
+
+
+    //69 - Formula
+    val auxWEDCommResQtynBigDealQtynNonDealQtyDF = auxWEDCommResellerClusterFeatureDF.withColumn("Qty",
+        when((col("Reseller_Cluster")==="Other - Option B") || (col("Reseller_Cluster")==="Other - Option C"),col("ST Qty"))
+        .otherwise(col("STT Qty")))
+      .withColumn("Big Deal Qty", when((col("Reseller_Cluster")==="Other - Option B") || (col("Reseller_Cluster")==="Other - Option C"),col("ST Big Deal Qty"))
+        .otherwise(col("STT Big Deal Qty")))
+      .withColumn("Non Big Deal Qty", when((col("Reseller_Cluster")==="Other - Option B") || (col("Reseller_Cluster")==="Other - Option C"),col("ST Non Big Deal Qty"))
+        .otherwise(col("STT Non Big Deal Qty")))
+
+    //62 - Join
+    val auxWEDJoin04 = auxWEDSource.joinOperation(JOIN04)
+    val auxWEDSKUJoin04Map = JoinAndSelectOperation.doJoinAndSelect(auxWEDCommResQtynBigDealQtynNonDealQtyDF, auxSKUHierDF, auxWEDJoin04)
+    val auxWEDSKUInnerJoinDF = auxWEDSKUJoin04Map("inner")
+    val auxWEDSKULeftJoinDF = auxWEDSKUJoin04Map("left")
+
+    //65 - Group Product, Aggregate ST & STT Qty
+    val auxWEDGroup01 = auxWEDSource.groupOperation(GROUP01)
+    val auxWEDProductGroupDF = GroupOperation.doGroup(auxWEDSKULeftJoinDF, auxWEDGroup01.cols, auxWEDGroup01.aggregations).get
+
+    //67 - Sort
+    val auxWEDSort01 = auxWEDSource.sortOperation(SORT01)
+    val auxWEDPRoductGroupSortedDF = SortOperation.doSort(auxWEDProductGroupDF, auxWEDSort01.ascending, auxWEDSort01.descending).get
 
 
     //201 - Join
     //Gets input from 202,
 
+
+    //114
+    val auxEtailerSelect01 = auxEtailerSource.selectOperation(SELECT01)
+    val auxEtailerSelectedDF = SelectOperation.doSelect(auxEtailerDF, auxEtailerSelect01.cols, auxEtailerSelect01.isUnknown)
+
+    //83
+    val ciORCASelect01 = ciORCASource.selectOperation(SELECT01)
+    val ciORCASelectedDF = SelectOperation.doSelect(ciORCADF, ciORCASelect01.cols, ciORCASelect01.isUnknown).get
+
+    //280
+    //val ciORCAProdIDDF = ciORCASelectedDF.withColumn("Product Base ID",when())
   }
 }
