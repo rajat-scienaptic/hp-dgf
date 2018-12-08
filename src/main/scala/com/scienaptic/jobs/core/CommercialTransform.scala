@@ -4,6 +4,8 @@ import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.bean.{UnionOperation, _}
 import com.scienaptic.jobs.utility.Utils
 import com.scienaptic.jobs.utility.CommercialUtility._
+import org.apache.avro.generic.GenericData
+import org.apache.xerces.impl.xpath.regex
 //import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.expressions.Window
@@ -506,8 +508,8 @@ object CommercialTransform {
       .otherwise("Option_B"))
 
     //202 - Filter
-    //TODO: implement in utility format
-    val sttORCAFilterOptionTypeDF = sttORCAOptionTypeDF.where(col("Option Type")===lit("Option C"))
+    val sttORCAFilter02 = sttORCASource.filterOperation(FILTER02)
+    val sttORCAFilterOptionTypeDF = FilterOperation.doFilter(sttORCAOptionTypeDF, sttORCAFilter02, sttORCAFilter02.conditionTypes(NUMERAL0)).get
 
     //49 - Select
     val auxWEDRename02 = auxWEDSource.renameOperation("rename02")
@@ -564,20 +566,183 @@ object CommercialTransform {
     val auxWEDSort01 = auxWEDSource.sortOperation(SORT01)
     val auxWEDPRoductGroupSortedDF = SortOperation.doSort(auxWEDProductGroupDF, auxWEDSort01.ascending, auxWEDSort01.descending).get
 
+    //201 - Join (SKU)
+    val sttORCAJoin05 = sttORCASource.joinOperation(JOIN05)
+    val sttORCAJoin05Map = JoinAndSelectOperation.doJoinAndSelect(auxWEDSKUInnerJoinDF, sttORCAFilterOptionTypeDF, sttORCAJoin05)
+    val sttORCALeftJoin05DF = sttORCAJoin05Map("left")
+    val sttORCAInnerJoin05DF = sttORCAJoin05Map("inner")
 
-    //201 - Join
-    //Gets input from 202,
+    //203 - Union
+    val sttORCAInnerLeftJoinUnionDF = UnionOperation.doUnion(sttORCAInnerJoin05DF, sttORCALeftJoin05DF).get
 
+    //197 - Formula (Reseller_Cluster)
+    val sttORCAResellerClusterDF = sttORCAInnerLeftJoinUnionDF.withColumn("Reseller_Cluster",
+      when((col("Option Type (SKU)")!=="Option C") && (col("Reseller_Cluster")==="Other - Option C"),"Other - Option B")
+      .otherwise(col("Reseller_Cluster")))
+
+    //70 - Multi field cast
+    val sttORCAResellerClusterCastedDF = sttORCAResellerClusterDF.withColumn("Qty",col("Qty").cast(StringType))
+      .withColumn("Big Deal Qty", col("Big Deal Qty").cast(StringType))
+      .withColumn("Non Big Deal Qty", col("Non Big Deal Qty").cast(StringType))
+    /* Used in 71 and 74*/
+
+    //73 - Filter
+    val auxWEDFilter01 = auxWEDSource.filterOperation(FILTER01)
+    val auxWEDOptionTypFilteredDF = FilterOperation.doFilter(auxWEDSelect01Rename02DF, auxWEDFilter01, auxWEDFilter01.conditionTypes(NUMERAL0)).get
+    val auxWEDFilter02 = auxWEDSource.filterOperation(FILTER02)
+    val auxWEDOptionTypNotFilteredDF = FilterOperation.doFilter(auxWEDSelect01Rename02DF, auxWEDFilter02, auxWEDFilter02.conditionTypes(NUMERAL0)).get
+
+    //71 - Join (SKU and Week_End_Date with filtered Option Typr)
+    val auxWEDJoin05 = auxWEDSource.joinOperation(JOIN05)
+    val auxWEDJoin05Map = JoinAndSelectOperation.doJoinAndSelect(sttORCAResellerClusterCastedDF, auxWEDOptionTypFilteredDF, auxWEDJoin05)
+    val auxWEDLeftJoin05DF = auxWEDJoin05Map("left")
+    val auxWEDInnerJoin05DF = auxWEDJoin05Map("inner")
+
+    //74 - Join (SKU and Week_End_Date with unfiltered Option Type)
+    val auxWEDJoin06 = auxWEDSource.joinOperation(JOIN06)
+    val auxWEDJoin06Map = JoinAndSelectOperation.doJoinAndSelect(sttORCAResellerClusterCastedDF, auxWEDOptionTypNotFilteredDF, auxWEDJoin06)
+    val auxWEDLeftJoin06DF = auxWEDJoin06Map("left")
+    val auxWEDInnerJoin06DF = auxWEDJoin06Map("inner")
+
+    //87 - Union
+    val auxWED05JoinsUnionDF = UnionOperation.doUnion(auxWEDLeftJoin05DF, auxWEDInnerJoin05DF).get
+
+    //86 - Union
+    val auxWED06JoinsUnionDF = UnionOperation.doUnion(auxWEDLeftJoin06DF, auxWEDInnerJoin06DF).get
+      .withColumnRenamed("IR","Option IR")
+
+    //88 - Join (SKU, Reseller, Week_End_Date Unions of filtered and unfiltered joins)
+    val auxWEDJoin07 = auxWEDSource.joinOperation(JOIN07)
+    val auxWEDJoin07Map = JoinAndSelectOperation.doJoinAndSelect(auxWED05JoinsUnionDF, auxWED06JoinsUnionDF, auxWEDJoin07)
+    val auxWEDInnerJoin07DF = auxWEDJoin07Map("inner")
+      .withColumnRenamed("IR","All IR")
+      .withColumnRenamed("First_C2B Promo Code","Right_First_C2B Promo Code")
 
     //114
     val auxEtailerSelect01 = auxEtailerSource.selectOperation(SELECT01)
-    val auxEtailerSelectedDF = SelectOperation.doSelect(auxEtailerDF, auxEtailerSelect01.cols, auxEtailerSelect01.isUnknown)
+    val auxEtailerSelectedDF = SelectOperation.doSelect(auxEtailerDF, auxEtailerSelect01.cols, auxEtailerSelect01.isUnknown).get
 
     //83
     val ciORCASelect01 = ciORCASource.selectOperation(SELECT01)
     val ciORCASelectedDF = SelectOperation.doSelect(ciORCADF, ciORCASelect01.cols, ciORCASelect01.isUnknown).get
 
     //280
-    //val ciORCAProdIDDF = ciORCASelectedDF.withColumn("Product Base ID",when())
+    var ciORCAProdIDDF = ciORCASelectedDF.withColumn("Product Base ID",
+      when(col("Product Base ID")==="M9L74A","M9L75A")
+        .when((col("Product Base ID")==="J9V91A")||(col("Product Base ID")==="J9V92A"),"J9V90A")
+        .otherwise(col("Product Base ID")))
+    ciORCAProdIDDF = ciORCAProdIDDF.withColumn("Product Base ID",
+      when((col("Product Base ID")==="X7N08A") || (col("Product Base ID")==="Z9L26A") || (col("Product Base ID")==="Z9L25A") || (col("Product Base ID")==="Z3Z93A") || (col("Product Base ID")==="Z3Z94A"),"X7N07A")
+        .when(col("Product Base ID")==="B3Q17A","B3Q11A")
+        .otherwise(col("Product Base ID")))
+
+    //90 - Join
+    val ciORCAJoin01 = ciORCASource.joinOperation(JOIN01)
+    val ciORCAJoin01Map = JoinAndSelectOperation.doJoinAndSelect(ciORCAProdIDDF, auxWEDSelect01Rename02DF, ciORCAJoin01)
+    val ciORCAauxWEDJoinDF = ciORCAJoin01Map("inner")
+
+    //91 - Formula Beg_Inventory
+    val ciORCABegInvFeatureDF = ciORCAauxWEDJoinDF.withColumn("Beg_Inventory",addDaystoDateStringUDF(col("Week_End_Date"),lit(7)))
+
+    //94 - Summarize
+    val ciORCAGroup01 = ciORCASource.groupOperation(GROUP01)
+    val ciORCABegGroupDF = GroupOperation.doGroup(ciORCABegInvFeatureDF, ciORCAGroup01.cols, ciORCAGroup01.aggregations).get
+
+    //93     /* 331 not implemented coz used for browse*/
+    val auxWEDIRInvClusterPromoIDDF = auxWEDInnerJoin07DF.withColumn("IR",
+        when((col("All IR").isNull) && (col("Option IR").isNull),0)
+        .otherwise(findMaxBetweenTwo(col("All IR"),col("Option IR"))))
+      .withColumn("Inventory Cluster", when((col("Reseller_Cluster")==="Other - Option B") || (col("Reseller_Cluster")=="Other - Option C"), lit("Distributor"))
+          .otherwise(col("Reseller_Cluster")))
+      .withColumn("Promo ID", findMaxBetweenTwo(col("Promo ID"),col("Right_First_C2B Promo Code")))
+
+    //96 - Join input from 94
+    /*292 not implemented*/
+    val ciORCAJoin02 = ciORCASource.joinOperation(JOIN02)
+    val ciORCAJoin02Map = JoinAndSelectOperation.doJoinAndSelect(auxWEDIRInvClusterPromoIDDF, ciORCABegGroupDF, ciORCAJoin02)
+    val ciORCAInnerJoin02DF = ciORCAJoin02Map("inner")
+    val ciORCALeftJoin02DF = ciORCAJoin02Map("left")
+
+    //100
+    val ciORCAJoin02UnionDF = UnionOperation.doUnion(ciORCAInnerJoin02DF, ciORCALeftJoin02DF).get
+
+    //102 - Select
+    val ciORCASelect02 = ciORCASource.selectOperation(SELECT02)
+    val ciORCAUnionSelectDF = SelectOperation.doSelect(ciORCAJoin02UnionDF, ciORCASelect02.cols, ciORCASelect02.isUnknown).get
+
+    //115 - Join
+    val ciORCAJoin03 = ciORCASource.joinOperation(JOIN03)
+    val ciORCAJoin03Map = JoinAndSelectOperation.doJoinAndSelect(ciORCAUnionSelectDF, auxEtailerSelectedDF, ciORCAJoin03)
+    val ciORCAInnerJoin03DF = ciORCAJoin03Map("inner")
+    val ciORCALeftJoin03DF = ciORCAJoin03Map("left")
+
+    //117 - Add eTailer
+    val ciORCALeftJoineTailerFeatureDF = ciORCALeftJoin03DF.withColumn("eTailer",lit(0))
+
+    //116 - Union
+    val ciORCAJoins03UnionDF = UnionOperation.doUnion(ciORCALeftJoineTailerFeatureDF, ciORCAInnerJoin03DF).get
+
+    //104 - Join
+    /*216 not implemented*/
+    val ciORCAJoin04 = ciORCASource.joinOperation(JOIN04)
+    val ciORCAJoin04Map = JoinAndSelectOperation.doJoinAndSelect(ciORCAJoins03UnionDF, auxWEDPRoductGroupSortedDF, ciORCAJoin04)
+    val ciORCAInnerJoin04DF = ciORCAJoin04Map("inner")
+    val ciORCALeftJoin04DF = ciORCAJoin04Map("left")
+    //110 /*Need not implement for now - browse*/
+
+    //227 - Union
+    val ciORCAJoins04UnionDF = UnionOperation.doUnion(ciORCAInnerJoin04DF, ciORCALeftJoin04DF).get
+
+    //112 - Formula
+    val ciORCAInvQtySpendPromoFlgSeasonBigDealNonBigDealDF = ciORCAJoins04UnionDF.withColumn("Inv_Qty",
+        when((col("Inv_Qty").isNull) || (col("Inv_Qty") < 0), 0)
+        .otherwise(col("Inv_Qty")))
+      .withColumn("Spend",col("IR")*col("Non_Big_Deal_Qty"))
+      .withColumn("Promo Flag", when(col("IR")===0,0).otherwise(1))
+      .withColumn("Big_Deal_Qty",when((col("Resller")==="General Data Tech") && (col("SKU")==="D3Q17A") && (col("Week_End_Datte")==="2017-04-29"),1183)
+        .when((col("Reseller")==="General Data Tech") && (col("SKU")==="D3Q21A") && (col("Week_End_Date")==="2017-04-29"), 1181)
+        .otherwise(col("Big_Deal_Qty")))
+      .withColumn("Non_Big_Deal_Qty", when((col("Resller")==="General Data Tech") && (col("SKU")==="D3Q17A") && (col("Week_End_Date")==="2017-04-29"),10)
+        .when((col("Reseller")==="General Data Tech") && (col("SKU")==="D3Q21A") && (col("Week_End_Date")==="2017-04-29"),12)
+        .otherwise(col("Non_Big_Deal_Qty")))
+      .withColumn("Season",when(col("IPSLES")==="IPS",col("Season"))
+        .when(col("Week_End_Date")==="2016-10-01","BTS'16")
+        .when(col("Week_End_Date")==="2016-12-31","HOL'16")
+        .when(col("Week_End_Date")==="2017-04-01","BTB'17")
+        .when(col("Week_End_Date")==="2017-07-01","STS'17")
+        .otherwise(col("Season")))
+
+
+    //330
+
+    //103
+
+    //322 - Read new source
+
+    //327
+
+    //323
+
+    //324
+
+    //326
+
+    //328
+
+    //325
+
+    //329
+
+    //229
+    /********  Main One  *******/
+
+    //221 /* Need not do it right now - browse*/
+
+    //270
+    /********  Main One  *******/
+
+    //278
+
+
   }
 }

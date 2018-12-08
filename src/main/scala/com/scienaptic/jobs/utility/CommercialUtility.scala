@@ -57,6 +57,10 @@ object CommercialUtility {
     convertStringToSimpleDate(dateStr.takeRight(chars), format)
   })
 
+  val findMaxBetweenTwo = udf((first: String, second: String) => {
+    math.max(first.toDouble, second.toDouble)
+  })
+
 
 
 

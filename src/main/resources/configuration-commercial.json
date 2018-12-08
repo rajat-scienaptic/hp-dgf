@@ -257,6 +257,39 @@
             "left": ["Product Base Desc","Product Base ID","Reseller Category","ST Big Deal Qty","ST Non Big Deal Deal Qty","ST Qty","STT Big Deal Qty","STT Non Big Deal Deal Qty","STT Qty"],
             "right": ["Added","Full Name","L0: Format","L3: IDC Category","Need Big Data","Need IFSC?","NPD Model","NPD Product Category","Platform Name","Sales Product Name","SKU","Top SKU"]
           }
+        },
+        "join05": {
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["SKU","Week_End_Date"], "right": ["SKU","Week_End_Date"]
+          },
+          "selectCriteria": {
+            "isUnknown":"y",
+            "left": [],
+            "right": ["SKU","Week_End_Date","Option Type"]
+          }
+        },
+        "join06": {
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["SKU","Week_End_Date","Promo Option"], "right": ["SKU","Week_End_Date","Option Type"]
+          },
+          "selectCriteria": {
+            "isUnknown":"y",
+            "left": [],
+            "right": []
+          }
+        },
+        "join07": {
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["SKU","Reseller","Week_End_Date"], "right": ["SKU","Reseller","Week_End_Date"]
+          },
+          "selectCriteria": {
+            "isUnknown":"y",
+            "left": [""],
+            "right": ["Big Deal Qty","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Non Big Deal Qty","Promo Option","Qty","Reseller","Reseller_Cluster","Season","Season_Ordered","Week_End_Date","SKU_Name","Brand","Category","Category Custom","Category Subgroup","Category.1","Category.2","Category.3","SKU","ES date","GA date","HPS/OPS","IPSLES","L1.Category","L2.Category","Line","Mono/Color","PL","PLC Status","Series","Street.Price","All","Option_B","Option_C","Option Type (SKU)","Top SKU","Need IFS2?"]
+          }
         }
       },
       "group" : {
@@ -269,6 +302,18 @@
         "sort01": {
           "asc": ["Product Base ID"],
           "desc": ["Sum_STT Qty","Sum_ST Qty"]
+        }
+      },
+      "filter": {
+        "filter01": {
+          "multiWordMap" : { "opt_type": "Option_Type"},
+          "conditionTypes": ["and"],
+          "conditions": ["opt_type = All"]
+        },
+        "filter02": {
+          "multiWordMap" : { "opt_type": "Option_Type"},
+          "conditionTypes": ["and"],
+          "conditions": ["opt_type != All"]
         }
       }
     },
@@ -396,6 +441,17 @@
           "selectCriteria": {
             "left": [], "right": []
           }
+        },
+        "join05": {
+          "isUnknown":"y",
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["SKU"],
+            "right": ["SKU"]
+          },
+          "selectCriteria": {
+            "left": [], "right": ["SKU","Max_Week_End_Date"]
+          }
         }
       },
       "group": {
@@ -425,6 +481,11 @@
           "multiWordMap" : { "big_deal": "Big Deal"},
           "conditionTypes": ["and"],
           "conditions": ["big_deal = 1"]
+        },
+        "filter02": {
+          "multiWordMap" : { "opt_type": "Option Type", "opt_c": "Option C"},
+          "conditionTypes": ["and"],
+          "conditions": ["opt_type = opt_c"]
         }
       }
     },
@@ -442,16 +503,79 @@
       "name": "aux_etailer",
       "filePath": ".....",
       "select": {
-        "isUnknown": "y",
-        "cols": ["Location ID","Account","QP 1_0 Letter to Send"]
+        "select01" :{
+          "isUnknown": "y",
+          "cols": ["Location ID","Account","QP 1_0 Letter to Send"]
+        }
       }
     },
     "CI_ORCA": {
       "name": "ci_orca",
       "filePath": ".....",
       "select": {
-        "isUnknown": "y",
-        "cols": ["Quarter","Month","Weed Desc","Product Base Desc"]
+        "select01": {
+          "isUnknown": "y",
+          "cols": ["Quarter","Month","Weed Desc","Product Base Desc"]
+        },
+        "select02":{
+          "isUnknown": "y",
+          "cols": ["All","All IR","Inventory Cluster","Option IR","Option_B","Option_C","Option Type (SKU)","Need IFS2?","Right_All","Right_Option_B","Right_Option_C","Right_Need IFS2?"]
+        }
+      },
+      "join": {
+        "join01": {
+          "isUnknown": "y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["Week"],
+            "right": ["fy_week"]
+          },
+          "selectCriteria": {
+            "left": [], "right": ["fy_week","season","season_ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year"]
+          }
+        },
+        "join02": {
+          "isUnknown": "y",
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["SKU","Week_End_Date","Inventory Cluster"],
+            "right": ["Product Base ID","Beg_Inventory","Resller Cluster"]
+          },
+          "selectCriteria": {
+            "left": ["Option Type (SKU)","Right_All","Right_C2B Promo Code","Right_Need IFS2?","Right_Option_B","Right_Option_C"],
+            "right": ["Beg_Inventory","Product Base ID","Reseller Cluster"]
+          }
+        },
+        "join03": {
+          "isUnknown": "y",
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["Reseller"],
+            "right": ["Reseller ORCA Name"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": []
+          }
+        },
+        "join04": {
+          "isUnknown": "y",
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["SKU"],
+            "right": ["SKU"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": []
+          }
+        }
+      },
+      "group": {
+        "group01": {
+          "cols" : ["Beg_Inventory","Reseller Cluster","Product Base ID"],
+          "aggregations": {"sum" : {"Inventory Total Qty":"Inv Qty"}}
+        }
       }
     }
   }
