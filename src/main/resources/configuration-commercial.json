@@ -575,7 +575,34 @@
         "group01": {
           "cols" : ["Beg_Inventory","Reseller Cluster","Product Base ID"],
           "aggregations": {"sum" : {"Inventory Total Qty":"Inv Qty"}}
+        },
+        "group02": {
+          "cols" : ["Brand","Category","Category Custom","Category_Subgroup","Category_1","Category_2","Category_3","ES_date","GA_date","HPS/OPS","IPSLES","L1_Category","L2_Category","Line","Mono/Color","PL","PLC Status","Promo ID","Promo_Option","Reseller","Reseller_Cluster","Season","Series","SKU","SKU_Name","Street_Price","Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","eTailer","Promo Flag"],
+          "aggregations": {"sum" : {"Big_Deal_Qty":"Sum	Big_Deal_Qty", "Non_Big_Deal_Qty": "Sum	Non_Big_Deal_Qty", "Qty": "Sum_Qty","Inv_Qty": "Sum	Inv_Qty", "Spend": "Sum	Spend"},
+                           "max" : {"IR": "IR"}}
         }
+      },
+      "sort": {
+        "sort01": {
+          "asc": ["Week_End_Date","SKU","Resller_Cluster"],
+          "desc": []
+        }
+      }
+    },
+    "TIDY_HPS_2016_17_HISTORICAL_POS": {
+      "name": "tidy_hps_2016_17_historical_pos",
+      "filePath": "...",
+      "select":  {
+
+      },
+      "filter": {
+
+      },
+      "group": {
+
+      },
+      "join": {
+
       }
     }
   }

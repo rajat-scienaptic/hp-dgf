@@ -61,6 +61,7 @@ object CommercialTransform {
   val AUX_COMM_RESELLER_SOURCE="AUX_COMM_RESELLER_OPTIONS"
   val AUX_ETAILER_SOURCE="AUX_ETAILER"
   val CI_ORCA_SOURCE="CI_ORCA"
+  val HISTORICAL_POS_SOURCE="TIDY_HPS_2016_17_HISTORICAL_POS"
 
 
   def execute(executionContext: ExecutionContext): Unit = {
@@ -78,6 +79,7 @@ object CommercialTransform {
     val auxCommResellerSource = sourceMap(AUX_COMM_RESELLER_SOURCE)
     val auxEtailerSource = sourceMap(AUX_ETAILER_SOURCE)
     val ciORCASource = sourceMap(CI_ORCA_SOURCE)
+    val histPOSSource = sourceMap(HISTORICAL_POS_SOURCE)
 
     /* Load all sources */
     val iecDF = Utils.loadCSV(executionContext, iecSource.filePath).get.cache()
@@ -90,6 +92,7 @@ object CommercialTransform {
     val auxCommResellerDF = Utils.loadCSV(executionContext, auxCommResellerSource.filePath).get.cache()
     val auxEtailerDF = Utils.loadCSV(executionContext, auxEtailerSource.filePath).get.cache()
     val ciORCADF = Utils.loadCSV(executionContext, ciORCASource.filePath).get.cache()
+    val histPOSDF = Utils.loadCSV(executionContext, histPOSSource.filePath).get.cache()
 
     val auxWEDSelect01 = auxWEDSource.selectOperation(SELECT01)
     var auxWEDSelectDF = SelectOperation.doSelect(auxWEDDF, auxWEDSelect01.cols, auxWEDSelect01.isUnknown).get
@@ -713,9 +716,13 @@ object CommercialTransform {
         .otherwise(col("Season")))
 
 
-    //330
+    //330 - Summarize
+    val ciORCAGroup02 = ciORCASource.groupOperation(GROUP02)
+    val ciORCAGroup02DF = GroupOperation.doGroup(ciORCAInvQtySpendPromoFlgSeasonBigDealNonBigDealDF, ciORCAGroup02.cols, ciORCAGroup02.aggregations).get
 
     //103
+    val ciORCASort01 = ciORCASource.sortOperation(SORT01)
+    val ciORCAFeaturesSortedDF = SortOperation.doSort(ciORCAGroup02DF, ciORCASort01.ascending, ciORCASort01.descending).get
 
     //322 - Read new source
 
