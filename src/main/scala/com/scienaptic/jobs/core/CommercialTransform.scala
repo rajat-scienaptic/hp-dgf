@@ -109,27 +109,35 @@ object CommercialTransform {
 
     val iecClaimFilter01 = iecSource.filterOperation(FILTER01)
     val iecFiltered01DF = FilterOperation.doFilter(iecSelectDF, iecClaimFilter01, iecClaimFilter01.conditionTypes(NUMERAL0))
+    //TODO: Check if this filter will work, else use spark date functions
+    //TODO: filter Partner Ship Calendar Date for last 5 years data
+
     //285 - Select
     val xsClaimsSelect01 = xsClaimsSource.selectOperation(SELECT01)
     val xsClaimsSelect01DF = SelectOperation.doSelect(xsClaimsDF, xsClaimsSelect01.cols,xsClaimsSelect01.isUnknown).get
     /*TODO: Rename 3 columns*/
 
+    //287 - Union
     /* Union XS Claims and IEC Claims DF TODO: Check if both Dataframes have same number of columns*/
     val xsClaimsUnionDF = UnionOperation.doUnion(iecFiltered01DF.get, xsClaimsSelect01DF).get
 
+    //Formula
     val baseSKUproductDF = xsClaimsUnionDF.withColumn("Base SKU",createBaseSKUFromProductIDUDF(col("Product ID")))
     val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String",extractWeekFromDateUDF(col("Partner Ship Calendar Date"), col("week")))
+      .withColumn("Temp Date Calc", getEpochNumberFromDateString(col("Temp Date Calc String")))
     val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",addDaystoDateStringUDF(col("Partner Ship Calendar Date"), col("day")))
     val xsClaimsBaseSKUDF = weekEndDateDF.withColumn("Base SKU",baseSKUFormulaUDF(col("Base SKU")))
 
     //127
     val xsClaimsGroup01 = xsClaimsSource.groupOperation("group01")
-    val xsClaimsGroupedClaimQuanAggDF = GroupOperation.doGroup(xsClaimsBaseSKUDF,xsClaimsGroup01.cols,xsClaimsGroup01.aggregations).get
-      .withColumnRenamed("Claim Quantity","Sum_Claim Quantity")
+    //Prev Group usage
+    //val xsClaimsGroupedClaimQuanAggDF = GroupOperation.doGroup(xsClaimsBaseSKUDF,xsClaimsGroup01.cols,xsClaimsGroup01.aggregations).get
+    val xsClaimsGroupedClaimQuanAggDF = GroupOperation.doGroup(xsClaimsBaseSKUDF,xsClaimsGroup01).get
+      //Select (sent in saurabh chat)
 
     //172
     val xsClaimsGroup02 = xsClaimsSource.groupOperation("group02")
-    var xsClaimsGroupSumClaimQuanAggDF = GroupOperation.doGroup(xsClaimsGroupedClaimQuanAggDF, xsClaimsGroup02.cols, xsClaimsGroup02.aggregations).get
+    var xsClaimsGroupSumClaimQuanAggDF = GroupOperation.doGroup(xsClaimsGroupedClaimQuanAggDF, xsClaimsGroup02).get
 
     val rawCalendarSelect01= rawCalendarSource.selectOperation(SELECT01)
     var rawCalendarSelectDF = SelectOperation.doSelect(rawCalendarDF, rawCalendarSelect01.cols, rawCalendarSelect01.isUnknown).get
@@ -137,7 +145,7 @@ object CommercialTransform {
 
     //124
     val rawCalendarGroup01 = rawCalendarSource.groupOperation("group01")
-    var rawCalendarGroupDF = GroupOperation.doGroup(rawCalendarSelectDF, rawCalendarGroup01.cols, rawCalendarGroup01.aggregations).get
+    var rawCalendarGroupDF = GroupOperation.doGroup(rawCalendarSelectDF, rawCalendarGroup01).get
     rawCalendarGroupDF = rawCalendarGroupDF.drop("dummy")//.drop("sum") //TODO: check what is name of sum aggregated column
 
     //243 - Join
@@ -189,7 +197,7 @@ object CommercialTransform {
 
     //133
     val rawCalendarGroup02 = rawCalendarSource.groupOperation(GROUP02)
-    val rawCalendarGroup02DF = GroupOperation.doGroup(rawXSJoinOutsidePromoTrueDF, rawCalendarGroup02.cols, rawCalendarGroup02.aggregations).get
+    val rawCalendarGroup02DF = GroupOperation.doGroup(rawXSJoinOutsidePromoTrueDF, rawCalendarGroup02).get
     //rawCalendarGroup02DF = rawCalendarGroup02DF.withColumnRenamed("Sum_Sum_Claim Quantity","Avg_Sum_Sum_Claim Quantity")
 
     //135 - Join
@@ -207,7 +215,7 @@ object CommercialTransform {
 
     //144 - Summarize
     val rawCalendarGroup03 = rawCalendarSource.groupOperation(GROUP04)
-    val rawCalendarPromonSKUGroupDF = GroupOperation.doGroup(rawCalendarFilterIncldeDF,rawCalendarGroup03.cols, rawCalendarGroup03.aggregations).get
+    val rawCalendarPromonSKUGroupDF = GroupOperation.doGroup(rawCalendarFilterIncldeDF,rawCalendarGroup03).get
 
     //146 - Join
     /*TODO: Suppose joining criteria is same but in select nothing given,
@@ -273,14 +281,14 @@ object CommercialTransform {
     //19 - Summarize (Group on C2B Promo Code)
     var rawCalendarEndDateSelectGroupDF = rawCalendarEndDateFilterSelectDF.withColumn("dummy",lit(1))
     val rawCalendarGroup04 = rawCalendarSource.groupOperation(GROUP04)
-    rawCalendarEndDateSelectGroupDF = GroupOperation.doGroup(rawCalendarEndDateSelectGroupDF, rawCalendarGroup04.cols, rawCalendarGroup04.aggregations).get
+    rawCalendarEndDateSelectGroupDF = GroupOperation.doGroup(rawCalendarEndDateSelectGroupDF, rawCalendarGroup04).get
       .drop("dummy")
       .cache()
     /*  ------------- USED IN 2nd SECTION -------- */
 
     //85
     val rawCalendarGroup05 = rawCalendarSource.groupOperation(GROUP05)
-    var rawCalendarSortGroupDF = GroupOperation.doGroup(rawCalendarSelectSortDF, rawCalendarGroup05.cols, rawCalendarGroup05.aggregations).get
+    var rawCalendarSortGroupDF = GroupOperation.doGroup(rawCalendarSelectSortDF, rawCalendarGroup05).get
     val wind = Window.partitionBy(col("C2B Promo Code"))
     rawCalendarSortGroupDF = rawCalendarSortGroupDF.withColumn("rn",row_number.over(wind))
       .where(col("rn") === 1)
@@ -366,19 +374,19 @@ object CommercialTransform {
 
     //167 - Summarize (ST)
     val stORCAGroup01 = stORCASource.groupOperation(GROUP01)
-    val stORCAGroupDealnAccountIDDF = GroupOperation.doGroup(stORCAUnionDF, stORCAGroup01.cols, stORCAGroup01.aggregations).get
+    val stORCAGroupDealnAccountIDDF = GroupOperation.doGroup(stORCAUnionDF, stORCAGroup01).get
 
     //168 - Summarize (STT)
     val sttORCAGroup02 = sttORCASource.groupOperation(GROUP02)
-    val sttORCAGroupDealnAccountIDDF = GroupOperation.doGroup(sttORCAUnionDF, sttORCAGroup02.cols, sttORCAGroup02.aggregations).get
+    val sttORCAGroupDealnAccountIDDF = GroupOperation.doGroup(sttORCAUnionDF, sttORCAGroup02).get
 
     //28 - Summarize
     val stORCAGroup02 = stORCASource.groupOperation(GROUP02)
-    val stORCAGroupIDnAccountnWEDDF = GroupOperation.doGroup(stORCAUnionDF, stORCAGroup02.cols, stORCAGroup02.aggregations).get
+    val stORCAGroupIDnAccountnWEDDF = GroupOperation.doGroup(stORCAUnionDF, stORCAGroup02).get
 
     //27 - Summarize
     val stORCAGroup03 = stORCASource.groupOperation(GROUP03)
-    val stORCAGroupDealnAccountnIDDF = GroupOperation.doGroup(stORCAFilterBigDealDF, stORCAGroup03.cols, stORCAGroup03.aggregations).get
+    val stORCAGroupDealnAccountnIDDF = GroupOperation.doGroup(stORCAFilterBigDealDF, stORCAGroup03).get
 
     //29 - Join
     val stORCAJoin02 = stORCASource.joinOperation(JOIN02)
@@ -399,7 +407,7 @@ object CommercialTransform {
 
     //183 - Summarize
     val stORCAGroup04 = stORCASource.groupOperation(GROUP04)
-    val stORCAGroupPartnerSKUWEDDF = GroupOperation.doGroup(stORCAJoin03DF, stORCAGroup04.cols, stORCAGroup04.aggregations).get
+    val stORCAGroupPartnerSKUWEDDF = GroupOperation.doGroup(stORCAJoin03DF, stORCAGroup04).get
 
     //30 - Union
     val stORCAInnerRightJoinUnionDF = UnionOperation.doUnion(stORCAInnerJoin02DF, stORCARightJoin02DF).get
@@ -417,11 +425,11 @@ object CommercialTransform {
 
     //35 - Summarize
     val sttORCAGroup03 = sttORCASource.groupOperation(GROUP03)
-    val sttORCAGroup03DF = GroupOperation.doGroup(sttORCABigDealFilterDF,sttORCAGroup03.cols, sttORCAGroup03.aggregations).get
+    val sttORCAGroup03DF = GroupOperation.doGroup(sttORCABigDealFilterDF,sttORCAGroup03).get
 
     //36 - Summarize
     val sttORCAGroup04 = sttORCASource.groupOperation(GROUP04)
-    val sttORCAGroup04DF = GroupOperation.doGroup(sttORCAUnionDF,sttORCAGroup04.cols, sttORCAGroup04.aggregations).get
+    val sttORCAGroup04DF = GroupOperation.doGroup(sttORCAUnionDF,sttORCAGroup04).get
 
     //37 - Join
     val sttORCAJoin02 = sttORCASource.joinOperation(JOIN02)
@@ -461,7 +469,7 @@ object CommercialTransform {
 
     //182 - Summarize
     val sttORCAGroup05 = sttORCASource.groupOperation(GROUP05)
-    val sttORCAAccountWEDProductGroupedDF = GroupOperation.doGroup(sttORCAJoinsUnionCastedDF, sttORCAGroup05.cols, sttORCAGroup05.aggregations).get
+    val sttORCAAccountWEDProductGroupedDF = GroupOperation.doGroup(sttORCAJoinsUnionCastedDF, sttORCAGroup05).get
 
     //176 - Join
     val sttORCAJoin04 = sttORCASource.joinOperation(JOIN04)
@@ -497,7 +505,7 @@ object CommercialTransform {
     //199 - Summarize
     val sttORCAwithDummyDF = sttORCAUnionDF.withColumn("dummy",lit(1))
     val sttORCAGroup01 = sttORCASource.groupOperation(GROUP01)
-    val sttORCAGroupDF = GroupOperation.doGroup(sttORCAwithDummyDF, sttORCAGroup01.cols, sttORCAGroup01.aggregations)
+    val sttORCAGroupDF = GroupOperation.doGroup(sttORCAwithDummyDF, sttORCAGroup01)
       .get
       .drop("dummy")
 
@@ -567,7 +575,7 @@ object CommercialTransform {
 
     //65 - Group Product, Aggregate ST & STT Qty
     val auxWEDGroup01 = auxWEDSource.groupOperation(GROUP01)
-    val auxWEDProductGroupDF = GroupOperation.doGroup(auxWEDSKULeftJoinDF, auxWEDGroup01.cols, auxWEDGroup01.aggregations).get
+    val auxWEDProductGroupDF = GroupOperation.doGroup(auxWEDSKULeftJoinDF, auxWEDGroup01).get
 
     //67 - Sort
     val auxWEDSort01 = auxWEDSource.sortOperation(SORT01)
@@ -653,7 +661,7 @@ object CommercialTransform {
 
     //94 - Summarize
     val ciORCAGroup01 = ciORCASource.groupOperation(GROUP01)
-    val ciORCABegGroupDF = GroupOperation.doGroup(ciORCABegInvFeatureDF, ciORCAGroup01.cols, ciORCAGroup01.aggregations).get
+    val ciORCABegGroupDF = GroupOperation.doGroup(ciORCABegInvFeatureDF, ciORCAGroup01).get
 
     //93     /* 331 not implemented coz used for browse*/
     val auxWEDIRInvClusterPromoIDDF = auxWEDInnerJoin07DF.withColumn("IR",
@@ -722,7 +730,7 @@ object CommercialTransform {
 
     //330 - Summarize
     val ciORCAGroup02 = ciORCASource.groupOperation(GROUP02)
-    val ciORCAGroup02DF = GroupOperation.doGroup(ciORCAInvQtySpendPromoFlgSeasonBigDealNonBigDealDF, ciORCAGroup02.cols, ciORCAGroup02.aggregations).get
+    val ciORCAGroup02DF = GroupOperation.doGroup(ciORCAInvQtySpendPromoFlgSeasonBigDealNonBigDealDF, ciORCAGroup02).get
 
     //103
     val ciORCASort01 = ciORCASource.sortOperation(SORT01)
@@ -745,7 +753,7 @@ object CommercialTransform {
 
     //326 - Group
     val hisPOSGroup01 = histPOSSource.groupOperation(GROUP01)
-    val histPOSGroupedDF = GroupOperation.doGroup(histPOSFilterChannelDF, hisPOSGroup01.cols, hisPOSGroup01.aggregations).get
+    val histPOSGroupedDF = GroupOperation.doGroup(histPOSFilterChannelDF, hisPOSGroup01).get
       .withColumnRenamed("season_ordered","Season_Ordered")
       .withColumnRenamed("cal_month","Cal_Month")
       .withColumnRenamed("cal_year","Cal_Year")
@@ -833,7 +841,7 @@ object CommercialTransform {
 
     //277 - Summarize
     val archivePOSGroup01 = archivePOSSource.groupOperation(GROUP01)
-    val archivePOSGroup01DF = GroupOperation.doGroup(archivePOSNewVarsDF.withColumn("dummy",lit(1)), archivePOSGroup01.cols, archivePOSGroup01.aggregations).get.drop("dummy").drop("sum_dummy")
+    val archivePOSGroup01DF = GroupOperation.doGroup(archivePOSNewVarsDF.withColumn("dummy",lit(1)), archivePOSGroup01).get.drop("dummy").drop("sum_dummy")
 
     //295 - Filter Week_End_Date
     val archivePOSFilter01 = archivePOSSource.filterOperation(FILTER01)
@@ -844,7 +852,8 @@ object CommercialTransform {
     //TODO: use writeCSV utility here
 
     //302 - summarize (Add new column max of Week_End_Date) & 303 - Append
-    val histPOSSelect03MaxWEDDF = histPOSSelect03DF.withColumn("Max_Week_End_Date", max(col("Week_End_date")))
+    val max_WED = histPOSSelect03DF.agg(max("Week_End_date")).head().getInt(0)
+    val histPOSSelect03MaxWEDDF = histPOSSelect03DF.withColumn("Max_Week_End_Date", lit(max_WED))
 
     //299 - Select : NOT REQUIRED as all fields getting selected
 
@@ -854,7 +863,7 @@ object CommercialTransform {
 
     //297 - Summarize
     val histPOSGroup02 = histPOSSource.groupOperation(GROUP02)
-    val histPOSGroup02DF = GroupOperation.doGroup(histPOSFilteredSeasonDF, histPOSGroup02.cols, histPOSGroup02.aggregations).get
+    val histPOSGroup02DF = GroupOperation.doGroup(histPOSFilteredSeasonDF, histPOSGroup02).get
 
     //300 - Pivot
     val histPOSPivotDF = histPOSGroup02DF.groupBy("Reseller_Cluster").pivot("Week_End_Date").agg(first("Sum_Qty"))
@@ -867,7 +876,7 @@ object CommercialTransform {
 
     //306 - Summarize
     val histPOSGroup03 = histPOSSource.groupOperation(GROUP03)
-    val histPOSGroup03DF = GroupOperation.doGroup(histPOSFilteredSeasonDF, histPOSGroup03.cols, histPOSGroup03.aggregations).get
+    val histPOSGroup03DF = GroupOperation.doGroup(histPOSFilteredSeasonDF, histPOSGroup03).get
 
     //309 - Cross tab Pivot
     val histPOSPivot02DF = histPOSGroup03DF.groupBy("Reseller_Cluster").pivot("Week_End_Date").agg(first("Sum_Inv_Qty"))
@@ -878,7 +887,7 @@ object CommercialTransform {
 
     //314 - 317: Same as 302 - 298
     val histPOSGroup04 = histPOSSource.groupOperation(GROUP04)
-    val histPOSGroup04DF = GroupOperation.doGroup(histPOSFilteredSeasonDF, histPOSGroup04.cols, histPOSGroup04.aggregations).get
+    val histPOSGroup04DF = GroupOperation.doGroup(histPOSFilteredSeasonDF, histPOSGroup04).get
 
     //319 - add diff%
     val histPOSDiffPerDF = histPOSGroup04DF.withColumn("diff%", (col("Sum_Qty Diff")/col("Sum_Qty"))*100)
