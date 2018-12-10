@@ -61,6 +61,10 @@ object CommercialUtility {
     math.max(first.toDouble, second.toDouble)
   })
 
+  val convertDatetoFormat = udf((dateStr: String, currentFormat: String, targetFormat:String) => {
+    val dateObj = convertStringToSimpleDate(dateStr, currentFormat)
+    new SimpleDateFormat(targetFormat).format(dateObj)
+  })
 
 
 

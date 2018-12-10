@@ -18,9 +18,9 @@ object UnionOperation {
     Try {
       val df1Columns = dataFrame.columns toSet
       val df2Columns = dataFrame2.columns toSet
-      if (df1Columns.size != df2Columns.size) {
+      /*if (df1Columns.size != df2Columns.size) {
         //TODO: Throw Log warning or exception
-      }
+      }*/
       val columnsUnion = df1Columns union(df2Columns)
       dataFrame.select(expr(df1Columns, columnsUnion):_*).union(dataFrame2.select(expr(df2Columns, columnsUnion):_*))
     }

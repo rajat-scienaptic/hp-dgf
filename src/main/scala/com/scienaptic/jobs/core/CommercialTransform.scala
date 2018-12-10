@@ -4,13 +4,15 @@ import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.bean.{UnionOperation, _}
 import com.scienaptic.jobs.utility.Utils
 import com.scienaptic.jobs.utility.CommercialUtility._
+import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior
 import org.apache.avro.generic.GenericData
 import org.apache.xerces.impl.xpath.regex
 //import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.types._
-
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 
 object CommercialTransform {
@@ -62,6 +64,7 @@ object CommercialTransform {
   val AUX_ETAILER_SOURCE="AUX_ETAILER"
   val CI_ORCA_SOURCE="CI_ORCA"
   val HISTORICAL_POS_SOURCE="TIDY_HPS_2016_17_HISTORICAL_POS"
+  val ARCHIVE_POS_QTY_COMMERCIAL_SOURCE="ARCHIVE_POS_QTY_COMMERCIAL"
 
 
   def execute(executionContext: ExecutionContext): Unit = {
@@ -80,6 +83,7 @@ object CommercialTransform {
     val auxEtailerSource = sourceMap(AUX_ETAILER_SOURCE)
     val ciORCASource = sourceMap(CI_ORCA_SOURCE)
     val histPOSSource = sourceMap(HISTORICAL_POS_SOURCE)
+    val archivePOSSource = sourceMap(ARCHIVE_POS_QTY_COMMERCIAL_SOURCE)
 
     /* Load all sources */
     val iecDF = Utils.loadCSV(executionContext, iecSource.filePath).get.cache()
@@ -92,7 +96,7 @@ object CommercialTransform {
     val auxCommResellerDF = Utils.loadCSV(executionContext, auxCommResellerSource.filePath).get.cache()
     val auxEtailerDF = Utils.loadCSV(executionContext, auxEtailerSource.filePath).get.cache()
     val ciORCADF = Utils.loadCSV(executionContext, ciORCASource.filePath).get.cache()
-    val histPOSDF = Utils.loadCSV(executionContext, histPOSSource.filePath).get.cache()
+    val archivePOSDF = Utils.loadCSV(executionContext, archivePOSSource.filePath).get.cache()
 
     val auxWEDSelect01 = auxWEDSource.selectOperation(SELECT01)
     var auxWEDSelectDF = SelectOperation.doSelect(auxWEDDF, auxWEDSelect01.cols, auxWEDSelect01.isUnknown).get
@@ -266,7 +270,7 @@ object CommercialTransform {
     val rawCalendarDistinctLeftJoinDF = JoinAndSelectOperation.doJoinAndSelect(xsClaimsGroupSumClaimQuanAggDF, rawCalendarSortDistinctDF, rawCalendarJoin04)("left")
     /*  ------------- USED IN 2nd SECTION --------------*/
 
-    //19
+    //19 - Summarize (Group on C2B Promo Code)
     var rawCalendarEndDateSelectGroupDF = rawCalendarEndDateFilterSelectDF.withColumn("dummy",lit(1))
     val rawCalendarGroup04 = rawCalendarSource.groupOperation(GROUP04)
     rawCalendarEndDateSelectGroupDF = GroupOperation.doGroup(rawCalendarEndDateSelectGroupDF, rawCalendarGroup04.cols, rawCalendarGroup04.aggregations).get
@@ -725,31 +729,163 @@ object CommercialTransform {
     val ciORCAFeaturesSortedDF = SortOperation.doSort(ciORCAGroup02DF, ciORCASort01.ascending, ciORCASort01.descending).get
 
     //322 - Read new source
+    val histPOSDF = Utils.loadCSV(executionContext, histPOSSource.filePath).get.cache()
 
-    //327
+    //327 - Convert wed to dateFormat
+    val histPOSDateFormattedDF = histPOSDF.withColumn("Week_End_Date", convertDatetoFormat(col("wed"),lit("mm-DD-yyyy"),lit("MM/dd/yyyy")))
+      .drop("wed")
 
-    //323
+    //323 - Select
+    val histPOSSelect01 = histPOSSource.selectOperation(SELECT01)
+    val histPOSSelectDF = SelectOperation.doSelect(histPOSDateFormattedDF, histPOSSelect01.cols, histPOSSelect01.isUnknown).get
 
-    //324
+    //324 - Filter channel
+    val histPOSFilter01 = histPOSSource.filterOperation(FILTER01)
+    val histPOSFilterChannelDF = FilterOperation.doFilter(histPOSSelectDF, histPOSFilter01, histPOSFilter01.conditionTypes(NUMERAL0)).get
 
-    //326
+    //326 - Group
+    val hisPOSGroup01 = histPOSSource.groupOperation(GROUP01)
+    val histPOSGroupedDF = GroupOperation.doGroup(histPOSFilterChannelDF, hisPOSGroup01.cols, hisPOSGroup01.aggregations).get
+      .withColumnRenamed("season_ordered","Season_Ordered")
+      .withColumnRenamed("cal_month","Cal_Month")
+      .withColumnRenamed("cal_year","Cal_Year")
+      .withColumnRenamed("fiscal_quarter","Fiscal_Quarter")
+      .withColumnRenamed("fiscal_year","Fiscal_Year")
 
-    //328
+    //328 - Formula (Big_Deal_Qty, eTailer, IR, Non_Big_Deal_Qty, Qty, Promo_Flag, Spend)
+    val histPOSNewVariablesDF = histPOSGroupedDF.withColumn("Big_Deal_Qty",lit(0))
+      .withColumn("eTailer",lit(0))
+      .withColumn("IR",lit(0))
+      .withColumn("Non_Big_Deal_Qty",col("Sum_Qty"))
+      .withColumn("Qty",col("Big_Deal_Qty")+col("Non_Big_Deal_Qty"))
+      .withColumn("Promo Flag",lit(0))
+      .withColumn("Spend",col("IR")*col("Non_Big_Deal_Qty"))
 
-    //325
+    //325 - Join
+    val histPOSJoin01 = histPOSSource.joinOperation(JOIN01)
+    val histPOSJoinSKUHierMap = JoinAndSelectOperation.doJoinAndSelect(histPOSNewVariablesDF, auxSKUHierDF, histPOSJoin01)
+    val histPOSInnerJoinSKUDF = histPOSJoinSKUHierMap("inner")
 
-    //329
+    //329 - Union
+    val histPOSUnionCIDF = UnionOperation(histPOSInnerJoinSKUDF, ciORCAFeaturesSortedDF)
 
-    //229
+    //229 - Select
     /********  Main One  *******/
+    val histPOSSelect02 = histPOSSource.selectOperation(SELECT02)
+    val histPOSSelect02DF = SelectOperation.doSelect(histPOSUnionCIDF, histPOSSelect02.cols, histPOSSelect02.isUnknown).get
 
     //221 /* Need not do it right now - browse*/
+    val histPOSSelectUniqueDF = histPOSSelect02DF.dropDuplicates(List("IR","Reseller","Week_End_Date","SKU"))
 
-    //270
+    //270 - Workflow run date
     /********  Main One  *******/
+    val histPOSWithRunDateDF = histPOSSelectUniqueDF.withColumn("Workflow Run Date", lit(LocalDateTime.now.format(DateTimeFormatter.ofPattern("YYYYMMdd_HHmmss"))))
 
-    //278
+    //278 - Select
+    val histPOSSelect03 = histPOSSource.selectOperation(SELECT03)
+    val histPOSSelect03DF = SelectOperation.doSelect(histPOSSelect02DF, histPOSSelect03.cols, histPOSSelect03.isUnknown).get
 
+    //242 - Save posqty_output_commercial.csv
+    histPOSSelect02DF.show()
+    //TODO: histPOSSelect02DF - writeCSV utility
 
+    //269 - Save posqty_output_commercial_with_date.csv
+    histPOSWithRunDateDF.show()
+    //TODO: writeCSV utility
+
+    //264 - 267  --> Reading last written posqty_Commercial output.csv
+
+    //262 - Select
+    val archivePOSSelect01 = archivePOSSource.selectOperation(SELECT01)
+    val archivePOS = SelectOperation.doSelect(archivePOSDF, archivePOSSelect01.cols, archivePOSSelect01.isUnknown).get
+
+    //281 - Join
+    val archivePOSJoin01 = archivePOSSource.joinOperation(JOIN01)
+    val archivePOSJoin01Map = JoinAndSelectOperation.doJoinAndSelect(archivePOS, histPOSSelect03DF, archivePOSJoin01)
+    val arhivePOSInnerJoin01DF = archivePOSJoin01Map("inner")
+    val arhivePOSLeftJoin01DF = archivePOSJoin01Map("left")
+    val arhivePOSRightJoin01DF = archivePOSJoin01Map("right")
+
+    //282 - Select
+    val archivePOSSelect02 = archivePOSSource.selectOperation(SELECT02)
+    val archivePOSRightJoinSelectDF = SelectOperation.doSelect(arhivePOSRightJoin01DF, archivePOSSelect02.cols, archivePOSSelect02.isUnknown).get
+
+    //283 - Union
+    val archivePOSJoinsUnionDF = UnionOperation.doUnion(UnionOperation.doUnion(arhivePOSInnerJoin01DF, arhivePOSLeftJoin01DF).get, arhivePOSRightJoin01DF).get
+
+    //279 - Select
+    val archivePOSSelect03 = archivePOSSource.selectOperation(SELECT03)
+    val archivePOSSelect03DF = SelectOperation.doSelect(archivePOSJoinsUnionDF, archivePOSSelect03.cols, archivePOSSelect03.isUnknown).get
+
+    //260 - Formula
+    val archivePOSNewVarsDF = archivePOSSelect03DF.withColumn("Qty", when(col("Qty").isNull,0).otherwise(col("Qty")))
+      .withColumn("New Qty", when(col("New Qty").isNull,0).otherwise(col("New Qty")))
+      .withColumn("Big_Deal_Qty", when(col("Big_Deal_Qty").isNull,0).otherwise(col("Big_Deal_Qty")))
+      .withColumn("New Big_Deal_Qty", when(col("New Big_Deal_Qty").isNull,0).otherwise(col("New Big_Deal_Qty")))
+      .withColumn("Non_Big_Deal_Qty", when(col("Non_Big_Deal_Qty").isNull,0).otherwise(col("Non_Big_Deal_Qty")))
+      .withColumn("New Non_Big_Deal_Qty", when(col("New Non_Big_Deal_Qty").isNull,0).otherwise(col("New Non_Big_Deal_Qty")))
+      .withColumn("Qty Diff", when((col("New Qty")-col("Qty")).isNull,0).otherwise(col("New Qty")-col("Qty")))
+      .withColumn("Big Deal QTY Diff", when((col("New Big_Deal_Qty")-col("Big_Deal_Qty")).isNull,0).otherwise(col("New Big_Deal_Qty")-col("Big_Deal_Qty")))
+      .withColumn("Non Big Deal QTY Qty", when((col("New Non_Big_Deal_Qty")-col("Non_Big_Deal_Qty")).isNull,0).otherwise(col("New Non_Big_Deal_Qty")-col("Non_Big_Deal_Qty")))
+      .withColumn("Qty Diff", when(col("Qty Diff").isNull,0).otherwise(col("Qty Diff")))
+      .withColumn("Big Deal QTY Diff", when(col("Big Deal QTY Diff").isNull,0).otherwise(col("Big Deal QTY Diff")))
+      .withColumn("Non Big deal Qty Diff", when(col("Non Big deal Qty Diff").isNull,0).otherwise(col("Non Big deal Qty Diff")))
+
+    //277 - Summarize
+    val archivePOSGroup01 = archivePOSSource.groupOperation(GROUP01)
+    val archivePOSGroup01DF = GroupOperation.doGroup(archivePOSNewVarsDF.withColumn("dummy",lit(1)), archivePOSGroup01.cols, archivePOSGroup01.aggregations).get.drop("dummy").drop("sum_dummy")
+
+    //295 - Filter Week_End_Date
+    val archivePOSFilter01 = archivePOSSource.filterOperation(FILTER01)
+    val archivePOSFilterWEDDF = FilterOperation.doFilter(archivePOSGroup01DF, archivePOSFilter01, archivePOSFilter01.conditionTypes(NUMERAL0)).get
+
+    //294 - Write QA File
+    archivePOSFilterWEDDF.show()
+    //TODO: use writeCSV utility here
+
+    //302 - summarize (Add new column max of Week_End_Date) & 303 - Append
+    val histPOSSelect03MaxWEDDF = histPOSSelect03DF.withColumn("Max_Week_End_Date", max(col("Week_End_date")))
+
+    //299 - Select : NOT REQUIRED as all fields getting selected
+
+    //298 - Filter
+    val histPOSFilter02 = histPOSSource.filterOperation(FILTER02)
+    val histPOSFilteredSeasonDF = FilterOperation.doFilter(histPOSSelect03MaxWEDDF, histPOSFilter02, histPOSFilter02.conditionTypes(NUMERAL0)).get
+
+    //297 - Summarize
+    val histPOSGroup02 = histPOSSource.groupOperation(GROUP02)
+    val histPOSGroup02DF = GroupOperation.doGroup(histPOSFilteredSeasonDF, histPOSGroup02.cols, histPOSGroup02.aggregations).get
+
+    //300 - Pivot
+    val histPOSPivotDF = histPOSGroup02DF.groupBy("Reseller_Cluster").pivot("Week_End_Date").agg(first("Sum_Qty"))
+
+    //304  - Save
+    histPOSPivotDF.show()
+    //TODO: save as Commercial qty check.csv using writeCSV
+
+    //311 - 377 same as 302 - 298
+
+    //306 - Summarize
+    val histPOSGroup03 = histPOSSource.groupOperation(GROUP03)
+    val histPOSGroup03DF = GroupOperation.doGroup(histPOSFilteredSeasonDF, histPOSGroup03.cols, histPOSGroup03.aggregations).get
+
+    //309 - Cross tab Pivot
+    val histPOSPivot02DF = histPOSGroup03DF.groupBy("Reseller_Cluster").pivot("Week_End_Date").agg(first("Sum_Inv_Qty"))
+
+    //313 - Save
+    histPOSPivot02DF.show()
+    //TODO: histPOSPivot02DF write this using writeCSV
+
+    //314 - 317: Same as 302 - 298
+    val histPOSGroup04 = histPOSSource.groupOperation(GROUP04)
+    val histPOSGroup04DF = GroupOperation.doGroup(histPOSFilteredSeasonDF, histPOSGroup04.cols, histPOSGroup04.aggregations).get
+
+    //319 - add diff%
+    val histPOSDiffPerDF = histPOSGroup04DF.withColumn("diff%", (col("Sum_Qty Diff")/col("Sum_Qty"))*100)
+
+    //321 - Save
+    histPOSDiffPerDF.show()
+    //TODO: Save this as Commercial_POS_old_vs_new.csv
   }
 }
+

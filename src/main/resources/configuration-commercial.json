@@ -593,16 +593,110 @@
       "name": "tidy_hps_2016_17_historical_pos",
       "filePath": "...",
       "select":  {
+        "select01": {
+          "isUnknown": "n",
+          "cols": ["Account","Account Consol","Channel","Inv : Saleable Qty","Sales : Net Qty","season","HP_SKU_Short","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Week_End_Date"]
+        },
+        "select02": {
+          "isUnknown": "y",
+          "cols": ["Right_First_C2B Promo Code"]
+        },
+        "select03": {
+          "isUnknown": "y",
+          "cols": ["Line","PL","L1_Category","L2_Category","PLC Status","GA_date","ES_date","Category_3","Right_Series","Right_First_C2B Promo Code"]
+        }
+      },
+      "filter": {
+        "filter01":{
+          "multiWordMap" : {},
+          "conditionTypes": ["and"],
+          "conditions": ["Channel = Commercial"]
+        }
+      },
+      "group": {
+        "group01": {
+          "cols" : ["HP_SKU_Short","Reseller","Reseller_Cluster","Week_End_Date","Season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year"],
+          "aggregations": {"sum":{"Qty":"Sum_Qty", "Inv_Qty_Raw":"Inv_Qty"}}
+        }
+      },
+      "join": {
+        "join01": {
+          "isUnknown": "y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["HP_SKU_Short"],
+            "right": ["SKU"]
+          },
+          "selectCriteria": {
+            "left": ["HP_SKU_Short","Sum_Qty"],
+            "right": ["SKU","Full Name","Platform Name","Added","L3: IDC Category","L0: Format","Need Big Data","Need IFS2?","Top SKU","NPD Product Category","NPD Model","Sales Product Name"]
+          }
+        }
+      }
+    },
+    "ARCHIVE_POS_QTY_COMMERCIAL": {
+      "name": "archive_pos_qty_commercial",
+      "filePath": "...",
+      "select": {
+        "select01": {
+          "isUnknown": "y",
+          "cols": ["Line","PL","L1_Category","L2_Category","PLC Status","GA_date","ES_date","Category_3","Right_Series","Right_First_C2B Promo Code"]
+        },
+        "select02": {
+          "isUnknown": "y",
+          "cols": ["POS_Qty","Raw_POS_Qty","Distribution_Inv"]
+        },
+        "select03": {
+          "isUnknown": "y",
+          "cols": ["New SKU","New SKU_Name","New Reseller","New Reseller_Cluster","New Week_End_Date","New Season","New Promo_Option","New Street_Price","New IPSLES","New Category","New Category_Subgroup","New IR","New Inv_Qty","New Category_1","New Category_2","New HPS/OPS","New Promo ID","New Series","New eTailer","New Spend","New Promo Flag"]
+        }
+      },
+      "group": {
+        "group01": {
+          "cols" : ["Reseller_Cluster","SKU","SKU_Name","Reseller","Week_End_Date","Season","Promo_Option","IPSLES","Category","Category_Subgroup"],
+          "aggregations": {"sum":{"dummy":"sum_dummy"}}
+        },
+        "group02": {
+          "cols" : ["Week_End_Date","Reseller_Cluster"],
+          "aggregations": {"sum":{"Qty":"Sum_Qty"}}
+        },
+        "group03": {
+          "cols" : ["Week_End_Date","Reseller_Cluster"],
+          "aggregations": {"sum":{"Inv_Qty":"Sum_Inv_Qty"}}
+        },
+        "group04": {
+          "cols" : ["Week_End_Date","Reseller_Cluster"],
+          "aggregations": {"sum":{"New Qty":"Sum_New Qty", "Qty": "Sum_Qty", "Qty Diff": "Sum_Qty Diff"}}
+        }
+      },
+      "join":{
+        "join01": {
+          "isUnknown": "y",
+          "typeOfJoin": ["left","right","inner"],
+          "joinCriteria": {
+            "left": ["SKU","Reseller","Season","Category","Week_End_Date"],
+            "right": ["SKU","Reseller","Season","Category","Week_End_Date"]
+          },
+          "selectCriteria": {
+            "left": ["Right_Series"],
+            "right": ["SKU","Full Name","Platform Name","Added","L3: IDC Category","L0: Format","Need Big Data","Need IFS2?","Top SKU","NPD Product Category","NPD Model","Sales Product Name"]
+          }
+        }
+      },
+      "sort": {
 
       },
       "filter": {
-
-      },
-      "group": {
-
-      },
-      "join": {
-
+        "filter01": {
+          "multiWordMap" : {},
+          "conditionTypes": ["and"],
+          "conditions": ["Week_End_Date > 2016-01-01"]
+        },
+        "filter02": {
+          "multiWordMap": {},
+          "conditionTypes": ["and"],
+          "conditions": ["Season = BTB'18"]
+        }
       }
     }
   }
