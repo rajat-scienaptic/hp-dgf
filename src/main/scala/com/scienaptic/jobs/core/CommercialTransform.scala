@@ -60,6 +60,9 @@ object CommercialTransform {
   val GROUP06="group06"
   val GROUP07="group07"
 
+  val RENAME01="rename01"
+  val RENAME02="rename02"
+
   val IEC_SOURCE="IEC_CLAIMS" 
   val XS_CLAIMS_SOURCE="XS_CLAIMS" 
   val RAW_CALENDAR_SOURCE="RAW_MASTER_CALENDAR"
@@ -106,9 +109,9 @@ object CommercialTransform {
     val archivePOSDF = Utils.loadCSV(executionContext, archivePOSSource.filePath).get.cache()
 
     val auxWEDSelect01 = auxWEDSource.selectOperation(SELECT01)
-    var auxWEDSelectDF = doSelect(auxWEDDF, auxWEDSelect01.cols, auxWEDSelect01.isUnknown).get
-    val auxWEDRename01 = auxWEDSource.renameOperation("rename01")
-    auxWEDSelectDF = Utils.convertListToDFColumnWithRename(auxWEDRename01, auxWEDSelectDF)
+    val auxWEDSelectDF = doSelect(auxWEDDF, auxWEDSelect01.cols, auxWEDSelect01.isUnknown).get
+    //val auxWEDRename01 = auxWEDSource.renameOperation("rename01")
+    //auxWEDSelectDF = Utils.convertListToDFColumnWithRename(auxWEDRename01, auxWEDSelectDF)
 
 
     val iecSelect01 = iecSource.selectOperation(SELECT01)
@@ -147,12 +150,13 @@ object CommercialTransform {
     //120
     val rawCalendarSelect01= rawCalendarSource.selectOperation(SELECT01)
     var rawCalendarSelectDF = doSelect(rawCalendarDF, rawCalendarSelect01.cols, rawCalendarSelect01.isUnknown).get
-    rawCalendarSelectDF = rawCalendarSelectDF.withColumn("dummy",lit(1))
+    //rawCalendarSelectDF = rawCalendarSelectDF.withColumn("dummy",lit(1))
 
     //124
     val rawCalendarGroup01 = rawCalendarSource.groupOperation(GROUP01)
-    var rawCalendarGroupDF = doGroup(rawCalendarSelectDF, rawCalendarGroup01).get
-    rawCalendarGroupDF = rawCalendarGroupDF.drop("dummy")
+    /*var rawCalendarGroupDF = doGroup(rawCalendarSelectDF, rawCalendarGroup01).get
+    rawCalendarGroupDF = rawCalendarGroupDF.drop("dummy")*/
+    var rawCalendarGroupDF = rawCalendarSelectDF.dropDuplicates(rawCalendarGroup01.cols)
 
     //243 - Join
     val iecXSJoin01 = xsClaimsSource.joinOperation(JOIN01)
@@ -294,11 +298,9 @@ object CommercialTransform {
     /*  ------------- USED IN 2nd SECTION --------------*/
 
     //19 - Summarize (Group on C2B Promo Code)
-    var rawCalendarEndDateSelectGroupDF = rawCalendarEndDateFilterSelectDF.withColumn("dummy",lit(1))
+    var rawCalendarEndDateSelectGroupDF = rawCalendarEndDateFilterSelectDF//.withColumn("dummy",lit(1))
     val rawCalendarGroup04 = rawCalendarSource.groupOperation(GROUP04)
-    rawCalendarEndDateSelectGroupDF = doGroup(rawCalendarEndDateSelectGroupDF, rawCalendarGroup04).get
-      .drop("dummy")
-      .cache()
+    rawCalendarEndDateSelectGroupDF = rawCalendarEndDateSelectGroupDF.dropDuplicates(rawCalendarGroup04.cols) //doGroup(rawCalendarEndDateSelectGroupDF, rawCalendarGroup04).get.drop("dummy").cache()
     /*  ------------- USED IN 2nd SECTION -------- */
 
     //85
@@ -405,7 +407,9 @@ object CommercialTransform {
 
     //29 - Join
     val stORCAJoin02 = stORCASource.joinOperation(JOIN02)
-    val stORCAJoin02Map = doJoinAndSelect(stORCAGroupDealnAccountnIDDF, stORCAGroupIDnAccountnWEDDF, stORCAJoin02)
+    val stORCAGroupIDnAccountnWEDWithRenamedDF = stORCAGroupIDnAccountnWEDDF.withColumnRenamed("Product Base ID","Righ_Product Base ID")
+      .withColumnRenamed("Product Base Desc","Right_Product Base Desc").withColumnRenamed("Account Company","Right_Account Company").withColumnRenamed("Week End Date","Right_Week End Date")
+    val stORCAJoin02Map = doJoinAndSelect(stORCAGroupDealnAccountnIDDF.withColumnRenamed("Qty","Big Deal Qty"), stORCAGroupIDnAccountnWEDWithRenamedDF, stORCAJoin02)
     val stORCAInnerJoin02DF = stORCAJoin02Map("inner")
     val stORCARightJoin02DF = stORCAJoin02Map("right")
 
@@ -448,7 +452,8 @@ object CommercialTransform {
 
     //37 - Join
     val sttORCAJoin02 = sttORCASource.joinOperation(JOIN02)
-    val sttORCAJoin02Map = doJoinAndSelect(sttORCAGroup03DF, sttORCAGroup04DF, sttORCAJoin02)
+    val sttORCAGroup04WithRenamedDF = sttORCAGroup04DF.withColumnRenamed("Product Base ID","Right_Product Base ID").withColumnRenamed("Product Base Desc","Right_Product Base Desc").withColumnRenamed("Account Company","Right_Account Company").withColumnRenamed("Week End Date","Right_Week End Date").withColumnRenamed("Week","Right_Week")
+    val sttORCAJoin02Map = doJoinAndSelect(sttORCAGroup03DF.withColumnRenamed("Qty","Big Deal Qty"), sttORCAGroup04WithRenamedDF, sttORCAJoin02)
     val sttORCAInnerJoin02DF = sttORCAJoin02Map("inner")
     val sttORCARightJoin02DF = sttORCAJoin02Map("right")
 
@@ -463,8 +468,12 @@ object CommercialTransform {
     val sttORCACastedNonBigDealDF = sttORCACastedDF.withColumn("Non Big Deal Qty",col("Qty")-col("Big Deal Qty"))
 
     //42 - Join
+    val stORCANonBigDealWithRenamedDF = stORCANonBigDealDF.withColumnRenamed("Big Deal Qty","ST Big Deal Qty").withColumnRenamed("Qty","ST Qty").withColumnRenamed("Non Big Deal Qty","ST Non Big Deal Qty")
+    val sttORCACastedNonBigDealWithRenamedDF = sttORCACastedNonBigDealDF.withColumnRenamed("Product Base ID","Right_Product Base ID").withColumnRenamed("Product Base Desc","Right_Product Base Desc")
+      .withColumnRenamed("Account Company","Right_Account Company").withColumnRenamed("Week End Date","Right_Week End Date").withColumnRenamed("Big Deal Qty","STT Big Deal Qty")
+      .withColumnRenamed("Qty","STT Qty").withColumnRenamed("Week","Right_Week")
     val sttORCAJoin03 = sttORCASource.joinOperation(JOIN03)
-    val sttORCAJoin03Map = doJoinAndSelect(stORCANonBigDealDF, sttORCACastedNonBigDealDF, sttORCAJoin03)
+    val sttORCAJoin03Map = doJoinAndSelect(stORCANonBigDealWithRenamedDF, sttORCACastedNonBigDealWithRenamedDF, sttORCAJoin03)
     val sttORCAInnerJoin03DF = sttORCAJoin03Map("inner")
     val sttORCALeftJoin03DF = sttORCAJoin03Map("left")
     val sttORCARightJoin03DF = sttORCAJoin03Map("right")
@@ -488,7 +497,7 @@ object CommercialTransform {
 
     //176 - Join
     val sttORCAJoin04 = sttORCASource.joinOperation(JOIN04)
-    val sttORCAJoin04Map = doJoinAndSelect(sttORCAAccountWEDProductGroupedDF, stORCAGroupPartnerSKUWEDDF, sttORCAJoin04)
+    val sttORCAJoin04Map = doJoinAndSelect(sttORCAAccountWEDProductGroupedDF, stORCAGroupPartnerSKUWEDDF.withColumnRenamed("Week End Date","Right_Week End Date"), sttORCAJoin04)
     val sttORCALeftJoin04DF = sttORCAJoin04Map("left")
     val sttORCAInnerJoin04DF = sttORCAJoin04Map("inner")
 
@@ -518,18 +527,15 @@ object CommercialTransform {
       .otherwise(col("Account Company")))
 
     //199 - Summarize
-    val sttORCAwithDummyDF = sttORCAUnionDF.withColumn("dummy",lit(1))
+    val sttORCAwithDummyDF = sttORCAUnionDF//.withColumn("dummy",lit(1))
     val sttORCAGroup01 = sttORCASource.groupOperation(GROUP01)
-    val sttORCAGroupDF = doGroup(sttORCAwithDummyDF, sttORCAGroup01)
-      .get
-      .drop("dummy")
+    val sttORCAGroupDF = sttORCAwithDummyDF.dropDuplicates(sttORCAGroup01.cols) //doGroup(sttORCAwithDummyDF, sttORCAGroup01).get.drop("dummy")
 
     //213 - Formula
     val sttORCAValueDF = sttORCAGroupDF.withColumn("Value",lit(1))
 
     //212 - Cross Tab
-    //TODO: Implement this
-    val sttORCAPivotDF = sttORCAValueDF
+    val sttORCAPivotDF = sttORCAValueDF.groupBy("SKU").pivot("Option Type").agg(sum("Value"))
 
     //211 - Formula
     val sttORCAOptionTypeDF = sttORCAPivotDF.withColumn("Option Type",
@@ -543,7 +549,7 @@ object CommercialTransform {
 
     //49 - Select
     val auxWEDRename02 = auxWEDSource.renameOperation("rename02")
-    val auxWEDSelect01Rename02DF = auxWEDSelectDF    //TODO: Rename using rename02
+    val auxWEDSelect01Rename02DF = Utils.convertListToDFColumnWithRename(auxWEDRename02, auxWEDSelectDF)    //TODO: Rename using rename02
 
     //50 - Join
     val auxWEDJoin02 = auxWEDSource.joinOperation(JOIN02)
@@ -556,7 +562,8 @@ object CommercialTransform {
 
     //51 - Join
     val auxWEDJoin03 = auxWEDSource.joinOperation(JOIN03)
-    val auxWEDCommResellerJoinMap = doJoinAndSelect(auxWEDJoinResellerInnerJoinDF, auxWEDSelect01Rename02DF, auxWEDJoin03)
+    val auxWEDSelect01Rename02RenamedDF = auxWEDSelect01Rename02DF.withColumnRenamed("OPP Option","Promo Option").withColumnRenamed("Season","Right_Season")
+    val auxWEDCommResellerJoinMap = doJoinAndSelect(auxWEDJoinResellerInnerJoinDF, auxWEDSelect01Rename02RenamedDF, auxWEDJoin03)
     val auxWEDCommResellerLeftJoinDF = auxWEDCommResellerJoinMap("left")
     val auxWEDCommResellerInnerJoinDF = auxWEDCommResellerJoinMap("inner")
 
@@ -584,7 +591,13 @@ object CommercialTransform {
 
     //62 - Join
     val auxWEDJoin04 = auxWEDSource.joinOperation(JOIN04)
-    val auxWEDSKUJoin04Map = doJoinAndSelect(auxWEDCommResQtynBigDealQtynNonDealQtyDF, auxSKUHierDF, auxWEDJoin04)
+    /* SKU renamed to join_SKU because after join Consol SKU being renamed to SKU and prev SKU is deselected */
+    val auxSKUHierWithRenamedDF = auxSKUHierDF.withColumnRenamed("SKU","join_SKU")
+      .withColumnRenamed("Consol SKU","SKU")
+      .withColumnRenamed("L1: Use Case","L1_Category")
+      .withColumnRenamed("L2: Key functionality","L2_Category")
+      .withColumnRenamed("Abbreviated Name","SKU_Name").withColumnRenamed("Street Price","Street_Price")
+    val auxWEDSKUJoin04Map = doJoinAndSelect(auxWEDCommResQtynBigDealQtynNonDealQtyDF, auxSKUHierWithRenamedDF, auxWEDJoin04)
     val auxWEDSKUInnerJoinDF = auxWEDSKUJoin04Map("inner")
     val auxWEDSKULeftJoinDF = auxWEDSKUJoin04Map("left")
 
@@ -598,7 +611,8 @@ object CommercialTransform {
 
     //201 - Join (SKU)
     val sttORCAJoin05 = sttORCASource.joinOperation(JOIN05)
-    val sttORCAJoin05Map = doJoinAndSelect(auxWEDSKUInnerJoinDF, sttORCAFilterOptionTypeDF, sttORCAJoin05)
+    val sttORCAFilterOptionTypeWithRenamedDF = sttORCAFilterOptionTypeDF.withColumnRenamed("SKU","Right_SKU").withColumnRenamed("Option Type","Option Type (SKU)")
+    val sttORCAJoin05Map = doJoinAndSelect(auxWEDSKUInnerJoinDF, sttORCAFilterOptionTypeWithRenamedDF, sttORCAJoin05)
     val sttORCALeftJoin05DF = sttORCAJoin05Map("left")
     val sttORCAInnerJoin05DF = sttORCAJoin05Map("inner")
 
@@ -624,13 +638,16 @@ object CommercialTransform {
 
     //71 - Join (SKU and Week_End_Date with filtered Option Typr)
     val auxWEDJoin05 = auxWEDSource.joinOperation(JOIN05)
-    val auxWEDJoin05Map = doJoinAndSelect(sttORCAResellerClusterCastedDF, auxWEDOptionTypFilteredDF, auxWEDJoin05)
+    val auxWEDOptionTypFilteredWithRenamedDF = auxWEDOptionTypFilteredDF.withColumnRenamed("SKU","Right_SKU").withColumnRenamed("First_C2B Promo Code", "Promo ID").withColumnRenamed("Week_End_Date","Right_Week_End_Date")
+    val auxWEDJoin05Map = doJoinAndSelect(sttORCAResellerClusterCastedDF, auxWEDOptionTypFilteredWithRenamedDF, auxWEDJoin05)
     val auxWEDLeftJoin05DF = auxWEDJoin05Map("left")
     val auxWEDInnerJoin05DF = auxWEDJoin05Map("inner")
 
     //74 - Join (SKU and Week_End_Date with unfiltered Option Type)
     val auxWEDJoin06 = auxWEDSource.joinOperation(JOIN06)
-    val auxWEDJoin06Map = doJoinAndSelect(sttORCAResellerClusterCastedDF, auxWEDOptionTypNotFilteredDF, auxWEDJoin06)
+    val auxWEDOptionTypNotFilteredWithRenamedDF = auxWEDOptionTypNotFilteredDF.withColumnRenamed("SKU","Right_SKU")
+      .withColumnRenamed("Week_End_Date","Right_Week_End_Date")
+    val auxWEDJoin06Map = doJoinAndSelect(sttORCAResellerClusterCastedDF, auxWEDOptionTypNotFilteredWithRenamedDF, auxWEDJoin06)
     val auxWEDLeftJoin06DF = auxWEDJoin06Map("left")
     val auxWEDInnerJoin06DF = auxWEDJoin06Map("inner")
 
@@ -643,7 +660,8 @@ object CommercialTransform {
 
     //88 - Join (SKU, Reseller, Week_End_Date Unions of filtered and unfiltered joins)
     val auxWEDJoin07 = auxWEDSource.joinOperation(JOIN07)
-    val auxWEDJoin07Map = doJoinAndSelect(auxWED05JoinsUnionDF, auxWED06JoinsUnionDF, auxWEDJoin07)
+    val auxWED06JoinsUnionWithRenamedDF = Utils.convertListToDFColumnWithRename(auxWEDSource.renameOperation("rename01"), auxWED06JoinsUnionDF)
+    val auxWEDJoin07Map = doJoinAndSelect(auxWED05JoinsUnionDF.withColumnRenamed("IR","All IR"), auxWED06JoinsUnionWithRenamedDF, auxWEDJoin07)
     val auxWEDInnerJoin07DF = auxWEDJoin07Map("inner")
       .withColumnRenamed("IR","All IR")
       .withColumnRenamed("First_C2B Promo Code","Right_First_C2B Promo Code")
@@ -668,6 +686,9 @@ object CommercialTransform {
 
     //90 - Join
     val ciORCAJoin01 = ciORCASource.joinOperation(JOIN01)
+    val auxWEDSelect01Rename02WithRenamedDF = auxWEDSelect01Rename02DF
+      .withColumnRenamed("Week_End_Date","Right_Week_End_Date")
+      .withColumnRenamed("wed","Week_End_Date")
     val ciORCAJoin01Map = doJoinAndSelect(ciORCAProdIDDF, auxWEDSelect01Rename02DF, ciORCAJoin01)
     val ciORCAauxWEDJoinDF = ciORCAJoin01Map("inner")
 
@@ -761,6 +782,9 @@ object CommercialTransform {
     //323 - Select
     val histPOSSelect01 = histPOSSource.selectOperation(SELECT01)
     val histPOSSelectDF = doSelect(histPOSDateFormattedDF, histPOSSelect01.cols, histPOSSelect01.isUnknown).get
+      .withColumnRenamed("Account","Reseller").withColumnRenamed("Account Consol","Resller_Cluster")
+      .withColumnRenamed("Inv : Saleable Qty","Inv_Qty_Raw").withColumnRenamed("Sales : New Qty","Qty")
+      .withColumnRenamed("season","Season")
 
     //324 - Filter channel
     val histPOSFilter01 = histPOSSource.filterOperation(FILTER01)
@@ -786,7 +810,8 @@ object CommercialTransform {
 
     //325 - Join
     val histPOSJoin01 = histPOSSource.joinOperation(JOIN01)
-    val histPOSJoinSKUHierMap = doJoinAndSelect(histPOSNewVariablesDF, auxSKUHierDF, histPOSJoin01)
+    val auxSKUHierRenamedDF = Utils.convertListToDFColumnWithRename(histPOSSource.renameOperation("rename01"), auxSKUHierDF)
+    val histPOSJoinSKUHierMap = doJoinAndSelect(histPOSNewVariablesDF.withColumnRenamed("season","Season"), auxSKUHierRenamedDF, histPOSJoin01)
     val histPOSInnerJoinSKUDF = histPOSJoinSKUHierMap("inner")
 
     //329 - Union
@@ -824,17 +849,20 @@ object CommercialTransform {
 
     //281 - Join
     val archivePOSJoin01 = archivePOSSource.joinOperation(JOIN01)
-    val archivePOSJoin01Map = doJoinAndSelect(archivePOS, histPOSSelect03DF, archivePOSJoin01)
-    val arhivePOSInnerJoin01DF = archivePOSJoin01Map("inner")
-    val arhivePOSLeftJoin01DF = archivePOSJoin01Map("left")
-    val arhivePOSRightJoin01DF = archivePOSJoin01Map("right")
+    val archivePOSRenamed = archivePOS.withColumnRenamed("Right_Series","Left_Right_Series")
+      .withColumnRenamed("Right_Need Big Data","Left_Right_Need Big Data")
+    val histPOSSelect03RenamedDF = Utils.convertListToDFColumnWithRename(archivePOSSource.renameOperation("rename01"), histPOSSelect03DF)
+    val archivePOSJoin01Map = doJoinAndSelect(archivePOSRenamed, histPOSSelect03RenamedDF, archivePOSJoin01)
+    val archivePOSInnerJoin01DF = archivePOSJoin01Map("inner")
+    val archivePOSLeftJoin01DF = archivePOSJoin01Map("left")
+    val archivePOSRightJoin01DF = archivePOSJoin01Map("right")
 
     //282 - Select
     val archivePOSSelect02 = archivePOSSource.selectOperation(SELECT02)
-    val archivePOSRightJoinSelectDF = doSelect(arhivePOSRightJoin01DF, archivePOSSelect02.cols, archivePOSSelect02.isUnknown).get
+    val archivePOSRightJoinSelectDF = doSelect(archivePOSRightJoin01DF, archivePOSSelect02.cols, archivePOSSelect02.isUnknown).get
 
     //283 - Union
-    val archivePOSJoinsUnionDF = doUnion(doUnion(arhivePOSInnerJoin01DF, arhivePOSLeftJoin01DF).get, arhivePOSRightJoin01DF).get
+    val archivePOSJoinsUnionDF = doUnion(doUnion(archivePOSInnerJoin01DF, archivePOSLeftJoin01DF).get, archivePOSRightJoin01DF).get
 
     //279 - Select
     val archivePOSSelect03 = archivePOSSource.selectOperation(SELECT03)
@@ -855,8 +883,9 @@ object CommercialTransform {
       .withColumn("Non Big deal Qty Diff", when(col("Non Big deal Qty Diff").isNull,0).otherwise(col("Non Big deal Qty Diff")))
 
     //277 - Summarize
-    val archivePOSGroup01 = archivePOSSource.groupOperation(GROUP01)
-    val archivePOSGroup01DF = doGroup(archivePOSNewVarsDF.withColumn("dummy",lit(1)), archivePOSGroup01).get.drop("dummy").drop("sum_dummy")
+    //was archivePOSSource.groupOperation
+    val archivePOSGroup01 = histPOSSource.groupOperation(GROUP01)
+    val archivePOSGroup01DF = archivePOSNewVarsDF.dropDuplicates(archivePOSGroup01.cols) //doGroup(archivePOSNewVarsDF.withColumn("dummy",lit(1)), archivePOSGroup01).get.drop("dummy").drop("sum_dummy")
 
     //295 - Filter Week_End_Date
     val archivePOSFilter01 = archivePOSSource.filterOperation(FILTER01)
