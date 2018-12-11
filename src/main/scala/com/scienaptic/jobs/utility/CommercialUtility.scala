@@ -12,7 +12,9 @@ import java.util.Calendar
 object CommercialUtility {
 
   val ddmmyyyyFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy")
+  val yyyyMMddFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd")
   val ddmmyyyySimpleFormat = new SimpleDateFormat("dd-MM-yyyy")
+
 
   val createBaseSKUFromProductIDUDF = udf((productID: String) => {
     if (productID.takeRight(4).charAt(0) == "#")
@@ -114,12 +116,12 @@ object CommercialUtility {
     "test"
   }
 
-  private def convertStringToSimpleDate(dateStr: String, format: String = "dd-MM-yyyy"): Date = {
+  private def convertStringToSimpleDate(dateStr: String, format: String = "yyyy-MM-dd"): Date = {
     val simpleFormat = new SimpleDateFormat(format)
     simpleFormat.parse(dateStr)
   }
 
-  private def convertStringToLocalDate(dateStr: String/*, format: String*/): LocalDate = {
+  private def convertStringToLocalDate(dateStr: String): LocalDate = {
     LocalDate.parse(dateStr, ddmmyyyyFormat)
   }
 

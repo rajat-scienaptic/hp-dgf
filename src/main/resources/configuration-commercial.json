@@ -17,7 +17,7 @@
         "filter01": {
           "multiWordMap" : { "ptnr_Date": "Partner Ship Calendar Date"},
           "conditionTypes": ["and"],
-          "conditions": ["ptnr_Date > 31-Oct-2018"]
+          "conditions": ["ptnr_Date > 2018-10-31  "]
         }
       }
     },
@@ -33,35 +33,35 @@
       },
       "join": {
         "join01": {
+          "isUnknown": "y",
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["Big Deal ID","Base SKU"],
             "right": ["C2B Promo Code","SKU"]
           },
           "selectCriteria": {
-            "isUnknown": "y",
             "left": [], "right": ["C2B Promo Code","SKU","Start Date","End Date"]
           }
         },
         "join02": {
+          "isUnknown": "y",
           "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": ["Week End Date"],
             "right": ["Week_End_Date"]
           },
           "selectCriteria": {
-            "isUnknown": "y",
             "left": [], "right": ["Week_End_Date"]
           }
         },
         "join03": {
+          "isUnknown": "Y",
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["Base SKU"],
             "right": ["SKU"]
           },
           "selectCriteria": {
-            "isUnknown": "Y",
             "left": [],
             "right": ["Added","L1: Use Case","L2: Key functionality","L3: IDC Category","L0: Format","Need IFS2?","PLC Status","GA date","ES date","NPD Product Category","NPD Model","Sales Product Name"]
           }
@@ -90,53 +90,61 @@
         },
         "select02": {
           "isUnknown":"y",
-          "cols":["Start Date","End Date","Start - Week End","Week End - End","Season Ordered","New End Date","Max_Week_End_Date","End Date Change"]
+          "cols":["Start Date","End Date","Start - Week End","Week End - End","Season_Ordered","New End Date","Max_Week_End_Date","End Date Change"]
+        },
+        "select03": {
+          "isUnknown":"n",
+          "cols": ["BU","SKU","Product","Rebate Amount","Promo Name","C2B Promo Code","Start Date","End Date","Season","Season_Ordered","New End Date","Max_Week_End_Date"]
+        },
+        "select04": {
+          "isUnknown": "n",
+          "cols": ["BU","SKU","Product","Rebate Amount","Promo Name","C2B Promo Code","Start Date","End Date","Season","Season_Ordered","New End Date"  ]
         }
       },
       "join": {
         "join01": {
+          "isUnknown": "n",
           "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": ["Big Deal ID","Base SKU"],
             "right": ["C2B Promo Code","SKU"]
           },
           "selectCriteria": {
-            "isUnknown": "n",
             "left": ["Week End Date","Partner Ship Calendar Date","Partner Desc","Big Deal ID","Base SKU","Claim Partner Unit Rebate","Sum_Claim Quantity"],
             "right": ["C2B Promo Code","Start Date","End Date"]
           }
         },
         "join02": {
+          "isUnknown": "n",
           "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": ["Base SKU","C2B Promo Code"],
             "right": ["Base SKU","C2B Promo Code"]
           },
           "selectCriteria": {
-            "isUnknown": "n",
             "left": ["Week End Date","Base SKU","Claim Partner Unit Rebate","C2B Promo Code","Sum_Sum_Claim Quantity"],
             "right": ["Avg_Sum_Sum_Claim Quantity"]
           }
         },
         "join03": {
+          "isUnknown": "y",
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["SKU","C2B Promo Code"],
             "right": ["Base SKU","C2B Promo Code"]
           },
           "selectCriteria": {
-            "isUnknown": "y",
             "left": [],
-            "right": ["C2B Promo Code","Base SKU"]
+            "right": ["Right_C2B Promo Code","Base SKU"]
           }
         },
         "join04": {
+          "isUnknown": "y",
           "typeOfJoin": ["left"],
           "joinCriteria": {
             "left": ["Big Deal ID"], "right": ["C2B Promo Code"]
           },
           "selectCriteria": {
-            "isUnknown": "y",
             "left": [],
             "right": []
           }
@@ -168,7 +176,7 @@
         "group02": {
           "cols": ["Base SKU","C2B Promo Code"],
           "aggregations": {"avg": {"Sum_Sum_Claim Quantity": "Avg_Sum_Sum_Claim Quantity"}},
-          "selectCriteria": ["Week End Date","Base SKU","C2B Promo Code"]
+          "selectCriteria": ["Week End Date","Base SKU","C2B Promo Code","Sum_Sum_Claim Quantity"]
         },
         "group03": {
           "cols": ["C2B Promo Code","Base SKU"],
@@ -218,97 +226,78 @@
           "cols": ["fy_week","wed","season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year"]
         }
       },
-      "rename" : {
-        "rename01": {
-          "wed": "Weed_End_Date",
-          "season_ordered":"Season_Ordered",
-          "cal_month": "Cal_Month",
-          "cal_year": "Cal_Year",
-          "fiscal_quarter": "Fiscal_Qtr",
-          "fiscal_year": "Fiscsl_Year"
-        },
-        "rename02": {
-          "wed": "Weed_End_Date",
-          "season": "Season",
-          "season_ordered":"Season_Ordered",
-          "cal_month": "Cal_Month",
-          "cal_year": "Cal_Year",
-          "fiscal_quarter": "Fiscal_Qtr",
-          "fiscal_year": "Fiscsl_Year"
-        }
-      },
       "join": {
         "join01": {
+          "isUnknown":"y",
           "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": ["Week End Date"], "right": ["Week_End_Date"]
           },
           "selectCriteria": {
-            "isUnknown":"y",
             "left": [], "right": []
           }
         },
         "join02": {
+          "isUnknown":"y",
           "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": ["Week End Date"], "right": ["Week_End_Date"]
           },
           "selectCriteria": {
-            "isUnknown":"y",
             "left": ["Account Company","Week","Claim Quantity","Week End Date"], "right": []
           }
         },
         "join03": {
+          "isUnknown":"y",
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["Reseller","Season"], "right": ["Base Account","Season"]
           },
           "selectCriteria": {
-            "isUnknown":"y",
             "left": [], "right": ["Base Account","Right_Season"]
           }
         },
         "join04": {
+          "isUnknown":"y",
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["Product Base ID"], "right": ["join_SKU"]
           },
           "selectCriteria": {
-            "isUnknown":"y",
             "left": ["Product Base Desc","Product Base ID","Reseller Category","ST Big Deal Qty","ST Non Big Deal Deal Qty","ST Qty","STT Big Deal Qty","STT Non Big Deal Deal Qty","STT Qty"],
             "right": ["Added","Full Name","L0: Format","L3: IDC Category","Need Big Data","Need IFSC?","NPD Model","NPD Product Category","Platform Name","Sales Product Name","Top SKU","join_SKU"]
           }
         },
         "join05": {
+          "isUnknown":"y",
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["SKU","Week_End_Date"], "right": ["Right_SKU","Right_Week_End_Date"]
           },
           "selectCriteria": {
-            "isUnknown":"y",
             "left": [],
             "right": ["Right_SKU","Right_Week_End_Date","Option Type"]
           }
         },
         "join06": {
+          "isUnknown":"y",
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["SKU","Week_End_Date","Promo Option"],
             "right": ["Right_SKU","Right_Week_End_Date","Option Type"]
           },
           "selectCriteria": {
-            "isUnknown":"y",
             "left": [],
             "right": ["Right_SKU","Right_Week_End_Date","Option Type"]
           }
         },
         "join07": {
+          "isUnknown":"y",
           "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": ["SKU","Reseller","Week_End_Date"], "right": ["SKU","Reseller","Week_End_Date"]
           },
           "selectCriteria": {
-            "isUnknown":"y",
             "left": [""],
             "right": ["Big Deal Qty","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Non Big Deal Qty","Promo Option","Qty","Reseller","Reseller_Cluster","Season","Season_Ordered","Week_End_Date","SKU_Name","Brand","Category","Category Custom","Category Subgroup","Category.1","Category.2","Category.3","SKU","ES date","GA date","HPS/OPS","IPSLES","L1.Category","L2.Category","Line","Mono/Color","PL","PLC Status","Series","Street.Price","All","Option_B","Option_C","Option Type (SKU)","Top SKU","Need IFS2?"]
           }
@@ -340,15 +329,6 @@
         }
       },
       "rename": {
-        "rename02": {
-          "wedDate": "Week_End_Date",
-          "season": "Season",
-          "season_ordered": "Season_Ordered",
-          "cal_month": "Cal_Month",
-          "cal_year": "Cal_Year",
-          "fiscal_quarter": "Fiscal_Qtr",
-          "fiscal_year": "Fiscal_Year"
-        },
         "rename01":{
           "Big Deal Qty": "Right_Big Deal Qty",
           "Non Big Deal Qty": "Right_Non Big Deal Qty",
@@ -387,6 +367,15 @@
           "IR": "Option IR",
           "Need IFS2?": "Right_Need IFS2?",
           "Need Big Data": "Right_Need Big Data"
+        },
+        "rename02": {
+          "wedDate": "Week_End_Date",
+          "season": "Season",
+          "season_ordered": "Season_Ordered",
+          "cal_month": "Cal_Month",
+          "cal_year": "Cal_Year",
+          "fiscal_quarter": "Fiscal_Qtr",
+          "fiscal_year": "Fiscal_Year"
         }
       }
     },
@@ -764,12 +753,12 @@
         "group02": {
           "cols" : ["Week_End_Date","Reseller_Cluster"],
           "aggregations": {"sum":{"Qty":"Sum_Qty"}},
-          "selectCriteria": []
+          "selectCriteria": ["Big_Deal_Qty","Brand","Category","Category Custom","Category_Subgroup","Category_1","Category_2","HPS/OPS","IPSLES","IR","Mono/Color","Non_Big_Deal_Qty","Promo ID","Promo_Option","Qty","Reseller","Reseller_Cluster","Season","Series","SKU","SKU_Name","Street_Price","Week_End_Date","Inv_Qty","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","eTailer","Spend","Promo Flag","Max_Week_End_Date"]
         },
         "group03": {
           "cols" : ["Week_End_Date","Reseller_Cluster"],
           "aggregations": {"sum":{"Inv_Qty":"Sum_Inv_Qty"}},
-          "selectCriteria": []
+          "selectCriteria": ["Big_Deal_Qty","Brand","Category","Category Custom","Category_Subgroup","Category_1","Category_2","HPS/OPS","IPSLES","IR","Mono/Color","Non_Big_Deal_Qty","Promo ID","Promo_Option","Qty","Reseller","Reseller_Cluster","Season","Series","SKU","SKU_Name","Street_Price","Week_End_Date","Inv_Qty","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","eTailer","Spend","Promo Flag","Max_Week_End_Date"]
         },
         "group04": {
           "cols" : ["Week_End_Date","Reseller_Cluster"],
