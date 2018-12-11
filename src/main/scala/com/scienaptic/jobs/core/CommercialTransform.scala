@@ -113,7 +113,6 @@ object CommercialTransform {
     //val auxWEDRename01 = auxWEDSource.renameOperation("rename01")
     //auxWEDSelectDF = Utils.convertListToDFColumnWithRename(auxWEDRename01, auxWEDSelectDF)
 
-
     val iecSelect01 = iecSource.selectOperation(SELECT01)
     val iecSelectDF = doSelect(iecDF, iecSelect01.cols, iecSelect01.isUnknown).get
 
@@ -132,10 +131,10 @@ object CommercialTransform {
 
     //126 - Formula
     val baseSKUproductDF = xsClaimsUnionDF.withColumn("Base SKU",createBaseSKUFromProductIDUDF(col("Product ID")))
-    val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String",extractWeekFromDateUDF(col("Partner Ship Calendar Date"), col("week")))
-      .withColumn("Temp Date Calc String", weekofyear(to_date(unix_timestamp(col("Partner Ship Calendar Date")))))
-      .withColumn("Temp Date Calc", getEpochNumberFromDateString(col("Temp Date Calc String")))
-    val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",addDaystoDateStringUDF(col("Partner Ship Calendar Date"), col("day")))
+    val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String", weekofyear(to_date(unix_timestamp(col("Partner Ship Calendar Date")))))//.withColumn("Temp Date Calc String",extractWeekFromDateUDF(col("Partner Ship Calendar Date"), col("week")))
+      .withColumn("Temp Date Calc", unix_timestamp(col("Temp Date Calc String")))
+      //.withColumn("Temp Date Calc", getEpochNumberFromDateString(col("Temp Date Calc String")))
+    val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",addDaystoDateStringUDF(col("Partner Ship Calendar Date"), col("Temp Date Calc")))
     val xsClaimsBaseSKUDF = weekEndDateDF.withColumn("Base SKU",baseSKUFormulaUDF(col("Base SKU")))
 
     //231 - Not implemented as used for browsing
@@ -196,8 +195,10 @@ object CommercialTransform {
     val rawXSInnerJoin01DF = rawXSJoinMap("inner")
 
     //129
-    val rawXSJoinChkOutsidePromoDF = rawXSInnerJoin01DF.withColumn("Outside Promo Date", checkOutsidePromoDateUDF(col("Partner Ship Calendar Date"),col("End Date")))
-
+    val rawXSJoinChkOutsidePromoDF = rawXSInnerJoin01DF/*.withColumn("Outside Promo Date", checkOutsidePromoDateUDF(col("Partner Ship Calendar Date"),col("End Date")))*/
+      .withColumn("EndDatePlus3", date_add(col("End Date").cast("timestamp"), 3))
+      .withColumn("Outside Promo Date", when(col("Partner Ship Calendar Date").cast("timestamp")>col("EndDatePlus3").cast("timestamp"),"Y")
+        .otherwise("N"))
     /*CHECK THIS PART*/
     //131
     val rawCalendarFilter01 = rawCalendarSource.filterOperation(FILTER01)
@@ -247,7 +248,11 @@ object CommercialTransform {
     val rawCalendarLftJNewEndDateDF = rawCalendarLeftJoin03DF.withColumn("New End Date",col("End Date"))
 
     //148 - Formula
-    val rawCalendarInnJNewEndDateDF = rawCalendarInnerJoin03DF.withColumn("New End Date", newEndDateFromMaxWED(col("Max_Week_End_Date"), col("End Date")))
+    val rawCalendarInnJNewEndDateDF = rawCalendarInnerJoin03DF/*.withColumn("New End Date", newEndDateFromMaxWED(col("Max_Week_End_Date"), col("End Date")))*/
+      .withColumn("MaxWeekDiff", datediff(col("Max_Week_End_Date").cast("timestamp"), col("End Date").cast("timestamp")))
+      .withColumn("New End Date",when(col("MaxWeekDiff")>14, date_add(col("End Date").cast("timestamp"), 14))
+        .when(col("Max_Week_End_Date").cast("timestamp")>col("End Date").cast("timestamp"),col("Max_Week_End_Date"))
+        .otherwise(col("End Date"))).drop("MaxWeekDiff")
 
     //150 - Union
     val rawCalendarEndDateUnionDF = doUnion(rawCalendarLftJNewEndDateDF,rawCalendarInnJNewEndDateDF).get
@@ -265,8 +270,10 @@ object CommercialTransform {
     val rawCalendarnAuxWEDAppendDF = rawCalendarEndDateChangeUnionDF.drop("fy_week").join(auxWEDSelectDF)
 
     //159 - Formula
-    val rawCalStartsubWEDDF = rawCalendarnAuxWEDAppendDF.withColumn("Start - Week End", dateTimeDiff(col("Start Date"),col("Week.End.Date")))
-      .withColumn("Week End - End",dateTimeDiff(col("Week.End.Date"),col("New End Date")))
+    val rawCalStartsubWEDDF = rawCalendarnAuxWEDAppendDF/*.withColumn("Start - Week End", dateTimeDiff(col("Start Date"),col("Week.End.Date")))
+      .withColumn("Week End - End",dateTimeDiff(col("Week.End.Date"),col("New End Date")))*/
+      .withColumn("Start - Week End", datediff(col("Start Date").cast("timestamp"),col("Week_End_Date").cast("timestamp")))
+      .withColumn("Week End - End", datediff(col("Week_End_Date").cast("timestamp"),col("New End Date").cast("timestamp")))
       .withColumn("Option Type",
         when(col("Promo Name").contains("Option B"),"Option B")
         .when(col("Promo Name").contains("Option C"),"Option C")
@@ -702,7 +709,8 @@ object CommercialTransform {
     //93     /* 331 not implemented coz used for browse*/
     val auxWEDIRInvClusterPromoIDDF = auxWEDInnerJoin07DF.withColumn("IR",
         when((col("All IR").isNull) && (col("Option IR").isNull),0)
-        .otherwise(findMaxBetweenTwo(col("All IR"),col("Option IR"))))
+        .otherwise(greatest(col("All IR"),col("Option IR"))))
+        //.otherwise(findMaxBetweenTwo(col("All IR"),col("Option IR"))))
       .withColumn("Inventory Cluster", when((col("Reseller_Cluster")==="Other - Option B") || (col("Reseller_Cluster")=="Other - Option C"), lit("Distributor"))
           .otherwise(col("Reseller_Cluster")))
       .withColumn("Promo ID", findMaxBetweenTwo(col("Promo ID"),col("Right_First_C2B Promo Code")))
