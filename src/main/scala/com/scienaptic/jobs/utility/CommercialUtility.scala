@@ -13,8 +13,10 @@ object CommercialUtility {
   val ddmmyyyySimpleFormat = new SimpleDateFormat("dd-MM-yyyy")
 
   val createBaseSKUFromProductIDUDF = udf((productID: String) => {
-    //TODO: IF Left(Right([Product ID], 4),1)="#" THEN Left([Product ID],Length([Product ID])-4) ELSE [Product ID] ENDIF
-    "Sample String"
+    if (productID.takeRight(4).charAt(0) == "#")
+      productID.substring(0, productID.length()-4)
+    else
+      productID
   })
 
   val extractWeekFromDateUDF = udf((dateStr: String) => {
@@ -25,6 +27,7 @@ object CommercialUtility {
 
   val addDaystoDateStringUDF = udf((dateString: String, days: Int) => {
     //TODO: DateTimeAdd([Partner Ship Calendar Date],6-[Temp Date Calc],"days")
+    //data.withColumn("future", expr("date_add(date, id)")).show
     new Date()
   })
 
@@ -50,6 +53,8 @@ object CommercialUtility {
   })
 
   val dateTimeDiff = udf((startDate: String, endDate: String) => {
+    //val r = sqlContext.sql("select id,datediff(year,to_date(end), to_date(start)) AS date from c4")
+    //datediff(current_date(), $"d")
     returnDiffBetweenDates(startDate,endDate,"days")
   })
 
@@ -62,6 +67,8 @@ object CommercialUtility {
   })
 
   val getEpochNumberFromDateString = udf((dateStr: String) => {
+    //df.withColumn("unix_ts" , unix_timestamp($"ts")
+    //ts should be timestamp
     //toNumber(dateStr) //convert dateStr to Date object first
   })
 

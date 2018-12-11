@@ -57,6 +57,8 @@ object CommercialTransform {
   val GROUP03="group03" 
   val GROUP04="group04" 
   val GROUP05="group05"
+  val GROUP06="group06"
+  val GROUP07="group07"
 
   val IEC_SOURCE="IEC_CLAIMS" 
   val XS_CLAIMS_SOURCE="XS_CLAIMS" 
@@ -123,33 +125,34 @@ object CommercialTransform {
     /*TODO: Rename 3 columns*/
 
     //287 - Union
-    /* Union XS Claims and IEC Claims DF TODO: Check if both Dataframes have same number of columns*/
     val xsClaimsUnionDF = doUnion(iecFiltered01DF.get, xsClaimsSelect01DF).get
 
     //126 - Formula
     val baseSKUproductDF = xsClaimsUnionDF.withColumn("Base SKU",createBaseSKUFromProductIDUDF(col("Product ID")))
     val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String",extractWeekFromDateUDF(col("Partner Ship Calendar Date"), col("week")))
+      .withColumn("Temp Date Calc String", weekofyear(to_date(unix_timestamp(col("Partner Ship Calendar Date")))))
       .withColumn("Temp Date Calc", getEpochNumberFromDateString(col("Temp Date Calc String")))
     val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",addDaystoDateStringUDF(col("Partner Ship Calendar Date"), col("day")))
     val xsClaimsBaseSKUDF = weekEndDateDF.withColumn("Base SKU",baseSKUFormulaUDF(col("Base SKU")))
 
     //231 - Not implemented as used for browsing
     //127
-    val xsClaimsGroup01 = xsClaimsSource.groupOperation("group01")
+    val xsClaimsGroup01 = xsClaimsSource.groupOperation(GROUP01)
     val xsClaimsGroupedClaimQuanAggDF = doGroup(xsClaimsBaseSKUDF,xsClaimsGroup01).get
 
     //172
-    val xsClaimsGroup02 = xsClaimsSource.groupOperation("group02")
-    var xsClaimsGroupSumClaimQuanAggDF = doGroup(xsClaimsGroupedClaimQuanAggDF, xsClaimsGroup02).get
+    val xsClaimsGroup02 = xsClaimsSource.groupOperation(GROUP02)
+    val xsClaimsGroupSumClaimQuanAggDF = doGroup(xsClaimsGroupedClaimQuanAggDF, xsClaimsGroup02).get
 
+    //120
     val rawCalendarSelect01= rawCalendarSource.selectOperation(SELECT01)
     var rawCalendarSelectDF = doSelect(rawCalendarDF, rawCalendarSelect01.cols, rawCalendarSelect01.isUnknown).get
     rawCalendarSelectDF = rawCalendarSelectDF.withColumn("dummy",lit(1))
 
     //124
-    val rawCalendarGroup01 = rawCalendarSource.groupOperation("group01")
+    val rawCalendarGroup01 = rawCalendarSource.groupOperation(GROUP01)
     var rawCalendarGroupDF = doGroup(rawCalendarSelectDF, rawCalendarGroup01).get
-    rawCalendarGroupDF = rawCalendarGroupDF.drop("dummy")//.drop("sum") //TODO: check what is name of sum aggregated column
+    rawCalendarGroupDF = rawCalendarGroupDF.drop("dummy")
 
     //243 - Join
     val iecXSJoin01 = xsClaimsSource.joinOperation(JOIN01)
@@ -170,42 +173,51 @@ object CommercialTransform {
     val iecXsClaimsJoin02 = xsClaimsSource.joinOperation(JOIN02)
     val xsInnerJoinAuxWEDMap = doJoinAndSelect(iecXSUnionDF, auxWEDSelectDF, iecXsClaimsJoin02)
     val xsInnerJoinAuxWEDDF = xsInnerJoinAuxWEDMap("inner")
+
     //254 - join
     val xsAuxSkuHierJoin03 = xsClaimsSource.joinOperation(JOIN03)
     var xsAuxSkuJoinMap = doJoinAndSelect(xsInnerJoinAuxWEDDF, auxSKUHierDF, xsAuxSkuHierJoin03)
     val xsAuxSkuLeftJoinDF = xsAuxSkuJoinMap("left")
     val xsAuxSkuInnerJoinDF = xsAuxSkuJoinMap("inner")
-    val xsAuxSKUHierUnionDF = doUnion(xsAuxSkuLeftJoinDF, xsAuxSkuInnerJoinDF)
+    val xsAuxSKUHierUnionDF = doUnion(xsAuxSkuLeftJoinDF, xsAuxSkuInnerJoinDF).get
 
-    //TODO: create WriteCSV utility and make changes to Source bean to accept 'outFilePath' attribute
-    // Utils.writeCSV(xsAuxSKUHierUnionDF,"/home/Avik/Scienaptic/RnD/OutData/claims_consolidated.csv")
+    //291
+    xsAuxSKUHierUnionDF.show()
+    //TODO: create WriteCSV utility and make changes to Source bean to accept 'outFilePath' attribute, name: claims_consolidated.csv
 
     //121 - Join
     val rawCalendarJoin01 = rawCalendarSource.joinOperation(JOIN01)
-    var rawXSJoinMap = doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, rawCalendarJoin01)
-    //val rawXSLeftJoin01 = rawXSJoinMap("left")   //Being used for Dump!
+    val rawXSJoinMap = doJoinAndSelect(xsClaimsGroupedClaimQuanAggDF, rawCalendarGroupDF, rawCalendarJoin01)
+    //val rawXSLeftJoin01 = rawXSJoinMap("left")   //Used for Dump!
     val rawXSInnerJoin01DF = rawXSJoinMap("inner")
 
     //129
     val rawXSJoinChkOutsidePromoDF = rawXSInnerJoin01DF.withColumn("Outside Promo Date", checkOutsidePromoDateUDF(col("Partner Ship Calendar Date"),col("End Date")))
 
+    /*CHECK THIS PART*/
     //131
     val rawCalendarFilter01 = rawCalendarSource.filterOperation(FILTER01)
-    val rawCalendarFilter02 = rawCalendarSource.filterOperation(FILTER02)
-    //132
     val rawXSJoinOutsidePromoTrueDF = doFilter(rawXSJoinChkOutsidePromoDF, rawCalendarFilter01, rawCalendarFilter01.conditionTypes(NUMERAL0)).get
-    //134
+    val rawCalendarFilter02 = rawCalendarSource.filterOperation(FILTER02)
     val rawXSJoinOutsidePromoFalseDF = doFilter(rawXSJoinChkOutsidePromoDF, rawCalendarFilter02, rawCalendarFilter02.conditionTypes(NUMERAL0)).get
+
+    //132
+    val rawCalendarGroup06 = rawCalendarSource.groupOperation(GROUP06)
+    val rawCalendarGroup06DF = doGroup(rawXSJoinOutsidePromoTrueDF, rawCalendarGroup06).get
+
+    //134
+    val rawCalendarGroup07 = rawCalendarSource.groupOperation(GROUP07)
+    val rawCalendarGroup07DF = doGroup(rawXSJoinOutsidePromoFalseDF, rawCalendarGroup07).get
 
     //133
     val rawCalendarGroup02 = rawCalendarSource.groupOperation(GROUP02)
-    val rawCalendarGroup02DF = doGroup(rawXSJoinOutsidePromoTrueDF, rawCalendarGroup02).get
-    //rawCalendarGroup02DF = rawCalendarGroup02DF.withColumnRenamed("Sum_Sum_Claim Quantity","Avg_Sum_Sum_Claim Quantity")
+    val rawCalendarGroup02DF = doGroup(rawCalendarGroup06DF, rawCalendarGroup02).get
 
     //135 - Join
     val rawCalendarJoin02 = rawCalendarSource.joinOperation(JOIN02)
-    val rawCalendarJoin02Map = doJoinAndSelect(rawXSJoinOutsidePromoFalseDF, rawCalendarGroup02DF, rawCalendarJoin02)
+    val rawCalendarJoin02Map = doJoinAndSelect(rawCalendarGroup07DF, rawCalendarGroup02DF, rawCalendarJoin02)
     val rawCalendarJoin02DF = rawCalendarJoin02Map("inner")
+
     //136 - Formula
     val rawCalendarIncludeVarDF = rawCalendarJoin02DF.withColumn("Include",
       when(col("Sum_Sum_Claim Quantity") > lit(0.2)*col("Avg_Sum_Sum_Claim Quantity"),"Y")
@@ -213,11 +225,11 @@ object CommercialTransform {
 
     //138 - Filter
     val rawCalendarFilter03 = rawCalendarSource.filterOperation(FILTER03)
-    val rawCalendarFilterIncldeDF = doFilter(rawCalendarIncludeVarDF, rawCalendarFilter03, rawCalendarFilter03.conditionTypes(NUMERAL0)).get
+    val rawCalendarFilterIncludeDF = doFilter(rawCalendarIncludeVarDF, rawCalendarFilter03, rawCalendarFilter03.conditionTypes(NUMERAL0)).get
 
     //144 - Summarize
-    val rawCalendarGroup03 = rawCalendarSource.groupOperation(GROUP04)
-    val rawCalendarPromonSKUGroupDF = doGroup(rawCalendarFilterIncldeDF,rawCalendarGroup03).get
+    val rawCalendarGroup03 = rawCalendarSource.groupOperation(GROUP03)
+    val rawCalendarPromonSKUGroupDF = doGroup(rawCalendarFilterIncludeDF,rawCalendarGroup03).get
 
     //146 - Join
     /*TODO: Suppose joining criteria is same but in select nothing given,
@@ -231,10 +243,9 @@ object CommercialTransform {
     val rawCalendarLftJNewEndDateDF = rawCalendarLeftJoin03DF.withColumn("New End Date",col("End Date"))
 
     //148 - Formula
-    val rawCalendarInnJNewEndDateDF = rawCalendarInnerJoin03DF.withColumn("New End Date", newEndDateFromMaxWED(col("Max_Week.End.Date"), col("End Date")))
+    val rawCalendarInnJNewEndDateDF = rawCalendarInnerJoin03DF.withColumn("New End Date", newEndDateFromMaxWED(col("Max_Week_End_Date"), col("End Date")))
 
     //150 - Union
-    //TODO: Check if both dataframes have same number of columns and data type is same
     val rawCalendarEndDateUnionDF = doUnion(rawCalendarLftJNewEndDateDF,rawCalendarInnJNewEndDateDF).get
 
     //155 - Formula
@@ -242,7 +253,7 @@ object CommercialTransform {
       when(col("End Date")===col("New End Date"),"N")
           .otherwise("Y"))
 
-    //157 - Union
+    //157 - Unique
     val rawCalendarEndDateChangeUnionDF = rawCalendarEndDateChangeDF.dropDuplicates(List("SKU","C2B Promo Code","Start Date","New End Date"))
 
     //158 - Append (Cartesian join)
@@ -259,7 +270,9 @@ object CommercialTransform {
 
     //160 - Filter
     //TODO: [Start - Week End]<=-3 AND [Week End - End]<=3
-    val rawCalendarEndDateFilteredDF = rawCalStartsubWEDDF
+    val rawCalendarEndDateFilteredDF = rawCalStartsubWEDDF.withColumn("StartMinusEnd", col("Start - Week End"))
+      .withColumn("WeekEndMinusEnd", col("Week End - End"))
+      .filter("StartMinusEnd <= -3").filter("WeekEndMinusEnd <= 3")
 
     //161 - Select
     val rawCalendarSelect02 = rawCalendarSource.selectOperation(SELECT02)
@@ -273,7 +286,7 @@ object CommercialTransform {
     /*  ------------- USED IN 2nd SECTION --------------*/
 
     //163 - Unique
-    val rawCalendarSortDistinctDF = rawCalendarSelectSortDF.dropDuplicates(List("SKU","C2B Promo Code","Week.End.Date"))
+    val rawCalendarSortDistinctDF = rawCalendarSelectSortDF.dropDuplicates(List("SKU","C2B Promo Code","Week_End_Date"))
 
     //196 - Join
     val rawCalendarJoin04 = rawCalendarSource.joinOperation(JOIN04)
@@ -291,10 +304,10 @@ object CommercialTransform {
     //85
     val rawCalendarGroup05 = rawCalendarSource.groupOperation(GROUP05)
     var rawCalendarSortGroupDF = doGroup(rawCalendarSelectSortDF, rawCalendarGroup05).get
-    val wind = Window.partitionBy(col("C2B Promo Code"))
+    /*val wind = Window.partitionBy(col("C2B Promo Code"))
     rawCalendarSortGroupDF = rawCalendarSortGroupDF.withColumn("rn",row_number.over(wind))
       .where(col("rn") === 1)
-      .drop("rn")
+      .drop("rn")*/
     /*  ------------- USED IN 2nd SECTION --------------*/
 
 
@@ -360,7 +373,7 @@ object CommercialTransform {
 
     //25 - Join
     val sttORCAJoin01 = sttORCASource.joinOperation(JOIN01)
-    val sttORCAJoin01Map = doJoinAndSelect(sttORCAFormulaDF, rawCalendarEndDateSelectGroupDF, stORCAJoin01)
+    val sttORCAJoin01Map = doJoinAndSelect(sttORCAFormulaDF, rawCalendarEndDateSelectGroupDF, sttORCAJoin01)
     val sttORCAInnerJoinDF = sttORCAJoin01Map("inner")
     val sttORCALeftJoinDF = sttORCAJoin01Map("left")
 
@@ -403,7 +416,7 @@ object CommercialTransform {
     val stSttUnionDistinctDF = stSttUnionDF.dropDuplicates(List("Big Deal Nbr","Account Company","Product Base ID"))
 
     //171 - Join
-    val stORCAJoin03 = sttORCASource.joinOperation(JOIN03)
+    val stORCAJoin03 = stORCASource.joinOperation(JOIN03)
     val stORCAJoin03Map = doJoinAndSelect(stSttUnionDistinctDF, rawCalendarDistinctLeftJoinDF, stORCAJoin03)
     val stORCAJoin03DF = stORCAJoin03Map("right")
 
