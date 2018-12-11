@@ -19,11 +19,11 @@ object SelectOperation {
       unknownFlag match {
         case "N" | "n" | "" => dataFrame.select(Utils.convertListToDFColumn(cols, dataFrame): _*)
         case "Y" | "y" => {
-            val allCols = dataFrame.columns.toList
-            val removeCols = cols
-            // if unknown flag is true then exclude the columns in select
-            dataFrame.select(Utils.convertListToDFColumn(allCols diff removeCols, dataFrame): _*)
-        }
+          val allCols = dataFrame.columns.toList
+          val removeCols = cols
+          // if unknown flag is true then exclude the columns in select
+          dataFrame.select(Utils.convertListToDFColumn(allCols diff removeCols, dataFrame): _*)
+      }
       }
     }
   }
