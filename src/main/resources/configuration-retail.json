@@ -9,7 +9,7 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
-          "isUnknown" : "N",
+          "isUnknown" : "Y",
           "cols": []
         }
       },
@@ -21,31 +21,39 @@
               "Units" : "Online Units"
             }
           }
+        },
+        "group02": {
+          "cols" : ["wed"],
+          "aggregations": {
+            "sum" : {
+              "Online Units" : "Sum_Online Units"
+            }
+          }
         }
       },
       "join": {
         "join01": {
-          "leftTableAlias": "left", "rightTableAlias": "right",
+          "isUnknown" : "Y",
           "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": ["Big Deal ID","C2B Promo Code"],
             "right": ["Base SKU","SKU"]
           },
           "selectCriteria": {
-            "left": ["Account Major", "Base SKU", "Online Units"], "right": ["wed", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"]
+            "left": ["week"], "right": ["fy_week","season"]
           }
         }
       },
       "filter": {
         "filter01": {
           "conditionTypes": ["and","or","if-else"],
-          "conditions": ["Account = Amazon","Fixed < 40.0"]
+          "conditions": ["wed >= 2018-01-01"]
         }
       },
       "sort" : {
         "sort01": {
-          "asc": ["Account"],
-          "desc": ["Fixed"]
+          "asc": [],
+          "desc": ["wed"]
         }
       }
     },
@@ -54,7 +62,16 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "N",
           "cols": ["WED", "HP SKU", "Units"]
+        },
+        "select02": {
+          "isUnknown" : "Y",
+          "cols": ["Sum_POS Qty", "IPSLES (Missing)", "Units"]
+        },
+        "select03": {
+          "isUnknown" : "Y",
+          "cols": ["Sum_POS Qty", "Online Units","IPSLES (Missing)"]
         }
       },
       "rename" : {
@@ -66,45 +83,33 @@
       },
       "join": {
         "join01": {
-          "isUnknown" : "N",
-          "typeOfJoin": "left",
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": [
-              "Account",
-              "Fixed"
+              "Account Major Consol",
+              "Product Base ID",
+              "wed"
             ],
             "right": [
-              "Account",
-              "Fixed"
+              "Account Major",
+              "Base SKU",
+              "wed"
             ]
           },
           "selectCriteria": {
-            "left": [
-              "Account"
-            ],
+            "left": [],
             "right": [
-              "Fixed"
+              "Account Major",
+              "Base SKU",
+              "wed",
+              "season_ordered",
+              "cal_month",
+              "cal_year",
+              "fiscal_quarter",
+              "fiscal_year"
             ]
           }
-        }
-      },
-      "filter": {
-        "filter01": {
-          "conditionTypes": [
-            "and",
-            "or",
-            "if-else"
-          ],
-          "conditions": [
-            "Account = Amazon",
-            "Fixed < 40.0"
-          ]
-        }
-      },
-      "sort" : {
-        "sort01": {
-          "asc": ["Account"],
-          "desc": ["Fixed"]
         }
       }
     },
@@ -114,30 +119,24 @@
       "select": {
         "select01": {
           "isUnknown" : "N",
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+          "cols": ["Units", "Week", "Product Description", "Product Number"]
         }
       },
       "join": {
         "join01": {
-          "isUnknown" : "N",
-          "typeOfJoin": "left",
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": [
-              "Account",
-              "Fixed"
+              "Week"
             ],
             "right": [
-              "Account",
-              "Fixed"
+              "fy_week"
             ]
           },
           "selectCriteria": {
-            "left": [
-              "Account"
-            ],
-            "right": [
-              "Fixed"
-            ]
+            "left": ["Week", "Product Description"],
+            "right": []
           }
         }
       },
@@ -149,15 +148,8 @@
             "if-else"
           ],
           "conditions": [
-            "Account = Amazon",
-            "Fixed < 40.0"
+            "Title not_contains Refurb"
           ]
-        }
-      },
-      "sort" : {
-        "sort01": {
-          "asc": ["Account"],
-          "desc": ["Fixed"]
         }
       }
     },
@@ -166,55 +158,103 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
-          "isUnknown" : "N",
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+          "isUnknown" : "Y",
+          "cols": ["Season", "Week Number"]
+        },
+        "select02": {
+          "isUnknown" : "Y",
+          "cols": ["Week Beginning"]
+        },
+        "select03": {
+          "isUnknown" : "Y",
+          "cols": ["Week.End.Date","fy_week", "Sum_Shipped Units (Missing)"]
         }
       },
-      "join": {
-        "join01": {
-          "isUnknown" : "N",
-          "typeOfJoin": "left",
+      "group" : {
+        "group01" : {
+          "cols" : ["ASIN","Title","Week Beginning Conv"],
+          "aggregations": {
+            "sum" : {
+              "Ordered Units" : "Ordered Units"
+            }
+          }
+        },
+        "group02" : {
+          "cols" : ["ASIN","Title"],
+          "aggregations": {
+            "sum" : {
+              "Ordered Units" : "Sum_Ordered Units"
+            }
+          }
+        },
+        "group03" : {
+          "cols" : ["SKU","Account", "Online", "Week.End.Date"],
+          "aggregations": {
+            "sum" : {
+              "POS Qty" : "Sum_POS Qty"
+            }
+          }
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": [],
+          "desc": ["Sum_Ordered Units"]
+        }
+      },
+      "join" : {
+        "join01" : {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["left","inner"],
           "joinCriteria": {
-            "left": [
-              "Account",
-              "Fixed"
-            ],
-            "right": [
-              "Account",
-              "Fixed"
-            ]
+            "left": ["ASIN"],
+            "right": ["ASIN"]
           },
           "selectCriteria": {
-            "left": [
-              "Account"
-            ],
-            "right": [
-              "Fixed"
-            ]
+            "left": [], "right": ["ASIN"]
           }
+        },
+        "join02" : {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["Week.End.Date"],
+            "right": ["wed"]
+          },
+          "selectCriteria": {
+            "left": [], "right": []
+          }
+        }
+      },
+      "rename" : {
+        "rename01" : {
+          "Week Beginning Conv" : "Week Beginning"
+        },
+        "rename02" : {
+          "Ordered Units" : "POS Qty"
         }
       },
       "filter": {
         "filter01": {
           "multiWordMap" : {
-            "sum_order_units" : "Sum_Ordered Units"
+            "sumOrderedUnits" : "Sum_Ordered Units"
           },
-          "conditionTypes": [
-            "and",
-            "or",
-            "if-else"
-          ],
-          "conditions": [
-            "sum_order_units = 0",
-            "ASIN = 0",
-            "Title = 0"
-          ]
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["sumOrderedUnits > 0"]
+        },
+        "filter02": {
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["SKU != NA"]
         }
-      },
-      "sort" : {
-        "sort01": {
-          "asc": ["Account"],
-          "desc": ["Fixed"]
+      }
+    },
+    "AMAZON_ASIN_MAP": {
+      "name": "AMAZON_ASIN_MAP",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "Y",
+          "cols": []
         }
       }
     },
@@ -224,50 +264,24 @@
       "select": {
         "select01": {
           "isUnknown" : "N",
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+          "cols": ["Account Consol", "Online", "Channel", "Inv : Saleable Qty", "Sales : Net Qty", "season","HP.SKU.Short","season.ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year", "Week.End.Date"]
         }
       },
-      "join": {
-        "join01": {
-          "isUnknown" : "N",
-          "typeOfJoin": "left",
-          "joinCriteria": {
-            "left": [
-              "Account",
-              "Fixed"
-            ],
-            "right": [
-              "Account",
-              "Fixed"
-            ]
-          },
-          "selectCriteria": {
-            "left": [
-              "Account"
-            ],
-            "right": [
-              "Fixed"
-            ]
-          }
-        }
-      },
-      "filter": {
+      "filter" : {
         "filter01": {
-          "conditionTypes": [
-            "and",
-            "or",
-            "if-else"
-          ],
-          "conditions": [
-            "Account = Amazon",
-            "Fixed < 40.0"
-          ]
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["Channel = Retail"]
         }
       },
-      "sort" : {
-        "sort01": {
-          "asc": ["Account"],
-          "desc": ["Fixed"]
+      "group" : {
+        "group01": {
+          "cols" : ["HP_SKU_Short", "Account Consol", "Online", "wed", "season", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"],
+          "aggregations": {
+            "sum" : {
+              "Inv : Saleable Qty" : "Sum_Inv : Saleable Qty",
+              "Sales : Net Qty" : "Sum_Sales : New Qty"
+            }
+          }
         }
       }
     },
@@ -276,51 +290,8 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
-          "isUnknown" : "N",
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
-        }
-      },
-      "join": {
-        "join01": {
-          "isUnknown" : "N",
-          "typeOfJoin": "left",
-          "joinCriteria": {
-            "left": [
-              "Account",
-              "Fixed"
-            ],
-            "right": [
-              "Account",
-              "Fixed"
-            ]
-          },
-          "selectCriteria": {
-            "left": [
-              "Account"
-            ],
-            "right": [
-              "Fixed"
-            ]
-          }
-        }
-      },
-      "filter": {
-        "filter01": {
-          "conditionTypes": [
-            "and",
-            "or",
-            "if-else"
-          ],
-          "conditions": [
-            "Account = Amazon",
-            "Fixed < 40.0"
-          ]
-        }
-      },
-      "sort" : {
-        "sort01": {
-          "asc": ["Account"],
-          "desc": ["Fixed"]
+          "isUnknown" : "Y",
+          "cols": ["Entity ID Old"]
         }
       }
     },
@@ -333,47 +304,67 @@
           "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
         }
       },
-      "join": {
+      "rename" : {
+        "rename01" : {
+          "Sell-To Qty" : "POS Qty",
+          "Sell-To Sales NDP" : "POS Sales NDP"
+        }
+      },
+      "group" : {
+        "group01": {
+          "cols" : ["Week", "Week Desc", "Account Manager"],
+          "aggregations": {
+            "sum" : {
+              "POS Qty" : "Sum_POS Qty",
+              "POS Sales NDP" : "Sum_POS Sales NDP"
+            }
+          }
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account Major"],
+          "desc": ["Week", "Sum_POS Qty", "Account Major"]
+        }
+      },
+      "join" : {
         "join01": {
-          "isUnknown" : "N",
-          "typeOfJoin": "left",
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": [
-              "Account",
-              "Fixed"
+              "Week"
             ],
             "right": [
-              "Account",
-              "Fixed"
+              "fy_week"
             ]
           },
           "selectCriteria": {
-            "left": [
-              "Account"
-            ],
-            "right": [
-              "Fixed"
-            ]
+            "left": ["Quarter", "Month", "Week", "Week Desc", "Product Category Desc"],
+            "right": ["fy_week", "season", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"]
+          }
+        },
+        "join02": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["wed"],
+            "right": ["wed"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["fy_week", "wed"]
           }
         }
       },
       "filter": {
         "filter01": {
-          "conditionTypes": [
-            "and",
-            "or",
-            "if-else"
-          ],
-          "conditions": [
-            "Account = Amazon",
-            "Fixed < 40.0"
-          ]
-        }
-      },
-      "sort" : {
-        "sort01": {
-          "asc": ["Account"],
-          "desc": ["Fixed"]
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["Account Major Consol = Costco Wholesale"]
+        },
+        "filter02": {
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["Account Major Consol != Costco Wholesale"]
         }
       }
     },
@@ -435,51 +426,136 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
+          "isUnknown" : "Y",
+          "cols": []
+        },
+        "select02": {
           "isUnknown" : "N",
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+          "cols": ["Product Base ID", "Account Major Consol", "SKU ACV POS", "SKU ACV Inv"]
         }
+      },
+      "rename" : {
+        "Product Base ID" : "SKU",
+        "Account Major Consol" : "Account"
       },
       "join": {
         "join01": {
-          "isUnknown" : "N",
-          "typeOfJoin": "left",
+          "isUnknown" : "Y",
+          "typeOfJoin": ["left","inner"],
           "joinCriteria": {
-            "left": [
-              "Account",
-              "Fixed"
-            ],
-            "right": [
-              "Account",
-              "Fixed"
-            ]
+            "left": ["Entity ID"],
+            "right": ["Entity ID"]
           },
           "selectCriteria": {
-            "left": [
-              "Account"
-            ],
-            "right": [
-              "Fixed"
-            ]
+            "left": [],
+            "right": ["Entity ID", "Entity Description"]
+          }
+        },
+        "join02": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["Account Major Consol","Entity ID"],
+            "right": ["Account Major Consol","Entity ID"]
+          },
+          "selectCriteria": {
+            "left": ["Account Major"],
+            "right": ["Account Major Consol","Entity ID", "Product Base ID"]
+          }
+        },
+        "join03": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["Account Major Consol"],
+            "right": ["Account Major Consol"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Account Major Consol", "Product Base ID"]
           }
         }
       },
       "filter": {
         "filter01": {
+          "multiWordMap" : {
+            "accountMajor" : "Account Major",
+            "dhDistribution" : "D&H Distributing Co",
+            "newAgeElectronics" : "New Age Electronics Inc, a Division of Synnex Corporation",
+            "unitedStationary" : "United Stationers Supply Co"
+          },
           "conditionTypes": [
             "and",
             "or",
             "if-else"
           ],
           "conditions": [
-            "Account = Amazon",
-            "Fixed < 40.0"
+            "accountMajor != dhDistribution",
+            "accountMajor !=  newAgeElectronics",
+            "accountMajor != Synnex",
+            "accountMajor != unitedStationary"
+
           ]
+        },
+        "filter02": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": ["wed > Max_wed"]
+        },
+        "filter03": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": ["Online != 1"]
         }
       },
-      "sort" : {
-        "sort01": {
-          "asc": ["Account"],
-          "desc": ["Fixed"]
+      "group" : {
+        "group01": {
+          "cols" : ["Account Major Consol", "Online", "Product Base ID", "Product Base Desc", "wed", "season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year"],
+          "aggregations": {"sum" : { "POS Qty" : "Sum_POS Qty"}
+          }
+        },
+        "group02": {
+          "cols" : ["Product Base ID", "season", "Type", "Account Major Consol", "Product Base Desc", "Online", "Account Major", "Entity ID", "Max_wed", "wed"],
+          "aggregations": {
+            "sum" : {
+              "POS Sales NDP" : "Sum_POS NDP",
+              "Inventory Total Qty" :  "Inventory Total Qty",
+              "POS Qty" : "POS Qty"
+            }
+          }
+        },
+        "group03": {
+          "cols" : ["Account Major Consol", "Entity ID"],
+          "aggregations": {
+            "sum" : {
+              "POS Qty" : "Sum_POS Qty",
+              "POS Sales NDP" : "Sum_POS Sales NDP"
+            }
+          }
+        },
+        "group04": {
+          "cols" : ["Account Major Consol"],
+          "aggregations": {
+            "sum" : {
+              "Sum_POS Qty" : "Sum_Sum_POS Qty",
+              "Sum_POS Sales NDP" : "Sum_Sum_POS Sales NDP"
+            }
+          }
+        },
+        "group05": {
+          "cols" : ["wed", "Product Base ID", "Product Base Desc", "Account Major Consol"],
+          "aggregations": {
+            "sum" : {
+              "Store POS" : "Sum_Store POS",
+              "Store Inv" : "Sum_Store Inv"
+            }
+          }
         }
       }
     },
@@ -489,50 +565,58 @@
       "select": {
         "select01": {
           "isUnknown" : "N",
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+          "cols": ["SKU", "Street Price", "Consol SKU", "Abbreviated Name", "Brand", "IPSLES","HPS/OPS","Series", "Category", "Category Subgroup", "Category_1","Category_2", "Category_3","Line", "PL", "Category Custom", "L1: Use Case", "L2: Key functionlaity", "GA date", "ES date"]
         }
       },
-      "join": {
+      "join" : {
         "join01": {
-          "isUnknown" : "N",
-          "typeOfJoin": "left",
+          "isUnknown" : "Y",
+          "typeOfJoin": ["left","inner"],
           "joinCriteria": {
-            "left": [
-              "Account",
-              "Fixed"
-            ],
-            "right": [
-              "Account",
-              "Fixed"
-            ]
+            "left": ["Product Base ID"],
+            "right": ["SKU"]
           },
           "selectCriteria": {
-            "left": [
-              "Account"
-            ],
-            "right": [
-              "Fixed"
-            ]
+            "left": ["IPSLES"],
+            "right": ["SKU"]
           }
         }
       },
-      "filter": {
+      "group" : {
+        "group01": {
+          "cols" : ["Product Base ID", "Product Base Desc"],
+          "aggregations": {"sum" : { "Sum_POS Qty" : "Sum_Sum_POS Qty"}
+          }
+        },
+        "group02": {
+          "cols" : ["Account Major Consol", "Online", "Consol SKU", "Abbreviated Name", "Street Price", "wed", "season", "Brand", "IPSLES", "HSP/OPS","Series","Category","Category Subgroup", "Category_1","Category_2","Category_3","Line","PL","Category Custom","L1: Use Case", "L2: Key functionality", "GA date","ES date", "season_ordered", "cal_month","cal_year","fiscal_quarter","fiscal_year"],
+          "aggregations": {"sum" : { "Sum_POS Qty" : "POS Qty"}
+          }
+        }
+      },
+      "rename" : {
+        "Account Major Consol" : "Account Major",
+        "Abbreviated Name" : "SKU Name",
+        "wed" : "WED"
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Product Base ID"],
+          "desc": ["Sum_Sum_POS Qty"]
+        }
+      },
+      "filter" : {
         "filter01": {
+          "multiWordMap" : {
+            "accountMajor" : "Account Major",
+            "bestBuy" : "Best Buy"
+          },
           "conditionTypes": [
             "and",
             "or",
             "if-else"
           ],
-          "conditions": [
-            "Account = Amazon",
-            "Fixed < 40.0"
-          ]
-        }
-      },
-      "sort" : {
-        "sort01": {
-          "asc": ["Account"],
-          "desc": ["Fixed"]
+          "conditions": ["accountMajor = bestBuy"]
         }
       }
     },
@@ -541,51 +625,160 @@
       "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
       "select": {
         "select01": {
-          "isUnknown" : "N",
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+          "isUnknown" : "Y",
+          "cols": []
         }
       },
-      "join": {
-        "join01": {
-          "isUnknown" : "N",
-          "typeOfJoin": "left",
-          "joinCriteria": {
-            "left": [
-              "Account",
-              "Fixed"
-            ],
-            "right": [
-              "Account",
-              "Fixed"
-            ]
-          },
-          "selectCriteria": {
-            "left": [
-              "Account"
-            ],
-            "right": [
-              "Fixed"
-            ]
+      "group" : {
+        "group01": {
+          "cols" : ["HP SKU", "Week Ending", "Online"],
+          "aggregations": {"sum" : { "Units" : "Units", "Bundle Qty Raw" :  "Bundle Qty Raw"}
+          }
+        },
+        "group02": {
+          "cols" : ["SKU", "WED"],
+          "aggregations": {"sum" : { "POS Qty" : "Sum_POS Qty"}
           }
         }
       },
-      "filter": {
+      "join" : {
+        "join01": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["SKU", "WED", "Online"],
+            "right": ["HP SKU", "Week Ending", "Online"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Week Ending", "Online"]
+          }
+        },
+        "join02": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["SKU", "WED"],
+            "right": ["SKU", "WED"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Account Major", "SKU", "WED", "HP SKU", "Week Ending", "Right_Online"]
+          }
+        },
+        "join03": {
+          "isUnknown" : "N",
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["SKU", "Online", "Account Major","WED"],
+            "right": ["SKU", "Online", "Account Major","WED"]
+          },
+          "selectCriteria": {
+            "left": ["Account Major", "Online","SKU","SKU Name","IPSLES","WED", "POS Qty", "Season", "Street Price","Category","Category Subgroup","Line","PL","L1: Use Case", "L2: Key functionality", "GA date","ES date","Category_1","Category_2","Category_3","HSP/OPS","Series","Category Custom", "Brand"],
+            "right": [ "POS Qty"]
+          }
+        },
+        "join04": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["left","inner","right"],
+          "joinCriteria": {
+            "left": ["Account Major","SKU","WED"],
+            "right": ["Account Major (Missing)","SKU (Missing)", "Week End Date"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Week End Date", "SKU", "Account", "SKU ACV POS"]
+          }
+        },
+        "join05": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["left"],
+          "joinCriteria": {
+            "left": ["Week_End_Date"],
+            "right": ["Week_End_Date"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": []
+          }
+        }
+      },
+      "rename" : {
+        "rename01" : {
+          "POS Qty" : "Raw POS Qty"
+        },
+        "rename02" : {
+          "Account Major" : "Account",
+          "SKU Name" : "SKU_Name",
+          "Street Price" : "Street_Price",
+          "WED" : "Week_End_Date",
+          "POS Qty" : "POS_Qty",
+          "Category Subgroup" : "Category_Subgroup",
+          "L1: Use Case" : "L1_Category",
+          "L2: Key functionality" : "L2_Category",
+          "GA date" : "GA_date",
+          "ES date" : "ES_date",
+          "season_ordered" : "Season_Ordered",
+          "cal_month" : "Cal_Month",
+          "cal_year" : "Cal_Year",
+          "fiscal_quarter": "Fiscal_Quarter",
+          "fiscal_year" : "Fiscal_Year",
+          "Raw POS Qty" : "Raw_POS_Qty",
+          "SKU ACV Inv" : "Distribution_Inv"
+        },
+        "rename03" : {
+          "Account" : "Right_Account",
+          "Online" : "Right_Online",
+          "SKU" : "Right_SKU",
+          "SKU_Name" : "Right_SKU_Name",
+          "IPSLES" : "Right_IPSLES",
+          "Week_End_Date" : "Right_Week_End_Date",
+          "POS_Qty" : "Right_POS_Qty",
+          "Season" : "Right_Season",
+          "Street_Price" : "Right_Street_Price",
+          "Category" : "Right_Category",
+          "Category_Subgroup" : "Right_Category_Subgroup",
+          "Line" : "Right_Line",
+          "PL" : "Right_PL",
+          "L1_Category" : "Right_L1_Category",
+          "L2_Category" : "Right_L2_Category",
+          "Raw_POS_Qty" : "Right_Raw_POS_Qty",
+          "GA_date" : "Right_GA_date",
+          "ES_date" : "Right_ES_date",
+          "Distribution_Inv" : "Right_Distribution_Inv",
+          "Category_1" : "Right_Category_1",
+          "Category_2" : "Right_Category_2",
+          "Category_3" : "Right_Category_3",
+          "HPS/OPS" : "Right_HPS/OPS",
+          "Series" : "Right_Series",
+          "Category_Custom" : "Right_Category_Custom",
+          "Brand" : "Right_Brand"
+        }
+      },
+      "filter" : {
         "filter01": {
           "conditionTypes": [
             "and",
             "or",
             "if-else"
           ],
-          "conditions": [
-            "Account = Amazon",
-            "Fixed < 40.0"
-          ]
+          "conditions": ["Week_End_Date > Max_Week_End_date"]
         }
       },
       "sort" : {
-        "sort01": {
-          "asc": ["Account"],
-          "desc": ["Fixed"]
+        "sort01" : {
+          "asc": ["Week_End_Date (Missing)", "SKU (Missing)", "Account (Missing)"],
+          "desc": []
+        }
+      }
+    },
+    "EXISTING_POS" : {
+      "name": "EXISTING_POS",
+      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "Y",
+          "cols": ["Top SKU", "Consol SKU"]
         }
       }
     }

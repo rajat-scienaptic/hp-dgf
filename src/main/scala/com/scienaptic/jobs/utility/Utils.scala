@@ -2,6 +2,7 @@ package com.scienaptic.jobs.utility
 
 import com.scienaptic.jobs.ExecutionContext
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions.lit
 
 import scala.util.Try
 
@@ -33,5 +34,9 @@ object Utils {
       })
       scienapticDataframe
     }
+  }
+
+  def litColumn(dataFrame: DataFrame, columnName: String, litValue: Any): DataFrame = {
+    dataFrame.withColumn(columnName, lit(litValue))
   }
 }

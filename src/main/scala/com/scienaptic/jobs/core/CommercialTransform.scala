@@ -46,7 +46,7 @@ object CommercialTransform {
     val iecSelect01 = iecSource.selectOperation(SELECT01)
     val iecSelectDF = SelectOperation.doSelect(iecDF, iecSelect01.cols).get
 
-    val iecClaimFilter01 = iecSource.filterOperation(FILTER01)
+    val iecClaim01 = iecSource.filterOperation(FILTER01)
     val iecFiltered01DF = FilterOperation.doFilter(iecSelectDF, iecClaimFilter01.conditions, iecClaimFilter01.conditionTypes(NUMERAL0))
 
     val xsClaimsSelect01 = xsClaimsSource.selectOperation(SELECT01)

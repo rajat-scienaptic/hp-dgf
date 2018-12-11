@@ -43,6 +43,7 @@ object FilterOperation {
           case ">" => dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) > multiWordMap.getOrElse(arr(2), arr(2))
           case "!=" => dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) =!= multiWordMap.getOrElse(arr(2), arr(2))
           case "contains" => dataFrame(multiWordMap.getOrElse(arr(0), arr(0))).contains(multiWordMap.getOrElse(arr(2), arr(2)))
+          case "not_contains" => !dataFrame(multiWordMap.getOrElse(arr(0), arr(0))).contains(multiWordMap.getOrElse(arr(2), arr(2)))
           case _ => throw new Exception("Invalid join conditions!")
         }
     })
