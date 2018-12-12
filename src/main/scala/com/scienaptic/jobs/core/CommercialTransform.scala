@@ -574,8 +574,8 @@ object CommercialTransform {
 
     //49 - Select
     val auxWEDRename02 = auxWEDSource.renameOperation(RENAME02)
-    val auxWEDSelect01Rename02DF = Utils.convertListToDFColumnWithRename(auxWEDRename02, auxWEDSelectDF)    //TODO: Rename using rename02
-    //DONE TILL HERE
+    val auxWEDSelect01Rename02DF = Utils.convertListToDFColumnWithRename(auxWEDRename02, auxWEDSelectDF)
+
     //50 - Join
     val auxWEDJoin02 = auxWEDSource.joinOperation(JOIN02)
     val auxWEDJoinResellerMap = doJoinAndSelect(sttORCAUnionWithResellerFeatureDF, auxWEDSelect01Rename02DF, auxWEDJoin02)
@@ -583,11 +583,12 @@ object CommercialTransform {
 
     //53 - select
     val auxCommSelect01 = auxCommResellerSource.selectOperation(SELECT01)
-    val auxCommSelectDF = doSelect(auxCommResellerDF, auxCommSelect01.cols, auxCommSelect01.isUnknown).get
+    val auxCommSelectDF = doSelect(auxCommResellerDF, auxCommSelect01.cols, auxCommSelect01.isUnknown).get.withColumnRenamed("season","Season")
 
     //51 - Join
     val auxWEDJoin03 = auxWEDSource.joinOperation(JOIN03)
-    val auxWEDSelect01Rename02RenamedDF = auxWEDSelect01Rename02DF.withColumnRenamed("OPP Option","Promo Option").withColumnRenamed("Season","Right_Season")
+    val auxWEDSelect01Rename02RenamedDF = auxCommSelectDF/*auxWEDSelect01Rename02DF*/.withColumnRenamed("OPP Option","Promo Option")
+      .withColumnRenamed("Season","Right_Season")
     val auxWEDCommResellerJoinMap = doJoinAndSelect(auxWEDJoinResellerInnerJoinDF, auxWEDSelect01Rename02RenamedDF, auxWEDJoin03)
     val auxWEDCommResellerLeftJoinDF = auxWEDCommResellerJoinMap("left")
     val auxWEDCommResellerInnerJoinDF = auxWEDCommResellerJoinMap("inner")
@@ -621,7 +622,8 @@ object CommercialTransform {
       .withColumnRenamed("Consol SKU","SKU")
       .withColumnRenamed("L1: Use Case","L1_Category")
       .withColumnRenamed("L2: Key functionality","L2_Category")
-      .withColumnRenamed("Abbreviated Name","SKU_Name").withColumnRenamed("Street Price","Street_Price")
+      .withColumnRenamed("Abbreviated Name","SKU_Name")
+      .withColumnRenamed("Street Price","Street_Price")
     val auxWEDSKUJoin04Map = doJoinAndSelect(auxWEDCommResQtynBigDealQtynNonDealQtyDF, auxSKUHierWithRenamedDF, auxWEDJoin04)
     val auxWEDSKUInnerJoinDF = auxWEDSKUJoin04Map("inner")
     val auxWEDSKULeftJoinDF = auxWEDSKUJoin04Map("left")
@@ -646,7 +648,7 @@ object CommercialTransform {
 
     //197 - Formula (Reseller_Cluster)
     val sttORCAResellerClusterDF = sttORCAInnerLeftJoinUnionDF.withColumn("Reseller_Cluster",
-      when((col("Option Type (SKU)")!=="Option C") && (col("Reseller_Cluster")==="Other - Option C"),"Other - Option B")
+      when((col("Option Type (SKU)")=!="Option C") && (col("Reseller_Cluster")==="Other - Option C"),"Other - Option B")
       .otherwise(col("Reseller_Cluster")))
 
     //70 - Multi field cast
@@ -688,8 +690,6 @@ object CommercialTransform {
     val auxWED06JoinsUnionWithRenamedDF = Utils.convertListToDFColumnWithRename(auxWEDSource.renameOperation(RENAME01), auxWED06JoinsUnionDF)
     val auxWEDJoin07Map = doJoinAndSelect(auxWED05JoinsUnionDF.withColumnRenamed("IR","All IR"), auxWED06JoinsUnionWithRenamedDF, auxWEDJoin07)
     val auxWEDInnerJoin07DF = auxWEDJoin07Map("inner")
-      .withColumnRenamed("IR","All IR")
-      .withColumnRenamed("First_C2B Promo Code","Right_First_C2B Promo Code")
 
     //114
     val auxEtailerSelect01 = auxEtailerSource.selectOperation(SELECT01)
@@ -745,8 +745,9 @@ object CommercialTransform {
 
     //102 - Select
     val ciORCASelect02 = ciORCASource.selectOperation(SELECT02)
-    val ciORCAUnionSelectDF = doSelect(ciORCAJoin02UnionDF, ciORCASelect02.cols, ciORCASelect02.isUnknown).get
-
+    var ciORCAUnionSelectDF = doSelect(ciORCAJoin02UnionDF, ciORCASelect02.cols, ciORCASelect02.isUnknown).get
+    ciORCAUnionSelectDF = Utils.convertListToDFColumnWithRename(ciORCASource.renameOperation(RENAME01), ciORCAUnionSelectDF)
+    //DONE till here
     //115 - Join
     val ciORCAJoin03 = ciORCASource.joinOperation(JOIN03)
     val ciORCAJoin03Map = doJoinAndSelect(ciORCAUnionSelectDF, auxEtailerSelectedDF, ciORCAJoin03)
@@ -762,7 +763,8 @@ object CommercialTransform {
     //104 - Join
     /*216 not implemented*/
     val ciORCAJoin04 = ciORCASource.joinOperation(JOIN04)
-    val ciORCAJoin04Map = doJoinAndSelect(ciORCAJoins03UnionDF, auxWEDPRoductGroupSortedDF, ciORCAJoin04)
+    val auxWEDPRoductGroupSortedRenamedDF = auxWEDPRoductGroupSortedDF.withColumnRenamed("SKU","Right_SKU")
+    val ciORCAJoin04Map = doJoinAndSelect(ciORCAJoins03UnionDF, auxWEDPRoductGroupSortedRenamedDF, ciORCAJoin04)
     val ciORCAInnerJoin04DF = ciORCAJoin04Map("inner")
     val ciORCALeftJoin04DF = ciORCAJoin04Map("left")
     //110 /*Need not implement for now - browse*/
@@ -802,7 +804,7 @@ object CommercialTransform {
     val histPOSDF = Utils.loadCSV(executionContext, histPOSSource.filePath).get.cache()
 
     //327 - Convert wed to dateFormat
-    val histPOSDateFormattedDF = histPOSDF.withColumn("Week_End_Date", convertDatetoFormat(col("wed"),lit("yyyy-MM-dd"),lit("MM/dd/yyyy")))
+    val histPOSDateFormattedDF = histPOSDF.withColumn("Week_End_Date", convertDatetoFormat(col("wed"),lit("MM/dd/yyyy")))
       .drop("wed")
 
     //323 - Select
@@ -853,7 +855,7 @@ object CommercialTransform {
 
     //270 - Workflow run date
     /********  Main One  *******/
-    val histPOSWithRunDateDF = histPOSSelectUniqueDF.withColumn("Workflow Run Date", lit(LocalDateTime.now.format(DateTimeFormatter.ofPattern("YYYYMMdd_HHmmss"))))
+    val histPOSWithRunDateDF = histPOSSelectUniqueDF.withColumn("Workflow Run Date", lit(current_date()/*LocalDateTime.now.format(DateTimeFormatter.ofPattern("YYYYMMdd_HHmmss"))*/))
 
     //278 - Select
     val histPOSSelect03 = histPOSSource.selectOperation(SELECT03)
@@ -877,7 +879,7 @@ object CommercialTransform {
     val archivePOSJoin01 = archivePOSSource.joinOperation(JOIN01)
     val archivePOSRenamed = archivePOS.withColumnRenamed("Right_Series","Left_Right_Series")
       .withColumnRenamed("Right_Need Big Data","Left_Right_Need Big Data")
-    val histPOSSelect03RenamedDF = Utils.convertListToDFColumnWithRename(archivePOSSource.renameOperation("rename01"), histPOSSelect03DF)
+    val histPOSSelect03RenamedDF = Utils.convertListToDFColumnWithRename(archivePOSSource.renameOperation(RENAME01), histPOSSelect03DF)
     val archivePOSJoin01Map = doJoinAndSelect(archivePOSRenamed, histPOSSelect03RenamedDF, archivePOSJoin01)
     val archivePOSInnerJoin01DF = archivePOSJoin01Map("inner")
     val archivePOSLeftJoin01DF = archivePOSJoin01Map("left")
@@ -886,9 +888,10 @@ object CommercialTransform {
     //282 - Select
     val archivePOSSelect02 = archivePOSSource.selectOperation(SELECT02)
     val archivePOSRightJoinSelectDF = doSelect(archivePOSRightJoin01DF, archivePOSSelect02.cols, archivePOSSelect02.isUnknown).get
+      .withColumnRenamed("Qty","New Qty").withColumnRenamed("Big_Deal_Qty","New Big_Deal_Qty").withColumnRenamed("Non_Big_Deal_Qty","New Non_Big_Deal_Qty")
 
     //283 - Union
-    val archivePOSJoinsUnionDF = doUnion(doUnion(archivePOSInnerJoin01DF, archivePOSLeftJoin01DF).get, archivePOSRightJoin01DF).get
+    var archivePOSJoinsUnionDF = doUnion(doUnion(archivePOSInnerJoin01DF, archivePOSLeftJoin01DF).get, archivePOSRightJoinSelectDF).get
 
     //279 - Select
     val archivePOSSelect03 = archivePOSSource.selectOperation(SELECT03)
@@ -911,12 +914,14 @@ object CommercialTransform {
     //277 - Summarize
     //was archivePOSSource.groupOperation
     val archivePOSGroup01 = archivePOSSource.groupOperation(GROUP01)
-    var archivePOSGroup01DF = archivePOSNewVarsDF.dropDuplicates(archivePOSGroup01.cols) //doGroup(archivePOSNewVarsDF.withColumn("dummy",lit(1)), archivePOSGroup01).get.drop("dummy").drop("sum_dummy")
-    archivePOSGroup01DF = archivePOSGroup01DF.select(Utils.convertListToDFColumn(archivePOSGroup01.cols, archivePOSGroup01DF):_*)
+    val archivePOSGroup01DF = archivePOSNewVarsDF.select(Utils.convertListToDFColumn(archivePOSGroup01.cols, archivePOSNewVarsDF):_*)
+      .dropDuplicates(archivePOSGroup01.cols)
+    //archivePOSGroup01DF = archivePOSGroup01DF.select(Utils.convertListToDFColumn(archivePOSGroup01.cols, archivePOSGroup01DF):_*)
 
     //295 - Filter Week_End_Date
     val archivePOSFilter01 = archivePOSSource.filterOperation(FILTER01)
-    val archivePOSFilterWEDDF = doFilter(archivePOSGroup01DF, archivePOSFilter01, archivePOSFilter01.conditionTypes(NUMERAL0)).get
+    val archivePOSFilterWEDDF = archivePOSGroup01DF.filter(col("Week_End_Date") > lit("2016-01-01"))
+    //val archivePOSFilterWEDDF = doFilter(archivePOSGroup01DF, archivePOSFilter01, archivePOSFilter01.conditionTypes(NUMERAL0)).get
 
     //294 - Write QA File
     archivePOSFilterWEDDF.show()
@@ -925,13 +930,14 @@ object CommercialTransform {
     //302 - summarize (Add new column max of Week_End_Date) & 303 - Append
     val max_WED = histPOSSelect03DF.agg(max("Week_End_date")).head().getInt(0)
     val histPOSSelect03MaxWEDDF = histPOSSelect03DF.withColumn("Max_Week_End_Date", lit(max_WED))
-    //TODO: Select "Big_Deal_Qty","Brand","Category","Category Custom","Category_Subgroup","Category_1","Category_2","HPS/OPS","IPSLES","IR","Mono/Color","Non_Big_Deal_Qty","Promo ID","Promo_Option","Qty","Reseller","Reseller_Cluster","Season","Series","SKU","SKU_Name","Street_Price","Week_End_Date","Inv_Qty","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","eTailer","Spend","Promo Flag"
+    //Select "Big_Deal_Qty","Brand","Category","Category Custom","Category_Subgroup","Category_1","Category_2","HPS/OPS","IPSLES","IR","Mono/Color","Non_Big_Deal_Qty","Promo ID","Promo_Option","Qty","Reseller","Reseller_Cluster","Season","Series","SKU","SKU_Name","Street_Price","Week_End_Date","Inv_Qty","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","eTailer","Spend","Promo Flag"
 
     //299 - Select : NOT REQUIRED as all fields getting selected
 
     //298 - Filter
     val histPOSFilter02 = archivePOSSource.filterOperation(FILTER02)
     val histPOSFilteredSeasonDF = doFilter(histPOSSelect03MaxWEDDF, histPOSFilter02, histPOSFilter02.conditionTypes(NUMERAL0)).get
+    //Check if BTB'18: apostry will create any problem or not
 
     //297 - Summarize
     val histPOSGroup02 = archivePOSSource.groupOperation(GROUP02)

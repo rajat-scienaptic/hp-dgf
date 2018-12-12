@@ -192,7 +192,7 @@
           "cols": ["SKU","Week_End_Date","Option Type"],
           "aggregations": {"max": {"Rebate Amount": "IR"},
                            "first": {"C2B Promo Code":"First_C2B Promo Code"}},
-          "selectCriteria": ["SKU","C2B Promo Code","Promo Name","Season","BU","Product","Rebate Amount","Week.End.Date","Option Type","Source_season","Source_Season.Ordered","Cal.Month","Cal.Year","Fiscal.Qtr","Fiscal.Year"]
+          "selectCriteria": ["SKU","C2B Promo Code","Promo Name","Season","BU","Product","Rebate Amount","Week_End_Date","Option Type","Source_season","Source_Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year"]
         },
         "group06": {
           "cols": ["Week End Date","Base SKU","C2B Promo Code"],
@@ -295,11 +295,11 @@
           "isUnknown":"y",
           "typeOfJoin": ["inner"],
           "joinCriteria": {
-            "left": ["SKU","Reseller","Week_End_Date"], "right": ["SKU","Reseller","Week_End_Date"]
+            "left": ["SKU","Reseller","Week_End_Date"], "right": ["Right_SKU","Right_Reseller","Right_Week_End_Date"]
           },
           "selectCriteria": {
             "left": [""],
-            "right": ["Big Deal Qty","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Non Big Deal Qty","Promo Option","Qty","Reseller","Reseller_Cluster","Season","Season_Ordered","Week_End_Date","SKU_Name","Brand","Category","Category Custom","Category Subgroup","Category.1","Category.2","Category.3","SKU","ES date","GA date","HPS/OPS","IPSLES","L1.Category","L2.Category","Line","Mono/Color","PL","PLC Status","Series","Street.Price","All","Option_B","Option_C","Option Type (SKU)","Top SKU","Need IFS2?"]
+            "right": ["Right_Big Deal Qty","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Right_Non Big Deal Qty","Right_Promo Option","Right_Qty","Right_Reseller","Right_Reseller_Cluster","Right_Season","Season_Ordered","Right_Week_End_Date","Right_SKU_Name","Right_Brand","Right_Category","Right_Category Custom","Right_Category Subgroup","Right_Category_1","Right_Category_2","Right_Category_3","Right_SKU","Right_ES date","Right_GA date","Right_HPS/OPS","Right_IPSLES","Right_L1_Category","Right_L2_Category","Right_Line","Right_Mono/Color","Right_PL","Right_PLC Status","Right_Series","Right_Street_Price","Right_All","Right_Option_B","Right_Option_C","Right_Option Type (SKU)","Top SKU","Right_Need IFS2?"]
           }
         }
       },
@@ -617,11 +617,11 @@
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["SKU","Week_End_Date","Inventory Cluster"],
-            "right": ["Product Base ID","Beg_Inventory","Resller Cluster"]
+            "right": ["Product Base ID","Beg_Inventory","Reseller Cluster"]
           },
           "selectCriteria": {
             "left": ["Option Type (SKU)","Right_All","Right_C2B Promo Code","Right_Need IFS2?","Right_Option_B","Right_Option_C"],
-            "right": ["Beg_Inventory","Product Base ID","Reseller Cluster"]
+            "right": ["Product Base ID","Reseller Cluster"]
           }
         },
         "join03": {
@@ -657,15 +657,26 @@
         },
         "group02": {
           "cols" : ["Brand","Category","Category Custom","Category_Subgroup","Category_1","Category_2","Category_3","ES_date","GA_date","HPS/OPS","IPSLES","L1_Category","L2_Category","Line","Mono/Color","PL","PLC Status","Promo ID","Promo_Option","Reseller","Reseller_Cluster","Season","Series","SKU","SKU_Name","Street_Price","Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","eTailer","Promo Flag"],
-          "aggregations": {"sum" : {"Big_Deal_Qty":"Sum	Big_Deal_Qty", "Non_Big_Deal_Qty": "Sum	Non_Big_Deal_Qty", "Qty": "Qty","Inv_Qty": "Inv_Qty", "Spend": "Spend"},
+          "aggregations": {"sum" : {"Big_Deal_Qty":"Big_Deal_Qty", "Non_Big_Deal_Qty": "Non_Big_Deal_Qty", "Qty": "Qty","Inv_Qty": "Inv_Qty", "Spend": "Spend"},
                            "max" : {"IR": "IR"}},
           "selectCriteria": ["Big_Deal_Qty","Brand","Category","Category Custom","Category_Subgroup","Category_1","Category_2","Category_3","ES_date","GA_dateTime","HPS/OPS","IPSLES","IR","L1_Category","L2_Category","Line","Mono/Color","Non_Big_Deal_Qty","PL","PLC Status","Promo ID","Promo_Option","Qty","Reseller","Reseller_Cluster","Season","Series","SKU","SKU_Name","Street_Price","Week_End_Date","Inv_Qty","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","eTailer","Right_First_C2B Promo Code","Spend","Promo Flag"]
         }
       },
       "sort": {
         "sort01": {
-          "asc": ["Week_End_Date","SKU","Resller_Cluster"],
+          "asc": ["Week_End_Date","SKU","Reseller_Cluster"],
           "desc": []
+        }
+      },
+      "rename": {
+        "rename01": {
+          "Big Deal Qty": "Big_Deal_Qty",
+          "Category Subgroup": "Category_Subgroup",
+          "ES date": "ES_date",
+          "GA date": "GA_date",
+          "Non Big Deal Qty": "Non_Big_Deal_Qty",
+          "Promo Option": "Promo_Option",
+          "Inv Qty": "Inv_Qty"
         }
       }
     },
@@ -683,7 +694,7 @@
         },
         "select03": {
           "isUnknown": "y",
-          "cols": ["Line","PL","L1_Category","L2_Category","PLC Status","GA_date","ES_date","Category_3","Right_Series","Right_First_C2B Promo Code"]
+          "cols": ["Category_3","ES_date","GA_date","L1_Category","L2_Category","Line","PL","PLC Status","Right_Series","Right_First_C2B Promo Code"]
         }
       },
       "filter": {
@@ -794,42 +805,42 @@
       },
       "rename": {
         "rename01": {
-          "Week.End.Date": "New Week.End.Date",
-          "Street.Price": "New Street.Price",
+          "Week_End_Date": "New Week_End_Date",
+          "Street_Price": "New Street_Price",
           "Spend": "New Spend",
-          "SKU.Name": "New SKU.Name",
+          "SKU_Name": "New SKU_Name",
           "SKU": "New SKU",
           "Series": "New Series",
           "Season": "New Season",
           "Right_Series": "New Right_Series",
           "Right_Need Big Data": "Right_Right_Need Big Data",
-          "Reseller.Cluster": "New Reseller.Cluster",
+          "Reseller_Cluster": "New Reseller_Cluster",
           "Reseller": "New Reseller",
           "Qty": "New Qty",
-          "Promo.Option": "New Promo.Option",
+          "Promo_Option": "New Promo_Option",
           "Promo ID": "New Promo ID",
           "Promo Flag": "New Promo Flag",
           "PLC Status": "New PLC Status",
           "PL": "New PL",
-          "Non.Big.Deal.Qty": "New Non.Big.Deal.Qty",
+          "Non_Big_Deal_Qty": "New Non_Big_Deal_Qty",
           "Need Big Data": "Right_Need Big Data",
           "Line": "New Line",
-          "L2.Category": "New L2.Category",
-          "L1.Category": "New L1.Category",
+          "L2_Category": "New L2_Category",
+          "L1_Category": "New L1_Category",
           "IR": "New IR",
           "IPSLES": "New IPSLES",
-          "Inv.Qty": "New Inv.Qty",
+          "Inv_Qty": "New Inv_Qty",
           "HPS/OPS": "New HPS/OPS",
-          "GA.date": "New GA.date",
+          "GA_date": "New GA_date",
           "eTailer": "New eTailer",
-          "ES.date": "New ES.date",
-          "Category.Subgroup": "New Category.Subgroup",
-          "Category.3": "New Category.3",
-          "Category.2": "New Category.2",
-          "Category.1": "New Category.1",
+          "ES_date": "New ES_date",
+          "Category_Subgroup": "New Category_Subgroup",
+          "Category_3": "New Category_3",
+          "Category_2": "New Category_2",
+          "Category_1": "New Category_1",
           "Category Custom": "Right_Category Custom",
           "Category": "New Category",
-          "Big.Deal.Qty": "New Big.Deal.Qty"
+          "Big_Deal_Qty": "New Big_Deal_Qty"
         }
       }
     }

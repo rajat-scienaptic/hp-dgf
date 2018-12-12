@@ -86,9 +86,10 @@ object CommercialUtility {
     //toNumber(dateStr) //convert dateStr to Date object first
   })
 
-  val convertDatetoFormat = udf((dateStr: String, currentFormat: String, targetFormat:String) => {
+  val convertDatetoFormat = udf((dateStr: String, currentFormat: String) => {
     val dateObj = convertStringToSimpleDate(dateStr, currentFormat)
-    new SimpleDateFormat(targetFormat).format(dateObj)
+    //new SimpleDateFormat(targetFormat).format(dateObj)
+    //TODO: Return timestamp
   })
 
 
