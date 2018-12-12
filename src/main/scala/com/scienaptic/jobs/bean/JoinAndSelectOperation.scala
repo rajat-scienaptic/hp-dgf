@@ -20,7 +20,7 @@ object JoinAndSelectOperation {
     column_names_left.isEmpty && column_names_right.isEmpty
   }
 
-  def generateColumnsFromJoinDF(dataFrame1: DataFrame, dataFrame2: DataFrame): scala.List[_root_.org.apache.spark.sql.Column] = {
+  def generateColumnsFromJoinDF(dataFrame1: DataFrame, dataFrame2: DataFrame): scala.List[Column] = {
     val leftColumnSet = Utils.convertListToDFColumn(dataFrame1.columns.toList, dataFrame1).toSet
     val rightColumnSet = Utils.convertListToDFColumn(dataFrame2.columns.toList, dataFrame2).toSet
     leftColumnSet union rightColumnSet toList
@@ -40,7 +40,7 @@ object JoinAndSelectOperation {
 
   def doJoinAndSelect(dataFrame1: DataFrame, dataFrame2: DataFrame, joinOperation: JoinAndSelectOperation) = {
 
-    var joinMap = Map[String, DataFrame]()
+    var joinMap = scala.collection.mutable.Map[String, DataFrame]()
     val joinTypes = joinOperation.typeOfJoin
     val isUnknownChecked = joinOperation.isUnknown
     val joinExpr = generateJoinExpression(joinOperation, dataFrame1, dataFrame2)
