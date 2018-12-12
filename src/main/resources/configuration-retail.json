@@ -4,64 +4,9 @@
     "appName": "hp-retail"
   },
   "sources": {
-    "ODOM_ONLINE_ORCA": {
-      "name": "ODOM_ONLINE_ORCA",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
-      "select": {
-        "select01": {
-          "isUnknown" : "Y",
-          "cols": []
-        }
-      },
-      "group" : {
-        "group01": {
-          "cols" : ["Account Major", "Week", "Base SKU"],
-          "aggregations": {
-            "sum" : {
-              "Units" : "Online Units"
-            }
-          },
-          "selectCriteria": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr", "Base SKU", "Account Major"]
-        },
-        "group02": {
-          "cols" : ["wed"],
-          "aggregations": {
-            "sum" : {
-              "Online Units" : "Sum_Online Units"
-            }
-          },
-          "selectCriteria": ["Account Major", "Base SKU", "Online Units", "wed", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"]
-        }
-      },
-      "join": {
-        "join01": {
-          "isUnknown" : "Y",
-          "typeOfJoin": ["inner"],
-          "joinCriteria": {
-            "left": ["Week"],
-            "right": ["fy_week","season"]
-          },
-          "selectCriteria": {
-            "left": ["Week"], "right": ["fy_week","season"]
-          }
-        }
-      },
-      "filter": {
-        "filter01": {
-          "conditionTypes": ["and","or","if-else"],
-          "conditions": ["wed >= 2018-01-01"]
-        }
-      },
-      "sort" : {
-        "sort01": {
-          "asc": [],
-          "desc": ["wed"]
-        }
-      }
-    },
     "STAPLES_COM_UNITS":  {
       "name": "STAPLES_COM_UNITS",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\updated promo files 20181211\\Staples.com Units.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -384,30 +329,6 @@
           "cols": ["fy_week", "wed", "season", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_years"]
         }
       },
-      "join": {
-        "join01": {
-          "isUnknown" : "N",
-          "typeOfJoin": "left",
-          "joinCriteria": {
-            "left": [
-              "Account",
-              "Fixed"
-            ],
-            "right": [
-              "Account",
-              "Fixed"
-            ]
-          },
-          "selectCriteria": {
-            "left": [
-              "Account"
-            ],
-            "right": [
-              "Fixed"
-            ]
-          }
-        }
-      },
       "filter": {
         "filter01": {
           "conditionTypes": [
@@ -620,9 +541,11 @@
         }
       },
       "rename" : {
-        "Account Major Consol" : "Account Major",
-        "Abbreviated Name" : "SKU Name",
-        "wed" : "WED"
+          "rename01" : {
+          "Account Major Consol" : "Account Major",
+          "Abbreviated Name" : "SKU Name",
+          "wed" : "WED"
+        }
       },
       "sort" : {
         "sort01": {
