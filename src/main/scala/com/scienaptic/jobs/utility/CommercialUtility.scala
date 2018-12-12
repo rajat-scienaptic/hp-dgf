@@ -38,8 +38,7 @@ object CommercialUtility {
     val sdf = new SimpleDateFormat("yyyy-MM-dd")
     val result = new Date(sdf.parse(dateString).getTime() + TimeUnit.DAYS.toMillis(6-days))
     sdf.format(result)
-
-    new Date()
+    /*new Date()*/
   })
 
   val baseSKUFormulaUDF = udf((baseSKU: String) => {
