@@ -45,6 +45,8 @@ object RetailTransform {
   val RENAME02 = "RENAME02"
   val RENAME03 = "RENAME03"
   val RENAME04 = "RENAME04"
+  val RENAME05 = "rename05"
+  val RENAME06 = "rename06"
   val SORT01 = "SORT01"
   val SORT02 = "SORT02"
   val SORT03 = "SORT03"
@@ -64,6 +66,7 @@ object RetailTransform {
   val AUX_TABLES_SKU_HIERARCHY_SOURCE = "AUX_TABLES_SKU_HIERARCHY"
   val BBY_BUNDLE_INFO_SOURCE = "BBY_BUNDLE_INFO"
   val EXISTING_POS_SOURCE = "EXISTING_POS"
+
 
   def execute(executionContext: ExecutionContext): Unit = {
     /* Source Map with all sources' information */
@@ -100,7 +103,7 @@ object RetailTransform {
     val existingPOS = Utils.loadCSV(executionContext, existingPOSSource.filePath).get
 
     /* AUX TABLES WEEKEND */
-    val auxTablesWeekendselect01DF = SelectOperation.doSelect(auxTablesWeekend, auxTablesWeekendSource.selectOperation("select01").cols).get
+    val auxTablesWeekendselect01DF = SelectOperation.doSelect(auxTablesWeekend, auxTablesWeekendSource.selectOperation(SELECT01).cols).get
 
     /* ODOOM ORCA */
     // Select01
@@ -184,7 +187,7 @@ object RetailTransform {
 
     // join
     val orca201617And2017QryAndAuxTablesJoin01 = orcaQry2017ToDateSource.joinOperation(JOIN01)
-    val orca201617And2017QryAndAuxTablesJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryFormulaDF, auxTablesWeekendselect01DF,orca201617And2017QryAndAuxTablesJoin01)
+    val orca201617And2017QryAndAuxTablesJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryFormulaDF, auxTablesWeekendselect01DF.withColumnRenamed("wed", "Right_wed"),orca201617And2017QryAndAuxTablesJoin01)
     val orca201617And2017QryAndAuxTablesInnerJoin01 = orca201617And2017QryAndAuxTablesJoin01Map(INNER_JOIN)
 
     // browse here
@@ -214,7 +217,7 @@ object RetailTransform {
 
     // join
     val auxTablesOnlineAndOrcaJoin01 = auxTablesOnlineSource.joinOperation(JOIN01)
-    val auxTablesOnlineAndOrcaJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryAndAuxTablesInnerJoin02, auxTablesOnlineSelect01DF,auxTablesOnlineAndOrcaJoin01)
+    val auxTablesOnlineAndOrcaJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryAndAuxTablesInnerJoin02, auxTablesOnlineSelect01DF.withColumnRenamed("Entity ID", "Right_Entity ID"),auxTablesOnlineAndOrcaJoin01)
     val auxTablesOnlineAndOrcaJoin01leftJoin01 = orca201617And2017QryAndAuxTablesJoin02Map(LEFT_JOIN)
     val auxTablesOnlineAndOrcaJoin01InnerJoin01 = orca201617And2017QryAndAuxTablesJoin02Map(INNER_JOIN)
 
@@ -240,7 +243,7 @@ object RetailTransform {
 
     // join Staples continued..
     val staplesComUnitsJoin01 = staplesComUnitsSource.joinOperation(JOIN01)
-    val staplesComUnitsJoin01Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineGroup01DF, staplesComUnitsUnionDF, staplesComUnitsJoin01)
+    val staplesComUnitsJoin01Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineGroup01DF, staplesComUnitsUnionDF.withColumnRenamed("wed", "Right_wed"), staplesComUnitsJoin01)
     val staplesComUnitsJoin01LefttDF = staplesComUnitsJoin01Map(LEFT_JOIN)
     val staplesComUnitsJoin01InnerDF = staplesComUnitsJoin01Map(INNER_JOIN).cache()
 
@@ -292,7 +295,7 @@ object RetailTransform {
 
     // group
     val amazonArapGroup01 = amazonArapSource.groupOperation(GROUP01)
-    val amazonArapGroup01DF = Utils.convertListToDFColumnWithRename(amazonArapSource.renameOperation(RENAME01),GroupOperation.doGroup(amazonArapConvertDateDF, amazonArapGroup01).get)
+    val amazonArapGroup01DF = GroupOperation.doGroup(amazonArapConvertDateDF.withColumn("Week Beginning", col("Week Beginning Conv")), amazonArapGroup01).get
 
     /* Amazon Asin Map*/
     // select
@@ -302,7 +305,7 @@ object RetailTransform {
     /* Amazon arap continued..*/
     // join
     val amazonArapJoin01 = amazonArapSource.joinOperation(JOIN01)
-    val amazonArapJoin01Map = JoinAndSelectOperation.doJoinAndSelect(amazonArapGroup01DF, amazonAsinMapSelectDF,amazonArapJoin01)
+    val amazonArapJoin01Map = JoinAndSelectOperation.doJoinAndSelect(amazonArapGroup01DF, amazonAsinMapSelectDF.withColumnRenamed("ASIN", "Right_ASIN"),amazonArapJoin01)
     val amazonArapJoin01LefttDF = amazonArapJoin01Map(LEFT_JOIN)
     val amazonArapJoin01InnerDF = amazonArapJoin01Map(INNER_JOIN)
 
@@ -349,7 +352,7 @@ object RetailTransform {
 
     /* S Prints Historical Units */
     // convert to Date (MM/dd/yyyy)
-    val sPrintsHistoricalUnitsDateConvDF = sPrintHistoricalUnitsDF.withColumn("Week.End.Date", to_date(unix_timestamp(col("wed"), "MM/dd/yyyy").cast("timestamp")))
+    val sPrintsHistoricalUnitsDateConvDF = sPrintHistoricalUnitsDF.withColumn("Week_End_Date", to_date(unix_timestamp(col("wed"), "MM/dd/yyyy").cast("timestamp")))
 
     // select
     val sPrintsHistoricalUnitsSelect01 = sPrintHistoricalUnitsSource.selectOperation(SELECT01)
@@ -413,7 +416,8 @@ object RetailTransform {
 
     // join
     val auxTablesOnlineJoin02 = auxTablesOnlineSource.joinOperation(JOIN02)
-    val auxTablesOnlineJoin02Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineIfOnline1FilterDF, auxTablesOnlineFormula03DF,auxTablesOnlineJoin02)
+    val auxTablesOnlineFormula03ColsRenamedDF = Utils.convertListToDFColumnWithRename(auxTablesOnlineSource.renameOperation(RENAME02), auxTablesOnlineFormula03DF)
+    val auxTablesOnlineJoin02Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineIfOnline1FilterDF, auxTablesOnlineFormula03ColsRenamedDF,auxTablesOnlineJoin02)
     val auxTablesOnlineJoin02InnerDF = auxTablesOnlineJoin02Map(INNER_JOIN)
 
     // formula
@@ -427,7 +431,8 @@ object RetailTransform {
 
     // join
     val auxTablesOnlineJoin03 = auxTablesOnlineSource.joinOperation(JOIN03)
-    val auxTablesOnlineJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineGroup04DF, auxTablesOnlineGroup05DF,auxTablesOnlineJoin03)
+    val auxTablesOnlineGroup05RenamedDF = Utils.convertListToDFColumnWithRename(auxTablesOnlineSource.renameOperation(RENAME03), auxTablesOnlineGroup05DF)
+    val auxTablesOnlineJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineGroup04DF, auxTablesOnlineGroup05RenamedDF,auxTablesOnlineJoin03)
     val auxTablesOnlineJoin03InnerDF = auxTablesOnlineJoin03Map(INNER_JOIN)
 
     // formula
@@ -483,8 +488,12 @@ object RetailTransform {
 
     /* BBY Bundle Info */
     // TODO
-    val bbyBundleInfoTranspose = bbyBundleInfo.withColumn("dummy",lit(1))
-    val bbyBundleInfoTransposeDF = bbyBundleInfoTranspose.groupBy(col("dummy")).count()
+    // transpose
+//    val bbyBundleInfoTranspose = bbyBundleInfo.withColumn("dummy",lit(1))
+//    val bbyBundleInfoTransposeDF = bbyBundleInfoTranspose.groupBy(col("dummy")).count()
+
+    val bbyBundleInfoTransposeDF = bbyBundleInfo.withColumn("newCol", explode(array(struct(col("B&M Units"),col("_COM Units")))))
+      .select(col("Week Ending"), col("Units"), col("HP SKU"), col("newCol.*"))
 
     // select
     val bbyBundleInfoSelect01 = bbyBundleInfoSource.selectOperation(SELECT01)
@@ -501,7 +510,7 @@ object RetailTransform {
 
     // join
     val bbyBundleInfoJoin01 = bbyBundleInfoSource.joinOperation(JOIN01)
-    val bbyBundleInfoJoin01Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFilter01DF, bbyBundleInfoGroup01DF, bbyBundleInfoJoin01)
+    val bbyBundleInfoJoin01Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFilter01DF, bbyBundleInfoGroup01DF.withColumnRenamed("Online","Right_Online"), bbyBundleInfoJoin01)
     val bbyBundleInfoJoin01InnerDF = bbyBundleInfoJoin01Map(INNER_JOIN)
 
     // unique
@@ -515,7 +524,8 @@ object RetailTransform {
 
     // join
     val bbyBundleInfoJoin02 = bbyBundleInfoSource.joinOperation(JOIN02)
-    val bbyBundleInfoJoin02Map = JoinAndSelectOperation.doJoinAndSelect(bbyBundleInfoGroup02DF, bbyBundleInfoJoin01InnerDF, bbyBundleInfoJoin02)
+    val bbyBundleInfoJoin01InnerRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME03), bbyBundleInfoJoin01InnerDF)
+    val bbyBundleInfoJoin02Map = JoinAndSelectOperation.doJoinAndSelect(bbyBundleInfoGroup02DF, bbyBundleInfoJoin01InnerRenamedDF, bbyBundleInfoJoin02)
     val bbyBundleInfoJoin02InnerDF = bbyBundleInfoJoin02Map(INNER_JOIN)
 
     // formula
@@ -526,6 +536,7 @@ object RetailTransform {
       when(col("online") === 1, floor(col("Ratio") * col("Units")))
     .otherwise(ceil(col("Ratio") * col("Units"))))
 
+    // formula
     val bbyBundleInfoFormula04DF = bbyBundleInfoFormula03DF.withColumn("Bundle Qty",
       when(!isnull(col("Bundle Qty Raw")), col("Bundle Qty Raw"))
     .otherwise(col("Bundle Qty Est")))
@@ -536,8 +547,9 @@ object RetailTransform {
     // join
     // TODO : Check if rename works on left or have to implement on both joins
     val bbyBundleInfoJoin03 = bbyBundleInfoSource.joinOperation(JOIN03)
-    val bbyBundleInfoJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFilter01DF, bbyBundleInfoFormula05DF, bbyBundleInfoJoin03)
-    val bbyBundleInfoJoin03LeftDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME01), bbyBundleInfoJoin03Map(LEFT_JOIN))
+    val bbyBundleInfoFormula05RenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME04), bbyBundleInfoFormula05DF)
+    val bbyBundleInfoJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFilter01DF.withColumnRenamed("POS QTY", "Raw POS Qty"), bbyBundleInfoFormula05RenamedDF, bbyBundleInfoJoin03)
+    val bbyBundleInfoJoin03LeftDF = bbyBundleInfoJoin03Map(LEFT_JOIN)
     val bbyBundleInfoJoin03InnerDF = bbyBundleInfoJoin03Map(INNER_JOIN)
 
     // union
@@ -545,10 +557,13 @@ object RetailTransform {
 
     // join
     val bbyBundleInfoAndAuxTablesOnlineJoin04 = bbyBundleInfoSource.joinOperation(JOIN04)
-    val bbyBundleInfoJoin04Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineSelect02DF, unionLeftAndInnerJoinDF, bbyBundleInfoAndAuxTablesOnlineJoin04)
-    val bbyBundleInfoJoin04LeftDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), bbyBundleInfoJoin04Map(LEFT_JOIN))
-    val bbyBundleInfoJoin04InnerDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), bbyBundleInfoJoin04Map(INNER_JOIN))
-    val bbyBundleInfoJoin04RightDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), bbyBundleInfoJoin04Map(RIGHT_JOIN))
+
+    val auxTablesOnlineSelect02LeftRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME05), auxTablesOnlineSelect02DF)
+    val unionLeftAndInnerJoinDFRightRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME06), unionLeftAndInnerJoinDF)
+    val bbyBundleInfoJoin04Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineSelect02LeftRenamedDF, unionLeftAndInnerJoinDFRightRenamedDF, bbyBundleInfoAndAuxTablesOnlineJoin04)
+    val bbyBundleInfoJoin04LeftDF = bbyBundleInfoJoin04Map(LEFT_JOIN)
+    val bbyBundleInfoJoin04InnerDF = bbyBundleInfoJoin04Map(INNER_JOIN)
+    val bbyBundleInfoJoin04RightDF = bbyBundleInfoJoin04Map(RIGHT_JOIN)
 
     // formula
     val bbyBundleInfoFormula06DF = bbyBundleInfoJoin04LeftDF.withColumn("Distribution_Inv",
@@ -574,8 +589,9 @@ object RetailTransform {
 
     // join
     val bbyBundleInfoAndAuxTablesOnlineJoin05 = bbyBundleInfoSource.joinOperation(JOIN05)
-    val bbyBundleInfoJoin05Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineSelect02DF, unionLeftAndInnerJoinDF, bbyBundleInfoAndAuxTablesOnlineJoin05)
-    val bbyBundleInfoJoin05LeftDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME03), bbyBundleInfoJoin05Map(LEFT_JOIN))
+    val unionLeftAndInnerJoinRenamedDF  = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), unionFormulaAndInnerJoinDF)
+    val bbyBundleInfoJoin05Map = JoinAndSelectOperation.doJoinAndSelect(existingPOSSelect01DF, unionLeftAndInnerJoinRenamedDF, bbyBundleInfoAndAuxTablesOnlineJoin05)
+    val bbyBundleInfoJoin05LeftDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), bbyBundleInfoJoin05Map(LEFT_JOIN))
 
     // union
     val unionFilterAndJoin05DF = UnionOperation.doUnion(bbyBundleInfoJoin05LeftDF, bbyBundleInfoWedGreaterThan70000Filter01DF)
@@ -588,7 +604,6 @@ object RetailTransform {
             .when(col("Week_End_date") === "2017-04-01" , "BTB'17")
             .when(col("Week_End_date") === "2017-07-01" , "STS'17")
           .otherwise(col("Season")))))
-
 
     // sort
     val bbyBundleInfoSort01 = bbyBundleInfoSource.sortOperation(SORT01)
