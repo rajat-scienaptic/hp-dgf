@@ -18,6 +18,8 @@ object GroupOperation {
       val cols = groupOp.cols
       val aggregations = groupOp.aggregations
       var selectCols = groupOp.selectCols
+      if (selectCols.isEmpty) selectCols=dataFrame.columns.toList
+      val df = dataFrame.select(Utils.convertListToDFColumn(selectCols, dataFrame): _*)
 
       var renameMap = scala.collection.mutable.Map[String, String]()
       var aggregationMap = scala.collection.mutable.Map[String, String]()
@@ -34,17 +36,16 @@ object GroupOperation {
           aggregationMap(aggrCol) = operation
         }
       }
-      selectCols = selectCols ::: aggrRenamedColumns
+      //selectCols = selectCols ::: aggrRenamedColumns
       val aggMap = aggregationMap.toMap
-      val groupedDataSet = dataFrame.groupBy(Utils.convertListToDFColumn(cols, dataFrame): _*)
+      val groupedDataSet = df.groupBy(Utils.convertListToDFColumn(cols, df): _*)
       val aggregatedDataSet = groupedDataSet.agg(aggMap)
       val groupedDF = Utils.convertListToDFColumnWithRename(renameMap.toMap, aggregatedDataSet)
-      val groupWithAllColumnsDF = dataFrame.drop(aggregationColumns.toList:_*).join(groupedDF, cols.toSeq, "inner")
+      /*val groupWithAllColumnsDF = df.drop(aggregationColumns.toList:_*).join(groupedDF, cols.toSeq, "inner")
       if (selectCols.size == 0) {
         selectCols = (selectCols ::: dataFrame.columns.toList) filterNot aggregationColumns.toSet
-        //selectCols = selectCols.filterNot(aggregationColumns.toSet)
       }
-      groupWithAllColumnsDF.select(Utils.convertListToDFColumn(selectCols, groupWithAllColumnsDF): _*)
+      groupWithAllColumnsDF.select(Utils.convertListToDFColumn(selectCols, groupWithAllColumnsDF): _*)*/
     }
   }
 }
