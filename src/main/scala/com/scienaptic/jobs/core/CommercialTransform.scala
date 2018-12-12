@@ -105,9 +105,10 @@ object CommercialTransform {
 
     //141
     val auxWEDSelect01 = auxWEDSource.selectOperation(SELECT01)
-    val auxWEDSelectDF = doSelect(auxWEDDF, auxWEDSelect01.cols, auxWEDSelect01.isUnknown).get
-    //val auxWEDRename01 = auxWEDSource.renameOperation("rename01")
-    //auxWEDSelectDF = Utils.convertListToDFColumnWithRename(auxWEDRename01, auxWEDSelectDF)
+    var auxWEDSelectDF = doSelect(auxWEDDF, auxWEDSelect01.cols, auxWEDSelect01.isUnknown).get
+    val auxWEDRename022 = auxWEDSource.renameOperation(RENAME02)
+    auxWEDSelectDF = Utils.convertListToDFColumnWithRename(auxWEDRename022, auxWEDSelectDF)
+        .withColumnRenamed("Season","season")
 
     //233 - Select
     val iecSelect01 = iecSource.selectOperation(SELECT01)
