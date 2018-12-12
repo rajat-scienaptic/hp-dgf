@@ -369,7 +369,7 @@
           "Need Big Data": "Right_Need Big Data"
         },
         "rename02": {
-          "wedDate": "Week_End_Date",
+          "wed": "Week_End_Date",
           "season": "Season",
           "season_ordered": "Season_Ordered",
           "cal_month": "Cal_Month",
@@ -435,12 +435,12 @@
         },
         "group02": {
           "cols" : ["Product Base ID","Product Base Desc","Account Company","Week End Date"],
-          "aggregations": {"sum" : {"Qty":"Sum_Qty"}},
+          "aggregations": {"sum" : {"Qty":"Qty"}},
           "selectCriteria": ["Week","Week Desc","Distributor","Big Deal Desc","Big Deal Eclipse Customer Desc","Account Company","Product Base Desc","Product Category Desc","Big Deal Nbr","Product Base ID","Dist Qty","POS Qty","Qty","Big Deal","Week End Date","C2B Promo Code"]
         },
         "group03":{
           "cols" : ["Product Base ID","Product Base Desc","Account Company","Week End Date"],
-          "aggregations": {"sum" : {"Qty":"Sum_Qty"}},
+          "aggregations": {"sum" : {"Qty":"Qty"}},
           "selectCriteria": ["Week","Week Desc","Distributor","Big Deal Desc","Big Deal Eclipse Customer Desc","Account Company","Product Base Desc","Product Category Desc","Big Deal Nbr","Product Base ID","Dist Qty","POS Qty","Qty","Big Deal","Week End Date","C2B Promo Code"]
         },
         "group04":{

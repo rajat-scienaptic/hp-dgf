@@ -313,11 +313,10 @@ object CommercialTransform {
     //19 - Summarize (Group on C2B Promo Code)
     var rawCalendarEndDateSelectGroupDF = rawCalendarEndDateFilterSelectDF//.withColumn("dummy",lit(1))
     val rawCalendarGroup04 = rawCalendarSource.groupOperation(GROUP04)
-    rawCalendarEndDateSelectGroupDF = rawCalendarEndDateSelectGroupDF.dropDuplicates(rawCalendarGroup04.cols) //doGroup(rawCalendarEndDateSelectGroupDF, rawCalendarGroup04).get.drop("dummy").cache()
-    rawCalendarEndDateSelectGroupDF.select(Utils.convertListToDFColumn(rawCalendarGroup04.cols, rawCalendarEndDateSelectGroupDF):_*)
+    rawCalendarEndDateSelectGroupDF = rawCalendarEndDateSelectGroupDF.select(Utils.convertListToDFColumn(rawCalendarGroup04.cols, rawCalendarEndDateSelectGroupDF):_*).dropDuplicates(rawCalendarGroup04.cols) //doGroup(rawCalendarEndDateSelectGroupDF, rawCalendarGroup04).get.drop("dummy").cache()
     /*  ------------- USED IN 2nd SECTION -------- */
 
-    //85
+    //85 - Summarize
     val rawCalendarGroup05 = rawCalendarSource.groupOperation(GROUP05)
     var rawCalendarSortGroupDF = doGroup(rawCalendarSelectSortDF, rawCalendarGroup05).get
     /*val wind = Window.partitionBy(col("C2B Promo Code"))
@@ -422,7 +421,10 @@ object CommercialTransform {
     //29 - Join
     val stORCAJoin02 = stORCASource.joinOperation(JOIN02)
     val stORCAGroupIDnAccountnWEDWithRenamedDF = stORCAGroupIDnAccountnWEDDF.withColumnRenamed("Product Base ID","Righ_Product Base ID")
-      .withColumnRenamed("Product Base Desc","Right_Product Base Desc").withColumnRenamed("Account Company","Right_Account Company").withColumnRenamed("Week End Date","Right_Week End Date")
+      .withColumnRenamed("Product Base Desc","Right_Product Base Desc")
+      .withColumnRenamed("Account Company","Right_Account Company")
+      .withColumnRenamed("Week End Date","Right_Week End Date")
+      .withColumnRenamed("Week","Right_Week")
     val stORCAJoin02Map = doJoinAndSelect(stORCAGroupDealnAccountnIDDF.withColumnRenamed("Qty","Big Deal Qty"), stORCAGroupIDnAccountnWEDWithRenamedDF, stORCAJoin02)
     val stORCAInnerJoin02DF = stORCAJoin02Map("inner")
     val stORCARightJoin02DF = stORCAJoin02Map("right")
@@ -466,7 +468,11 @@ object CommercialTransform {
 
     //37 - Join
     val sttORCAJoin02 = sttORCASource.joinOperation(JOIN02)
-    val sttORCAGroup04WithRenamedDF = sttORCAGroup04DF.withColumnRenamed("Product Base ID","Right_Product Base ID").withColumnRenamed("Product Base Desc","Right_Product Base Desc").withColumnRenamed("Account Company","Right_Account Company").withColumnRenamed("Week End Date","Right_Week End Date").withColumnRenamed("Week","Right_Week")
+    val sttORCAGroup04WithRenamedDF = sttORCAGroup04DF.withColumnRenamed("Product Base ID","Right_Product Base ID")
+      .withColumnRenamed("Product Base Desc","Right_Product Base Desc")
+      .withColumnRenamed("Account Company","Right_Account Company")
+      .withColumnRenamed("Week End Date","Right_Week End Date")
+      .withColumnRenamed("Week","Right_Week")
     val sttORCAJoin02Map = doJoinAndSelect(sttORCAGroup03DF.withColumnRenamed("Qty","Big Deal Qty"), sttORCAGroup04WithRenamedDF, sttORCAJoin02)
     val sttORCAInnerJoin02DF = sttORCAJoin02Map("inner")
     val sttORCARightJoin02DF = sttORCAJoin02Map("right")
@@ -482,7 +488,9 @@ object CommercialTransform {
     val sttORCACastedNonBigDealDF = sttORCACastedDF.withColumn("Non Big Deal Qty",col("Qty")-col("Big Deal Qty"))
 
     //42 - Join
-    val stORCANonBigDealWithRenamedDF = stORCANonBigDealDF.withColumnRenamed("Big Deal Qty","ST Big Deal Qty").withColumnRenamed("Qty","ST Qty").withColumnRenamed("Non Big Deal Qty","ST Non Big Deal Qty")
+    val stORCANonBigDealWithRenamedDF = stORCANonBigDealDF.withColumnRenamed("Big Deal Qty","ST Big Deal Qty")
+      .withColumnRenamed("Qty","ST Qty")
+      .withColumnRenamed("Non Big Deal Qty","ST Non Big Deal Qty")
     val sttORCACastedNonBigDealWithRenamedDF = sttORCACastedNonBigDealDF.withColumnRenamed("Product Base ID","Right_Product Base ID").withColumnRenamed("Product Base Desc","Right_Product Base Desc")
       .withColumnRenamed("Account Company","Right_Account Company").withColumnRenamed("Week End Date","Right_Week End Date").withColumnRenamed("Big Deal Qty","STT Big Deal Qty")
       .withColumnRenamed("Qty","STT Qty").withColumnRenamed("Week","Right_Week")
@@ -493,8 +501,10 @@ object CommercialTransform {
     val sttORCARightJoin03DF = sttORCAJoin03Map("right")
 
     //47 - Union
-    val sttORCA03InnerLeftUnionDF = doUnion(sttORCALeftJoin03DF, sttORCAInnerJoin03DF).get
-    val sttORCA03JoinsUnionDF = doUnion(sttORCA03InnerLeftUnionDF, sttORCARightJoin03DF).get
+    val sttORCALeftJoin03ReArrangedDF = sttORCALeftJoin03DF.withColumnRenamed("Big Deal Qty","ST Big Deal Qty").withColumnRenamed("Qty","ST Qty").withColumnRenamed("Non Big Deal Qty", "ST Non Big Deal Qty").withColumn("STT Big Deal",lit(null)).withColumn("STT Qty",lit(null)).withColumn("STT Non Big Deal Qty",lit(null))
+    val sttORCARightJoin03ReArrangedDF = sttORCARightJoin03DF.withColumnRenamed("Big Deal Qty","STT Big Deal Qty").withColumnRenamed("Qty","STT Qty").withColumnRenamed("Non Big Deal Qty","STT Non Big Deal Qty").withColumn("ST Big Deal Qty",lit(null)).withColumn("ST Qty",lit(null)).withColumn("ST Non Big Deal Qty",lit(null))
+    val sttORCA03InnerLeftUnionDF = doUnion(sttORCAInnerJoin03DF, sttORCALeftJoin03ReArrangedDF).get
+    val sttORCA03JoinsUnionDF = doUnion(sttORCA03InnerLeftUnionDF, sttORCARightJoin03ReArrangedDF).get
 
     //TODO: Create Utility to type cast the columns. Accept map "column name" -> "type"
     //190 - Multi field cast
@@ -565,7 +575,7 @@ object CommercialTransform {
     //49 - Select
     val auxWEDRename02 = auxWEDSource.renameOperation(RENAME02)
     val auxWEDSelect01Rename02DF = Utils.convertListToDFColumnWithRename(auxWEDRename02, auxWEDSelectDF)    //TODO: Rename using rename02
-
+    //DONE TILL HERE
     //50 - Join
     val auxWEDJoin02 = auxWEDSource.joinOperation(JOIN02)
     val auxWEDJoinResellerMap = doJoinAndSelect(sttORCAUnionWithResellerFeatureDF, auxWEDSelect01Rename02DF, auxWEDJoin02)
