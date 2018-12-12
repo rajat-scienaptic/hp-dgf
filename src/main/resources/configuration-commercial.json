@@ -24,7 +24,6 @@
     "XS_CLAIMS": {
       "name": "xs_claims",
       "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\03_Xs_Claims.csv",
-      "outFilePath" : "",
       "select": {
         "select01": {
           "isUnknown":"n",
