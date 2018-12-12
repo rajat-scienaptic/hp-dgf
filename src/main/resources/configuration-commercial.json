@@ -6,7 +6,7 @@
   "sources": {
     "IEC_CLAIMS": {
       "name": "iec_claims",
-      "filePath": "/home/avik/Scienaptic/RnD/data/iec_claims.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\iec_claims_archive.csv",
       "select": {
         "select01": {
           "isUnknown":"n",
@@ -23,7 +23,7 @@
     },
     "XS_CLAIMS": {
       "name": "xs_claims",
-      "filePath": "/home/avik/Scienaptic/RnD/data/.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\03_Xs_Claims.csv",
       "outFilePath" : "",
       "select": {
         "select01": {
@@ -82,7 +82,7 @@
     },
     "RAW_MASTER_CALENDAR": {
       "name": "raw_master_calendar",
-      "filePath": "/home/avik/Scienaptic/RnD/data/.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\master_calendar_raw_commercial.csv",
       "select": {
         "select01": {
           "isUnknown":"y",
@@ -219,7 +219,7 @@
     },
     "AUX_WEEK_END_DATE": {
       "name": "aux_week_end_date",
-      "filePath": "/home/avik/Scienaptic/RnD/data/aux_week_end_date.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\AUX_week_end_date.csv",
       "select": {
         "select01": {
           "isUnknown":"n",
@@ -381,11 +381,11 @@
     },
     "AUX_SKU_HIERARCHY": {
       "name": "aux_sku_hierarchy",
-      "filePath": "/home/avik/Scienaptic/RnD/data/aux_sku_hierarchy.csv"
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\AUX_sku_hierarchy.csv"
     },
     "ST_ORCA" :{
       "name": "st_orca",
-      "filePath": "/home/avik/Scienaptic/RnD/data/st_orca.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\.csv",
       "select": {
         "select01": {
           "isUnknown": "y",
@@ -459,7 +459,7 @@
     },
     "STT_ORCA" :{
       "name": "stt_orca",
-      "filePath": "/home/avik/Scienaptic/RnD/data/stt_orca.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\.csv",
       "select": {
         "select01": {
           "isUnknown": "y",
@@ -569,7 +569,7 @@
     },
     "AUX_COMM_RESELLER_OPTIONS" :{
       "name": "aux_comm_reseller_options",
-      "filePath": "/home/avik/Scienaptic/RnD/data/stt_orca.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\AUX_comm_resller_option.csv",
       "select": {
         "select01": {
           "isUnknown": "n",
@@ -579,7 +579,7 @@
     },
     "AUX_ETAILER": {
       "name": "aux_etailer",
-      "filePath": ".....",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\AUX_etailers.csv",
       "select": {
         "select01" :{
           "isUnknown": "y",
@@ -589,7 +589,7 @@
     },
     "CI_ORCA": {
       "name": "ci_orca",
-      "filePath": ".....",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\.csv",
       "select": {
         "select01": {
           "isUnknown": "y",
@@ -681,7 +681,7 @@
       }
     },
     "TIDY_HPS_2016_17_HISTORICAL_POS": {
-      "name": "tidy_hps_2016_17_historical_pos",
+      "name": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\Tidy_HP_Sprt_2016-2017_v2_(historical_pos_units).csv",
       "filePath": "...",
       "select":  {
         "select01": {
@@ -740,7 +740,7 @@
     },
     "ARCHIVE_POS_QTY_COMMERCIAL": {
       "name": "archive_pos_qty_commercial",
-      "filePath": "...",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\outputs\\arch_posqty_commercial.csv",
       "select": {
         "select01": {
           "isUnknown": "y",
