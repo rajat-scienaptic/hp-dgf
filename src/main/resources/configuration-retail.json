@@ -157,7 +157,7 @@
     },
     "AMAZON_ARAP": {
       "name": "AMAZON_ARAP",
-      "filePath": "D:\\Documents\\HP-Docs\\updated promo files 20181211\\Staples.com Units.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\amazon_arap_data.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
