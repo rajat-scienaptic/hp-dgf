@@ -5,6 +5,7 @@ import com.scienaptic.jobs.bean._
 import com.scienaptic.jobs.utility.Utils
 import org.apache.spark.sql.functions._
 
+// TODO : FileNotFound Exception
 //TODO: Check if argument lists empty. Don't call utility if empty!
 //TODO: Implement Logger
 //TODO: Implement Custom Exceptions
@@ -47,10 +48,10 @@ object RetailTransform {
   val RENAME04 = "RENAME04"
   val RENAME05 = "rename05"
   val RENAME06 = "rename06"
-  val SORT01 = "SORT01"
-  val SORT02 = "SORT02"
-  val SORT03 = "SORT03"
-  val SORT04 = "SORT04"
+  val SORT01 = "sort01"
+  val SORT02 = "sort02"
+  val SORT03 = "sort03"
+  val SORT04 = "sort04"
 
 
   val ODOM_ONLINE_ORCA_SOURCE = "ODOM_ONLINE_ORCA"
@@ -133,7 +134,7 @@ object RetailTransform {
 
     // sort
     val odomOrcaSort01 = odomOrcaSource.sortOperation(SORT01)
-    val odomOrcaWedSortDescDF = SortOperation.doSort(odomOrcaWedGreaterThanFIxedDF, odomOrcaSort01.ascending, odomOrcaSort01.descending)
+    val odomOrcaWedSortDescDF = SortOperation.doSort(odomOrcaWedGreaterThanFIxedDF, odomOrcaSort01.ascending, odomOrcaSort01.descending).get.show()
 
     // TODO : Write to CSV for ODOM_ONLINE_ORCA_SOURCE
     /* STAPLESDOTCOM UNITS */
@@ -144,9 +145,13 @@ object RetailTransform {
     // formula
     val staplesComUnitsFormula01DF = Utils.litColumn(staplesComUnitsSelect01DF, "Account Major", "staples")
 
-    // TODO : Union with rearrange Select columns
     // union
-    val staplesComUnitsUnionDF = UnionOperation.doUnion(odomOrcaJoin01InnerDF, staplesComUnitsFormula01DF).get
+    val staplesComUnitsFormulaLitNullDF = staplesComUnitsFormula01DF.withColumn("season_ordered", lit(null))
+      .withColumn("cal_month", lit(null))
+      .withColumn("cal_year", lit(null))
+      .withColumn("fiscal_quarter", lit(null))
+      .withColumn("fiscal_year", lit(null))
+    val staplesComUnitsUnionDF = UnionOperation.doUnion(odomOrcaJoin01InnerDF, staplesComUnitsFormulaLitNullDF).get
 
     /* Orca 2014 16 Archive */
     // select
@@ -196,14 +201,19 @@ object RetailTransform {
     val orca201617And2017QryFilter01IfTrue = orcaQry2017ToDateSource.filterOperation(FILTER01)
     val orca201617And2017QryFilter01IfTrueDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter01IfTrue,orca201617And2017QryFilter01IfTrue.conditionTypes(NUMERAL0)).get
 
+    // filter
+    val orca201617And2017QryFilter02IfTrue = orcaQry2017ToDateSource.filterOperation(FILTER02)
+    val orca201617And2017QryFilter02IfTrueDF = FilterOperation.doFilter(orca201617And2017QryFilter01IfTrueDF, orca201617And2017QryFilter02IfTrue,orca201617And2017QryFilter02IfTrue.conditionTypes(NUMERAL0)).get
+
     // formula
     val orca201617And2017Qry7DaysLessFormula = orca201617And2017QryFilter01IfTrueDF.withColumn("wed",date_add(col("wed").cast("timestamp"), -7))
 
-    val orca201617And2017QryFilter02IfFalse = orcaQry2017ToDateSource.filterOperation(FILTER02)
-    val orca201617And2017QryFilter02IfFalseDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter02IfFalse,orca201617And2017QryFilter02IfFalse.conditionTypes(NUMERAL0)).get
+    // filter
+    val orca201617And2017QryFilter03IfFalse = orcaQry2017ToDateSource.filterOperation(FILTER03)
+    val orca201617And2017QryFilter03IfFalseDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter03IfFalse,orca201617And2017QryFilter03IfFalse.conditionTypes(NUMERAL0)).get
 
     // union
-    val orca201617And2017QryUnion01DF = UnionOperation.doUnion(orca201617And2017Qry7DaysLessFormula, orca201617And2017QryFilter02IfFalseDF).get
+    val orca201617And2017QryUnion01DF = UnionOperation.doUnion(orca201617And2017Qry7DaysLessFormula, orca201617And2017QryFilter03IfFalseDF).get
 
     // join
     val orca201617And2017QryAndAuxTablesJoin02 = orcaQry2017ToDateSource.joinOperation(JOIN02)
@@ -218,13 +228,15 @@ object RetailTransform {
     // join
     val auxTablesOnlineAndOrcaJoin01 = auxTablesOnlineSource.joinOperation(JOIN01)
     val auxTablesOnlineAndOrcaJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryAndAuxTablesInnerJoin02, auxTablesOnlineSelect01DF.withColumnRenamed("Entity ID", "Right_Entity ID"),auxTablesOnlineAndOrcaJoin01)
-    val auxTablesOnlineAndOrcaJoin01leftJoin01 = orca201617And2017QryAndAuxTablesJoin02Map(LEFT_JOIN)
-    val auxTablesOnlineAndOrcaJoin01InnerJoin01 = orca201617And2017QryAndAuxTablesJoin02Map(INNER_JOIN)
+    val auxTablesOnlineAndOrcaJoin01leftJoin01 = auxTablesOnlineAndOrcaJoin01Map(LEFT_JOIN)
+    val auxTablesOnlineAndOrcaJoin01InnerJoin01 = auxTablesOnlineAndOrcaJoin01Map(INNER_JOIN)
 
     // browse here
 
     // union
     val auxTablesOnlineLeftAndInnerJoinUnion01 = UnionOperation.doUnion(auxTablesOnlineAndOrcaJoin01leftJoin01, auxTablesOnlineAndOrcaJoin01InnerJoin01).get
+
+    // browse
 
     // filter
     val auxTablesOnlineFilter01 = auxTablesOnlineSource.filterOperation(FILTER01)
@@ -318,8 +330,8 @@ object RetailTransform {
     val amazonArapSumOrderedUnitsSortDescDF = SortOperation.doSort(amazonArapGroup02DF, amazonArapSort01.ascending, amazonArapSort01.descending).get
 
     // filter
-    val amazonArapFilter01 = odomOrcaSource.filterOperation(FILTER01)
-    val amazonArapSumOrderedUnitsGreaterThanZeroDF = FilterOperation.doFilter(amazonArapSumOrderedUnitsSortDescDF, amazonArapFilter01, amazonArapFilter01.conditionTypes(NUMERAL0)).get
+    val amazonArapFilter02 = odomOrcaSource.filterOperation(FILTER02)
+    val amazonArapSumOrderedUnitsGreaterThanZeroDF = FilterOperation.doFilter(amazonArapSumOrderedUnitsSortDescDF, amazonArapFilter02, amazonArapFilter02.conditionTypes(NUMERAL0)).get
 
     // browse here
 
@@ -334,12 +346,12 @@ object RetailTransform {
       SelectOperation.doSelect(amazonArapAdd6DaysMoreFormula01,amazonArapSelect02.cols, amazonArapSelect02.isUnknown).get)
 
     // filter
-    val amazonArapFilter02 = amazonArapSource.filterOperation(FILTER02)
-    val amazonArapSKUNotNaFilter02DF = FilterOperation.doFilter(amazonArapSelect02DF, amazonArapFilter02, amazonArapFilter02.conditionTypes(NUMERAL0)).get
+    val amazonArapFilter03 = amazonArapSource.filterOperation(FILTER03)
+    val amazonArapSKUNotNaFilter03DF = FilterOperation.doFilter(amazonArapSelect02DF, amazonArapFilter03, amazonArapFilter03.conditionTypes(NUMERAL0)).get
 
     // group
     val amazonArapGroup03 = amazonArapSource.groupOperation(GROUP03)
-    val amazonArapGroup03DF = GroupOperation.doGroup(amazonArapSKUNotNaFilter02DF, amazonArapGroup03).get
+    val amazonArapGroup03DF = GroupOperation.doGroup(amazonArapSKUNotNaFilter03DF, amazonArapGroup03).get
 
     // join
     val amazonArapJoin02 = amazonArapSource.joinOperation(JOIN02)
@@ -375,7 +387,7 @@ object RetailTransform {
     val mainUnion01StaplesLeftAndStaplesSelect = UnionOperation.doUnion(staplesComUnitsJoin01LefttDF,staplesComUnitsSelect03DF).get
     val mainUnion02Union01AndStaplesFormula = UnionOperation.doUnion(mainUnion01StaplesLeftAndStaplesSelect,staplesComUnitsSetOnline1FormalaDF).get
     val mainUnion03Union02AndHPQryFormula = UnionOperation.doUnion(mainUnion02Union01AndStaplesFormula,hpComSubsStrFormalaDF).get
-    val mainUnion04Union03AndAmazonArapSelect = UnionOperation.doUnion(mainUnion03Union02AndHPQryFormula,amazonArapSelect03DF).get
+    val mainUnion04Union03AndAmazonArapSelect = UnionOperation.doUnion(mainUnion03Union02AndHPQryFormula.withColumn("Product Base Desc", lit(null)),amazonArapSelect03DF.withColumn("Product Base Desc", lit(null))).get
     val mainUnion05Union04AndSPrintFormula = UnionOperation.doUnion(mainUnion04Union03AndAmazonArapSelect,sPrintsHistoricalFormula01DF).get
 
     /* Aux Table online continued.. */
@@ -455,7 +467,7 @@ object RetailTransform {
     val auxTablesSKUHierarchySelect01DF = SelectOperation.doSelect(auxTablesSKUHierarchy, auxTablesSKUHierarchySelect01.cols).get
 
     // join
-    val auxTablesSKUHierarchyJoin01 = auxTablesSKUHierarchySource.joinOperation(JOIN03)
+    val auxTablesSKUHierarchyJoin01 = auxTablesSKUHierarchySource.joinOperation(JOIN01)
     val auxTablesSKUHierarchyJoin01Map = JoinAndSelectOperation.doJoinAndSelect(mainUnion05Union04AndSPrintFormula, auxTablesSKUHierarchySelect01DF,auxTablesSKUHierarchyJoin01)
     val auxTablesSKUHierarchyJoin01LeftDF = auxTablesSKUHierarchyJoin01Map(LEFT_JOIN)
     val auxTablesSKUHierarchyJoin01InnerDF = auxTablesSKUHierarchyJoin01Map(INNER_JOIN)
@@ -492,9 +504,10 @@ object RetailTransform {
 //    val bbyBundleInfoTranspose = bbyBundleInfo.withColumn("dummy",lit(1))
 //    val bbyBundleInfoTransposeDF = bbyBundleInfoTranspose.groupBy(col("dummy")).count()
 
-    val bbyBundleInfoTransposeDF = bbyBundleInfo.withColumn("newCol", explode(array(struct(col("B&M Units"),col("_COM Units")))))
+    val bbyBundleInfoTransposeDF = bbyBundleInfo.withColumn("newCol", explode(array(struct(col("B&M Units").as("Name"),col("_COM Units").as("Value")))))
       .select(col("Week Ending"), col("Units"), col("HP SKU"), col("newCol.*"))
-
+      .withColumnRenamed("Name" , "Online")
+      .withColumnRenamed("Value", "Bundle Qty Raw")
     // select
     val bbyBundleInfoSelect01 = bbyBundleInfoSource.selectOperation(SELECT01)
     val bbyBundleInfoSelect01DF = SelectOperation.doSelect(bbyBundleInfoTransposeDF, bbyBundleInfoSelect01.cols, bbyBundleInfoSelect01.isUnknown).get
@@ -545,7 +558,6 @@ object RetailTransform {
     val bbyBundleInfoFormula05DF = bbyBundleInfoFormula04DF.withColumn("POS Qty", (col("POS Qty") - col("Bundle Qty")))
 
     // join
-    // TODO : Check if rename works on left or have to implement on both joins
     val bbyBundleInfoJoin03 = bbyBundleInfoSource.joinOperation(JOIN03)
     val bbyBundleInfoFormula05RenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME04), bbyBundleInfoFormula05DF)
     val bbyBundleInfoJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFilter01DF.withColumnRenamed("POS QTY", "Raw POS Qty"), bbyBundleInfoFormula05RenamedDF, bbyBundleInfoJoin03)

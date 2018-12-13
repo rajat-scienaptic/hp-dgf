@@ -36,14 +36,62 @@ object FilterOperation {
       val arr = cond.split("\\s+")
       if (arr.size != 3) throw new Exception("Invalid join conditions!") else
         arr(1) match {
-          case "<" => dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) < multiWordMap.getOrElse(arr(2), arr(2))
-          case "<=" => dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) <= multiWordMap.getOrElse(arr(2), arr(2))
-          case "=" => dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) === multiWordMap.getOrElse(arr(2), arr(2))
-          case ">=" => dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) >= multiWordMap.getOrElse(arr(2), arr(2))
-          case ">" => dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) > multiWordMap.getOrElse(arr(2), arr(2))
-          case "!=" => dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) =!= multiWordMap.getOrElse(arr(2), arr(2))
-          case "contains" => dataFrame(multiWordMap.getOrElse(arr(0), arr(0))).contains(multiWordMap.getOrElse(arr(2), arr(2)))
-          case "not_contains" => !dataFrame(multiWordMap.getOrElse(arr(0), arr(0))).contains(multiWordMap.getOrElse(arr(2), arr(2)))
+          case "<" => {
+            if (multiWordMap != null) {
+              dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) < multiWordMap.getOrElse(arr(2), arr(2))
+            } else {
+              dataFrame(arr(0)) < arr(2)
+            }
+          }
+          case "<=" => {
+            if (multiWordMap != null) {
+              dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) <= multiWordMap.getOrElse(arr(2), arr(2))
+            } else  {
+              dataFrame(arr(0)) <= arr(2)
+            }
+          }
+          case "=" => {
+            if (multiWordMap != null) {
+              dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) === multiWordMap.getOrElse(arr(2), arr(2))
+            } else {
+              dataFrame(arr(0)) === arr(2)
+            }
+          }
+          case ">=" => {
+            if (multiWordMap != null) {
+              dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) >= multiWordMap.getOrElse(arr(2), arr(2))
+            } else {
+              dataFrame(arr(0)) >= arr(2)
+            }
+          }
+          case ">" => {
+            if (multiWordMap != null) {
+              dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) > multiWordMap.getOrElse(arr(2), arr(2))
+            } else {
+              dataFrame(arr(0)) > arr(2)
+            }
+          }
+          case "!=" => {
+            if (multiWordMap != null) {
+              dataFrame(multiWordMap.getOrElse(arr(0), arr(0))) =!= multiWordMap.getOrElse(arr(2), arr(2))
+            } else {
+              dataFrame(arr(0)) =!= arr(2)
+            }
+          }
+          case "contains" => {
+            if (multiWordMap != null) {
+              dataFrame(multiWordMap.getOrElse(arr(0), arr(0))).contains(multiWordMap.getOrElse(arr(2), arr(2)))
+            } else {
+              dataFrame(arr(0)).contains(arr(2))
+            }
+          }
+          case "not_contains" => {
+            if (multiWordMap != null) {
+              !dataFrame(multiWordMap.getOrElse(arr(0), arr(0))).contains(multiWordMap.getOrElse(arr(2), arr(2)))
+            } else {
+              !dataFrame(arr(0)).contains(arr(2))
+            }
+          }
           case _ => throw new Exception("Invalid join conditions!")
         }
     })
