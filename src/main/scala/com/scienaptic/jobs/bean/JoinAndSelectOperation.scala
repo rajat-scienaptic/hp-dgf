@@ -39,7 +39,7 @@ object JoinAndSelectOperation {
 
   def checkIfDuplicatesPresent(left_columns: List[String], right_columns: List[String]) = {
     val intersectList  = left_columns.toSet intersect right_columns.toSet
-    right_columns.toSet diff intersectList
+    right_columns diff intersectList.toList
   }
 
   def doJoinAndSelect(dataFrame1: DataFrame, dataFrame2: DataFrame, joinOperation: JoinAndSelectOperation) = {
