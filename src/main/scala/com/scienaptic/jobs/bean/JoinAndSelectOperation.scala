@@ -37,17 +37,24 @@ object JoinAndSelectOperation {
     }
   }
 
+  def checkIfDuplicatesPresent(left_columns: List[String], right_columns: List[String]) = {
+    val intersectList  = left_columns.toSet intersect right_columns.toSet
+    right_columns.toSet diff intersectList
+  }
+
   def doJoinAndSelect(dataFrame1: DataFrame, dataFrame2: DataFrame, joinOperation: JoinAndSelectOperation) = {
 
     var joinMap = scala.collection.mutable.Map[String, DataFrame]()
     val joinTypes = joinOperation.typeOfJoin
     val isUnknownChecked = joinOperation.isUnknown
     val joinExpr = generateJoinExpression(joinOperation, dataFrame1, dataFrame2)
-    val column_names_left = Utils.convertListToDFColumn(joinOperation.selectCriteria("left"), dataFrame1)
-    val column_names_right = Utils.convertListToDFColumn(joinOperation.selectCriteria("right"), dataFrame2)
+    var left_columns =  joinOperation.selectCriteria("left")
+    var right_columns =  checkIfDuplicatesPresent(left_columns, joinOperation.selectCriteria("right")).toList
+    val column_names_left = Utils.convertListToDFColumn(left_columns, dataFrame1)
+    val column_names_right = Utils.convertListToDFColumn(right_columns, dataFrame2)
 
     val selectAll: List[Column] = if (checkIfNullColumns(column_names_left, column_names_right)) {
-      generateColumnsFromJoinDF(dataFrame1, dataFrame2)
+        generateColumnsFromJoinDF(dataFrame1, dataFrame2)
     } else {
       // if unknown flag is true then exclude the columns in select and merge both left and right column list
       getColumnsWithUnknownFilter(column_names_left, isUnknownChecked, dataFrame1) ::: getColumnsWithUnknownFilter(column_names_right, isUnknownChecked, dataFrame2)
