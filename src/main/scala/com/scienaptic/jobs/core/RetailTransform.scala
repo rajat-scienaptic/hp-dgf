@@ -48,10 +48,10 @@ object RetailTransform {
   val RENAME04 = "RENAME04"
   val RENAME05 = "rename05"
   val RENAME06 = "rename06"
-  val SORT01 = "SORT01"
-  val SORT02 = "SORT02"
-  val SORT03 = "SORT03"
-  val SORT04 = "SORT04"
+  val SORT01 = "sort01"
+  val SORT02 = "sort02"
+  val SORT03 = "sort03"
+  val SORT04 = "sort04"
 
 
   val ODOM_ONLINE_ORCA_SOURCE = "ODOM_ONLINE_ORCA"
@@ -134,7 +134,7 @@ object RetailTransform {
 
     // sort
     val odomOrcaSort01 = odomOrcaSource.sortOperation(SORT01)
-    val odomOrcaWedSortDescDF = SortOperation.doSort(odomOrcaWedGreaterThanFIxedDF, odomOrcaSort01.ascending, odomOrcaSort01.descending)
+    val odomOrcaWedSortDescDF = SortOperation.doSort(odomOrcaWedGreaterThanFIxedDF, odomOrcaSort01.ascending, odomOrcaSort01.descending).get.show()
 
     // TODO : Write to CSV for ODOM_ONLINE_ORCA_SOURCE
     /* STAPLESDOTCOM UNITS */

@@ -24,7 +24,7 @@ object Utils {
         .format("csv")
         .option("header", true)
         .option("inferSchema", true)
-        .load(file)
+        .csv(file)
 
       var renameMap = scala.collection.mutable.Map[String, String]()
       scienapticDataframe.columns.map(x => {
