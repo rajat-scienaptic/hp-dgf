@@ -26,13 +26,16 @@ object Utils {
         .option("inferSchema", true)
         .load(file)
 
+      var renameMap = scala.collection.mutable.Map[String, String]()
       scienapticDataframe.columns.map(x => {
         if (x contains ".") {
-          x.replace(".", "_")
+          val orgCol = x
+          renameMap(orgCol) = x.replace(".", "_")
+        } else {
+          renameMap(x) = x
         }
-        else x
       })
-      scienapticDataframe
+      convertListToDFColumnWithRename(renameMap.toMap,scienapticDataframe)
     }
   }
 

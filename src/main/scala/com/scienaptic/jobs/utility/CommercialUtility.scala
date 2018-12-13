@@ -111,7 +111,7 @@ object CommercialUtility {
 
   private def addIntervalToDate(dateStr: String, interval: Int, intFormat: String): String = {
     val dateVal = convertStringToSimpleDate(dateStr)
-    val dattime = Date
+    val dattime = new Date
 
     "test"
   }

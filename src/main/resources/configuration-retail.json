@@ -4,9 +4,64 @@
     "appName": "hp-retail"
   },
   "sources": {
+    "ODOM_ONLINE_ORCA": {
+      "name": "ODOM_ONLINE_ORCA",
+      "filePath": "D:\\Documents\\HP-Docs\\US ODOM Online.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "Y",
+          "cols": []
+        }
+      },
+      "group" : {
+        "group01": {
+          "cols" : ["Account Major", "Week", "Base SKU"],
+          "aggregations": {
+            "sum" : {
+              "Units" : "Online Units"
+            }
+          },
+          "selectCriteria": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr", "Base SKU", "Account Major"]
+        },
+        "group02": {
+          "cols" : ["wed"],
+          "aggregations": {
+            "sum" : {
+              "Online Units" : "Sum_Online Units"
+            }
+          },
+          "selectCriteria": ["Account Major", "Base SKU", "Online Units", "wed", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"]
+        }
+      },
+      "join": {
+        "join01": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["Week"],
+            "right": ["fy_week","season"]
+          },
+          "selectCriteria": {
+            "left": ["Week"], "right": ["fy_week","season"]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["wed >= 2018-01-01"]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": [],
+          "desc": ["wed"]
+        }
+      }
+    },
     "STAPLES_COM_UNITS":  {
       "name": "STAPLES_COM_UNITS",
-      "filePath": "D:\\Documents\\updated promo files 20181211\\Staples.com Units.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\updated promo files 20181211\\Staples.com Units.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -14,7 +69,7 @@
         },
         "select02": {
           "isUnknown" : "Y",
-          "cols": ["Sum_POS Qty", "IPSLES", "Units"]
+          "cols": ["Sum_POS Qty", "IPSLES"]
         },
         "select03": {
           "isUnknown" : "Y",
@@ -62,7 +117,7 @@
     },
     "HP_COM": {
       "name": "HP_COM",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\US-HP-Shopping-v3.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -83,7 +138,7 @@
           },
           "selectCriteria": {
             "left": ["Week", "Product Description"],
-            "right": []
+            "right": ["fy_week"]
           }
         }
       },
@@ -102,7 +157,7 @@
     },
     "AMAZON_ARAP": {
       "name": "AMAZON_ARAP",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\updated promo files 20181211\\Staples.com Units.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -114,7 +169,7 @@
         },
         "select03": {
           "isUnknown" : "Y",
-          "cols": ["Week.End.Date","fy_week", "Sum_Shipped Units"]
+          "cols": ["Week_End_Date","fy_week", "Sum_Shipped Units"]
         }
       },
       "group" : {
@@ -186,13 +241,23 @@
       },
       "filter": {
         "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Title not_contains Refurb"
+          ]
+        },
+        "filter02": {
           "multiWordMap" : {
             "sumOrderedUnits" : "Sum_Ordered Units"
           },
           "conditionTypes": ["and","or","if-else"],
           "conditions": ["sumOrderedUnits > 0"]
         },
-        "filter02": {
+        "filter03": {
           "conditionTypes": ["and","or","if-else"],
           "conditions": ["SKU != NA"]
         }
@@ -200,7 +265,7 @@
     },
     "AMAZON_ASIN_MAP": {
       "name": "AMAZON_ASIN_MAP",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\updated promo files 20181211\\amazon_asin_sku_mapping.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -210,7 +275,7 @@
     },
     "S_PRINT_HISTORICAL_UNITS": {
       "name": "S_PRINT_HISTORICAL_UNITS",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\updated promo files 20181211\\Staples.com Units.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -238,7 +303,7 @@
     },
     "ORCA_2014_16_ARCHIVE": {
       "name": "ORCA_2014_16_ARCHIVE",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\US ODOM Online.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -248,11 +313,11 @@
     },
     "ORCA_QRY_2017_TO_DATE": {
       "name": "ORCA_QRY_2017_TO_DATE",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\US ODOM Online.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
-          "cols": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr"]
+          "cols": ["Product Family Desc","Product Business Unit Desc","Product Business Area Desc","Store Nbr"]
         }
       },
       "rename" : {
@@ -276,7 +341,7 @@
       "sort" : {
         "sort01": {
           "asc": ["Account Major"],
-          "desc": ["Week", "Sum_POS Qty", "Account Major"]
+          "desc": ["Week", "Sum_POS Qty"]
         }
       },
       "join" : {
@@ -311,22 +376,37 @@
       },
       "filter": {
         "filter01": {
+          "multiWordMap" : {
+            "accountMajorConsol" : "Account Major Consol"
+          },
           "conditionTypes": ["and","or","if-else"],
-          "conditions": ["Account Major Consol = Costco Wholesale"]
+          "conditions": ["accountMajorConsol = Amazon.Com","wed > 2015-11-07"]
         },
         "filter02": {
+          "multiWordMap" : {
+            "accountMajorConsol" : "Account Major Consol",
+            "costcoWholesale" : "Costco Wholesale"
+          },
           "conditionTypes": ["and","or","if-else"],
-          "conditions": ["Account Major Consol != Costco Wholesale"]
+          "conditions": ["accountMajorConsol = costcoWholesale"]
+        },
+        "filter03": {
+          "multiWordMap" : {
+            "accountMajorConsol" : "Account Major Consol",
+            "costcoWholesale" : "Costco Wholesale"
+          },
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["accountMajorConsol !=costcoWholesale"]
         }
       }
     },
     "AUX_TABLES_WEEKEND": {
       "name": "AUX_TABLES_WEEKEND",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\updated promo files 20181211\\Aux Tables-weekend.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
-          "cols": ["fy_week", "wed", "season", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_years"]
+          "cols": ["fy_week", "wed", "season", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"]
         }
       },
       "filter": {
@@ -351,7 +431,7 @@
     },
     "AUX_TABLES_ONLINE": {
       "name": "AUX_TABLES_ONLINE",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\updated promo files 20181211\\Aux Tables-online.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -359,11 +439,12 @@
         },
         "select02": {
           "isUnknown" : "N",
-          "cols": ["Product Base ID", "Account Major Consol", "SKU ACV POS", "SKU ACV Inv"]
+          "cols": ["wed","Product Base ID", "Account Major Consol", "SKU ACV POS", "SKU ACV Inv"]
         }
       },
       "rename" : {
         "rename01" : {
+          "wed" : "Week End Date",
           "Product Base ID" : "SKU",
           "Account Major Consol" : "Account"
         },
@@ -505,7 +586,7 @@
     },
     "AUX_TABLES_SKU_HIERARCHY": {
       "name": "AUX_TABLES_SKU_HIERARCHY",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\updated promo files 20181211\\Aux Tables-SKU-hierarchy.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -570,7 +651,7 @@
     },
     "BBY_BUNDLE_INFO": {
       "name": "BBY_BUNDLE_INFO",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\updated promo files 20181211\\BestBuyBundle_Summary.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -755,7 +836,7 @@
     },
     "EXISTING_POS" : {
       "name": "EXISTING_POS",
-      "filePath": "/home/avik/Scienaptic/RnD/data/odom_online_orca.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\updated promo files 20181211\\posqty_output_retail.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",

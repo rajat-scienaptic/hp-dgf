@@ -6,7 +6,7 @@ import org.apache.spark.sql.DataFrame
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
-case class GroupOperation(@JsonProperty("cols") cols: List[String], @JsonProperty("aggregations") aggregations: Map[String, Map[String, String]], @JsonProperty("selecCriteria") selectCols: List[String]) extends Operation {
+case class GroupOperation(@JsonProperty("cols") cols: List[String], @JsonProperty("aggregations") aggregations: Map[String, Map[String, String]], @JsonProperty("selectCriteria") selectCols: List[String]) extends Operation {
   override def scienapticDef() = {
     //Do Nothing
   }
@@ -40,7 +40,7 @@ object GroupOperation {
       val aggMap = aggregationMap.toMap
       val groupedDataSet = df.groupBy(Utils.convertListToDFColumn(cols, df): _*)
       val aggregatedDataSet = groupedDataSet.agg(aggMap)
-      val groupedDF = Utils.convertListToDFColumnWithRename(renameMap.toMap, aggregatedDataSet)
+      Utils.convertListToDFColumnWithRename(renameMap.toMap, aggregatedDataSet)
       /*val groupWithAllColumnsDF = df.drop(aggregationColumns.toList:_*).join(groupedDF, cols.toSeq, "inner")
       if (selectCols.size == 0) {
         selectCols = (selectCols ::: dataFrame.columns.toList) filterNot aggregationColumns.toSet
