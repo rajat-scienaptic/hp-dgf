@@ -88,7 +88,7 @@ object CommercialTransform {
     val auxEtailerSource = sourceMap(AUX_ETAILER_SOURCE)
     val ciORCASource = sourceMap(CI_ORCA_SOURCE)
     val histPOSSource = sourceMap(HISTORICAL_POS_SOURCE)
-    val archivePOSSource = sourceMap(ARCHIVE_POS_QTY_COMMERCIAL_SOURCE)
+    //val archivePOSSource = sourceMap(ARCHIVE_POS_QTY_COMMERCIAL_SOURCE)
 
     /* Load all sources */
     val iecDF = Utils.loadCSV(executionContext, iecSource.filePath).get.cache()
@@ -101,7 +101,7 @@ object CommercialTransform {
     val auxCommResellerDF = Utils.loadCSV(executionContext, auxCommResellerSource.filePath).get.cache()
     val auxEtailerDF = Utils.loadCSV(executionContext, auxEtailerSource.filePath).get.cache()
     val ciORCADF = Utils.loadCSV(executionContext, ciORCASource.filePath).get.cache()
-    val archivePOSDF = Utils.loadCSV(executionContext, archivePOSSource.filePath).get.cache()
+    //val archivePOSDF = Utils.loadCSV(executionContext, archivePOSSource.filePath).get.cache()
 
     //141
     val auxWEDSelect01 = auxWEDSource.selectOperation(SELECT01)
@@ -132,8 +132,7 @@ object CommercialTransform {
     //126 - Formula
     val baseSKUproductDF = xsClaimsUnionDF.withColumn("Base SKU",createBaseSKUFromProductIDUDF(col("Product ID")))
     val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String", weekofyear(to_date(col("Partner Ship Calendar Date"))))//.withColumn("Temp Date Calc String",extractWeekFromDateUDF(col("Partner Ship Calendar Date"), col("week")))
-      .withColumn("Temp Date Calc", unix_timestamp(col("Temp Date Calc String")))
-      //.withColumn("Temp Date Calc", getEpochNumberFromDateString(col("Temp Date Calc String")))
+      .withColumn("Temp Date Calc", col("Temp Date Calc String").cast(DoubleType))
     val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",addDaystoDateStringUDF(col("Partner Ship Calendar Date"), col("Temp Date Calc")))
     val xsClaimsBaseSKUDF = weekEndDateDF.withColumn("Base SKU",baseSKUFormulaUDF(col("Base SKU")))
 
@@ -349,7 +348,9 @@ object CommercialTransform {
       .withColumn("Big Deal",
         when((col("Big Deal Nbr")==="?") || (col("Big Deal Nbr").contains("B01OP")),0)
         .otherwise(1))
-      .withColumn("Week End Date", dateTimeParseWithLastCharacters(col("Week Desc"),lit("%b %d, %Y"),lit(12)))
+      .withColumn("Week End Date Str", dateTimeParseWithLastCharacters(col("Week Desc"),lit("%b %d, %Y"),lit(12)))
+        .withColumn("Week End Date", to_date(col("Week End Date Str"),"%b %d %Y"))
+        .drop("Week End Date Str")
 
     //20 - join
     val stORCAJoin01 = stORCASource.joinOperation(JOIN01)
@@ -805,7 +806,8 @@ object CommercialTransform {
     val histPOSDF = Utils.loadCSV(executionContext, histPOSSource.filePath).get.cache()
 
     //327 - Convert wed to dateFormat
-    val histPOSDateFormattedDF = histPOSDF.withColumn("Week_End_Date", convertDatetoFormat(col("wed"),lit("MM/dd/yyyy")))
+    val histPOSDateFormattedDF = histPOSDF//.withColumn("Week_End_Date", convertDatetoFormat(col("wed"),lit("MM/dd/yyyy")))
+      .withColumn("Week_End_Date",to_date(unix_timestamp(col("wed"),"MM/dd/yyyy")))
       .drop("wed")
 
     //323 - Select
@@ -873,7 +875,7 @@ object CommercialTransform {
     //264 - 267  --> Reading last written posqty_Commercial output.csv
 
     //262 - Select
-    val archivePOSSelect01 = archivePOSSource.selectOperation(SELECT01)
+    /*val archivePOSSelect01 = archivePOSSource.selectOperation(SELECT01)
     val archivePOS = doSelect(archivePOSDF, archivePOSSelect01.cols, archivePOSSelect01.isUnknown).get
 
     //281 - Join
@@ -977,6 +979,7 @@ object CommercialTransform {
     //321 - Save
     histPOSDiffPerDF.show()
     //TODO: Save this as Commercial_POS_old_vs_new.csv
+    */
   }
 }
 

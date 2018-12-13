@@ -384,7 +384,7 @@
     },
     "ST_ORCA" :{
       "name": "st_orca",
-      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\US Comm ST v7 NGO.csv",
       "select": {
         "select01": {
           "isUnknown": "y",
@@ -458,7 +458,7 @@
     },
     "STT_ORCA" :{
       "name": "stt_orca",
-      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\US Comm STT v7 NGO.csv",
       "select": {
         "select01": {
           "isUnknown": "y",
@@ -568,7 +568,7 @@
     },
     "AUX_COMM_RESELLER_OPTIONS" :{
       "name": "aux_comm_reseller_options",
-      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\AUX_comm_resller_option.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\AUX_comm_reseller_option.csv",
       "select": {
         "select01": {
           "isUnknown": "n",
@@ -588,7 +588,7 @@
     },
     "CI_ORCA": {
       "name": "ci_orca",
-      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\.csv",
+      "filePath": "C:\\Users\\avika\\OneDrive\\Desktop\\HP Docs\\Pricing\\Pipeline_Test_Data\\US Comm CI v7 NGO.csv",
       "select": {
         "select01": {
           "isUnknown": "y",

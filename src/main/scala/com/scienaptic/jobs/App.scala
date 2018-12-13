@@ -1,7 +1,7 @@
 package com.scienaptic.jobs
 
 import com.scienaptic.jobs.config.{AppConfiguration, ConfigurationFactory}
-import com.scienaptic.jobs.core.RetailTransform
+import com.scienaptic.jobs.core.{CommercialTransform, RetailTransform}
 import org.apache.spark.sql.SparkSession
 
 object App {
