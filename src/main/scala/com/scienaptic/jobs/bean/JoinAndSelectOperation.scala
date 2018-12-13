@@ -15,7 +15,6 @@ case class JoinAndSelectOperation(@JsonProperty("isUnknown") isUnknown: String,
 }
 
 object JoinAndSelectOperation {
-
   def checkIfNullColumns(column_names_left: List[Column], column_names_right: List[Column]) = {
     column_names_left.isEmpty && column_names_right.isEmpty
   }

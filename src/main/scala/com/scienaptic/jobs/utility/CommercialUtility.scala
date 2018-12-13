@@ -38,8 +38,7 @@ object CommercialUtility {
     val sdf = new SimpleDateFormat("yyyy-MM-dd")
     val result = new Date(sdf.parse(dateString).getTime() + TimeUnit.DAYS.toMillis(6-days))
     sdf.format(result)
-
-    new Date()
+    /*new Date()*/
   })
 
   val baseSKUFormulaUDF = udf((baseSKU: String) => {
@@ -87,9 +86,10 @@ object CommercialUtility {
     //toNumber(dateStr) //convert dateStr to Date object first
   })
 
-  val convertDatetoFormat = udf((dateStr: String, currentFormat: String, targetFormat:String) => {
+  val convertDatetoFormat = udf((dateStr: String, currentFormat: String) => {
     val dateObj = convertStringToSimpleDate(dateStr, currentFormat)
-    new SimpleDateFormat(targetFormat).format(dateObj)
+    //new SimpleDateFormat(targetFormat).format(dateObj)
+    //TODO: Return timestamp
   })
 
 
@@ -111,8 +111,7 @@ object CommercialUtility {
 
   private def addIntervalToDate(dateStr: String, interval: Int, intFormat: String): String = {
     val dateVal = convertStringToSimpleDate(dateStr)
-    val dattime = new Date
-
+    //val dattime = Date
     "test"
   }
 
