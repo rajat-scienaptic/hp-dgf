@@ -50,7 +50,7 @@
             "right": ["Week_End_Date"]
           },
           "selectCriteria": {
-            "left": [], "right": ["Week_End_Date"]
+            "left": [], "right": ["Week_End_Date","Season_Ordered"]
           }
         },
         "join03": {
@@ -61,7 +61,7 @@
             "right": ["SKU"]
           },
           "selectCriteria": {
-            "left": [],
+            "left": ["Season"],
             "right": ["Added","L1: Use Case","L2: Key functionality","L3: IDC Category","L0: Format","Need IFS2?","PLC Status","GA date","ES date","NPD Product Category","NPD Model","Sales Product Name"]
           }
         }
@@ -130,7 +130,7 @@
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["SKU","C2B Promo Code"],
-            "right": ["Base SKU","C2B Promo Code"]
+            "right": ["Base SKU","Right_C2B Promo Code"]
           },
           "selectCriteria": {
             "left": [],

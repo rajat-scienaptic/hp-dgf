@@ -108,7 +108,7 @@ object CommercialTransform {
     var auxWEDSelectDF = doSelect(auxWEDDF, auxWEDSelect01.cols, auxWEDSelect01.isUnknown).get
     val auxWEDRename022 = auxWEDSource.renameOperation(RENAME02)
     auxWEDSelectDF = Utils.convertListToDFColumnWithRename(auxWEDRename022, auxWEDSelectDF)
-        .withColumnRenamed("Season","season")
+        .withColumnRenamed("Season","wed_season")
 
     //233 - Select
     val iecSelect01 = iecSource.selectOperation(SELECT01)
@@ -274,7 +274,7 @@ object CommercialTransform {
 
     //158 - Append (Cartesian join)
     val rawCalendarnAuxWEDAppendDF = rawCalendarEndDateChangeUnionDF.join(auxWEDSelectDF.drop("fy_week"))
-
+      .withColumnRenamed("aux_season","Source_season").withColumnRenamed("Season_Ordered","Source_Season_Ordered")
     //159 - Formula
     val rawCalStartsubWEDDF = rawCalendarnAuxWEDAppendDF/*.withColumn("Start - Week End", dateTimeDiff(col("Start Date"),col("Week.End.Date")))
       .withColumn("Week End - End",dateTimeDiff(col("Week.End.Date"),col("New End Date")))*/
