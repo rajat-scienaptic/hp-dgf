@@ -189,7 +189,7 @@
               "Ordered Units" : "Sum_Ordered Units"
             }
           },
-          "selectCriteria" : ["ASIN", "Title", "Week Beginning", "Ordered"]
+          "selectCriteria" : ["ASIN", "Title", "Week Beginning", "Ordered Units"]
         },
         "group03" : {
           "cols" : ["SKU","Account", "Online", "Week_End_Date"],
