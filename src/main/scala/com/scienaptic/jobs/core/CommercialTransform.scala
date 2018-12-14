@@ -298,6 +298,7 @@ object CommercialTransform {
     val rawCalendarSelect02 = rawCalendarSource.selectOperation(SELECT02)
     val rawCalendarEndDateFilterSelectDF = doSelect(rawCalendarEndDateFilteredDF, rawCalendarSelect02.cols, rawCalendarSelect02.isUnknown).get
     rawCalendarEndDateFilterSelectDF.cache()
+    rawCalendarEndDateFilterSelectDF.show()
     /*  -------------  USED TWICE ---------  */
 
     //162 - Sort
@@ -311,6 +312,7 @@ object CommercialTransform {
     //196 - Join
     val rawCalendarJoin04 = rawCalendarSource.joinOperation(JOIN04)
     val rawCalendarDistinctLeftJoinDF = doJoinAndSelect(xsClaimsGroupSumClaimQuanAggDF, rawCalendarSortDistinctDF, rawCalendarJoin04)("left")
+    rawCalendarDistinctLeftJoinDF.show()
     /*  ------------- USED IN 2nd SECTION --------------*/
 
     //19 - Summarize (Group on C2B Promo Code)
@@ -322,6 +324,7 @@ object CommercialTransform {
     //85 - Summarize
     val rawCalendarGroup05 = rawCalendarSource.groupOperation(GROUP05)
     val rawCalendarSortGroupDF = doGroup(rawCalendarSelectSortDF, rawCalendarGroup05).get
+    rawCalendarSortGroupDF.show()
     /*val wind = Window.partitionBy(col("C2B Promo Code"))
     rawCalendarSortGroupDF = rawCalendarSortGroupDF.withColumn("rn",row_number.over(wind))
       .where(col("rn") === 1)

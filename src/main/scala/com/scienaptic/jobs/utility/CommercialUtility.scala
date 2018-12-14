@@ -115,12 +115,12 @@ object CommercialUtility {
   }
 
   private def addIntervalToDate(dateStr: String, interval: Int, intFormat: String): String = {
-    val dateVal = convertStringToSimpleDate(dateStr)
+    val dateVal = convertStringToSimpleDate(dateStr, "yyyy-MM-dd")
     //val dattime = Date
     "test"
   }
 
-  private def convertStringToSimpleDate(dateStr: String, format: String = "yyyy-MM-dd"): Date = {
+  private def convertStringToSimpleDate(dateStr: String, format: String): Date = {
     //println(s"::::::::::Got dateStr $dateStr and format $format")
     val simpleFormat = new SimpleDateFormat(format)
     simpleFormat.parse(dateStr)
