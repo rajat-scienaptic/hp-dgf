@@ -14,7 +14,7 @@ case class SelectOperation(@JsonProperty("isUnknown") isUnknown: String,@JsonPro
 }
 
 object SelectOperation {
-  def doSelect(dataFrame: DataFrame, cols: List[String], unknownFlag: String = "N"): Try[DataFrame] = {
+  def doSelect(dataFrame: DataFrame, cols: List[String], unknownFlag: String): Try[DataFrame] = {
     Try {
       unknownFlag match {
         case "N" | "n" | "" => dataFrame.select(Utils.convertListToDFColumn(cols, dataFrame): _*)
