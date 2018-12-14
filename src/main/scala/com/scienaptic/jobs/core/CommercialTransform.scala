@@ -471,6 +471,7 @@ object CommercialTransform {
 
     //170 - Unique
     val stSttUnionDistinctDF = stSttUnionDF.dropDuplicates(List("Big Deal Nbr","Account Company","Product Base ID"))
+    stSttUnionDistinctDF.show(10)
 
     //171 - Join
     val stORCAJoin03 = stORCASource.joinOperation(JOIN03)
@@ -480,13 +481,16 @@ object CommercialTransform {
     //183 - Summarize
     val stORCAGroup04 = stORCASource.groupOperation(GROUP04)
     val stORCAGroupPartnerSKUWEDDF = doGroup(stORCAJoin03DF, stORCAGroup04).get
+    stORCAGroupPartnerSKUWEDDF.show(10)
 
     //30 - Union
     val stORCAInnerRightJoinUnionDF = doUnion(stORCAInnerJoin02DF, stORCARightJoin02DF).get
+    stORCAInnerRightJoinUnionDF.show(10)
 
     //33 - Multi-field
     val stORCAJoinUnionCastDF = stORCAInnerRightJoinUnionDF.withColumn("Big Deal Qty",col("Big Deal Qty").cast(DoubleType))
       .withColumn("Qty", col("Qty").cast(DoubleType))
+    stORCAJoinUnionCastDF.show(10)
 
     //31 - Formula
     val stORCANonBigDealDF = stORCAJoinUnionCastDF.withColumn("Non Big Deal Qty",col("Qty")-col("Big Deal Qty"))
@@ -494,6 +498,7 @@ object CommercialTransform {
     //34 - Filter
     val sttORCAFilter01 = sttORCASource.filterOperation(FILTER01)
     val sttORCABigDealFilterDF = doFilter(sttORCAUnionDF, sttORCAFilter01, sttORCAFilter01.conditionTypes(NUMERAL0)).get
+    sttORCABigDealFilterDF.show(10)
 
     //35 - Summarize
     val sttORCAGroup03 = sttORCASource.groupOperation(GROUP03)
@@ -513,9 +518,11 @@ object CommercialTransform {
     val sttORCAJoin02Map = doJoinAndSelect(sttORCAGroup03DF.withColumnRenamed("Qty","Big Deal Qty"), sttORCAGroup04WithRenamedDF, sttORCAJoin02)
     val sttORCAInnerJoin02DF = sttORCAJoin02Map("inner")
     val sttORCARightJoin02DF = sttORCAJoin02Map("right")
+    sttORCAInnerJoin02DF.show(10)
 
     //38 - Union
     val sttORCAInnerRightJoinUnionDF = doUnion(sttORCAInnerJoin02DF, sttORCARightJoin02DF).get
+    sttORCAInnerRightJoinUnionDF.show(10)
 
     //41 - Multi field
     val sttORCACastedDF = sttORCAInnerRightJoinUnionDF.withColumn("Big Deal Qty",col("Big Deal Qty").cast(DoubleType))
@@ -538,6 +545,7 @@ object CommercialTransform {
     val sttORCAInnerJoin03DF = sttORCAJoin03Map("inner")
     val sttORCALeftJoin03DF = sttORCAJoin03Map("left")
     val sttORCARightJoin03DF = sttORCAJoin03Map("right")
+    sttORCAInnerJoin03DF.show(10)
 
     //47 - Union
     val sttORCALeftJoin03ReArrangedDF = sttORCALeftJoin03DF
@@ -572,15 +580,18 @@ object CommercialTransform {
     //182 - Summarize
     val sttORCAGroup05 = sttORCASource.groupOperation(GROUP05)
     val sttORCAAccountWEDProductGroupedDF = doGroup(sttORCAJoinsUnionCastedDF, sttORCAGroup05).get
+    sttORCAAccountWEDProductGroupedDF.show(10)
 
     //176 - Join
     val sttORCAJoin04 = sttORCASource.joinOperation(JOIN04)
     val sttORCAJoin04Map = doJoinAndSelect(sttORCAAccountWEDProductGroupedDF, stORCAGroupPartnerSKUWEDDF.withColumnRenamed("Week End Date","Right_Week End Date"), sttORCAJoin04)
     val sttORCALeftJoin04DF = sttORCAJoin04Map("left")
     val sttORCAInnerJoin04DF = sttORCAJoin04Map("inner")
+    sttORCAInnerJoin04DF.show(10)
 
     //185 - Unique
     val sttORCALeftJoin04UniqueDF = sttORCALeftJoin04DF.dropDuplicates(List("Account Company","Week End Date","Product Base ID"))
+    sttORCALeftJoin04UniqueDF.show(10)
 
     //184 - Unique
     val sttORCAInnerJoin04UniqueDF = sttORCAInnerJoin04DF.dropDuplicates(List("Account Company","Week End date", "Product Base ID"))
@@ -591,6 +602,7 @@ object CommercialTransform {
       .withColumn("STT Non Big Deal Qty", when(col("STT Qty")===0,col("STT Non Big Deal Qty")).otherwise(col("STT Non Big Deal Qty")-col("Claim Quantity")))
       .withColumn("ST Big Deal Qty", when(col("ST Qty")===0,col("ST Big Deal Qty")).otherwise(col("ST Big Deal Qty")+col("Claim Quantity")))
       .withColumn("ST Non Big Deal Qty", when(col("ST Qty")===0, col("ST Non Big Deal Qty")).otherwise(col("ST Non Big Deal Qty")-col("Claim Quantity")))
+    sttORCAJoin04STnSTTDealQty.show(10)
 
     /* Note: All operations 185, 184 outputs used in browse */
 
@@ -603,6 +615,7 @@ object CommercialTransform {
       .when(col("Account Company")==="CDW Logistics Inc",lit("CDW"))
       .when(col("Account Company")==="PCM Sales",lit("PCM"))
       .otherwise(col("Account Company")))
+    sttORCAUnionWithResellerFeatureDF.show(10)
 
     //199 - Summarize
     //val sttORCAwithDummyDF = sttORCAUnionDF//.withColumn("dummy",lit(1)) ---Changed 13 Dec

@@ -2,6 +2,7 @@ package com.scienaptic.jobs
 
 import com.scienaptic.jobs.config.{AppConfiguration, ConfigurationFactory}
 import com.scienaptic.jobs.core.{CommercialTransform, RetailTransform}
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 object App {
@@ -16,15 +17,19 @@ class App(args: Array[String]) extends ConfigurationFactory[AppConfiguration](ar
 
   private def start(): Unit = {
     println("Spark-job Started.")
+    val sparkConf = new SparkConf().setAppName("Test")
+    sparkConf.set("spark.sql.crossJoin.enabled", "true")
     val spark = SparkSession.builder
       .master(configuration.sparkConfig.master)
       .appName(configuration.sparkConfig.appName)
+      .config(sparkConf)
       .getOrCreate
     spark.sparkContext.setLogLevel("WARN")
     val executionContext = ExecutionContext(spark, configuration)
     try {
       //TODO: Based on cli options, call appropriate Transformation.
-      RetailTransform.execute(executionContext)
+      //RetailTransform.execute(executionContext)
+      CommercialTransform.execute(executionContext)
     } finally {
       spark.close()
     }
