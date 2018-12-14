@@ -117,7 +117,7 @@
     },
     "HP_COM": {
       "name": "HP_COM",
-      "filePath": "D:\\Documents\\HP-Docs\\US-HP-Shopping-v3.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\US HP Shopping v3.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",

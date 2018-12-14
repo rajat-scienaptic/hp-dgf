@@ -3,6 +3,7 @@ package com.scienaptic.jobs.core
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.bean._
 import com.scienaptic.jobs.utility.Utils
+import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.functions._
 
 // TODO : FileNotFound Exception
@@ -104,7 +105,7 @@ object RetailTransform {
     val existingPOS = Utils.loadCSV(executionContext, existingPOSSource.filePath).get
 
     /* AUX TABLES WEEKEND */
-    val auxTablesWeekendselect01DF = SelectOperation.doSelect(auxTablesWeekend, auxTablesWeekendSource.selectOperation(SELECT01).cols).get
+    val auxTablesWeekendselect01DF = SelectOperation.doSelect(auxTablesWeekend, auxTablesWeekendSource.selectOperation(SELECT01).cols, auxTablesWeekendSource.selectOperation(SELECT01).isUnknown).get
 
     /* ODOOM ORCA */
     // Select01
@@ -134,148 +135,149 @@ object RetailTransform {
 
     // sort
     val odomOrcaSort01 = odomOrcaSource.sortOperation(SORT01)
-    val odomOrcaWedSortDescDF = SortOperation.doSort(odomOrcaWedGreaterThanFIxedDF, odomOrcaSort01.ascending, odomOrcaSort01.descending).get.show()
+    val odomOrcaWedSortDescDF = SortOperation.doSort(odomOrcaWedGreaterThanFIxedDF, odomOrcaSort01.ascending, odomOrcaSort01.descending).get
 
     // TODO : Write to CSV for ODOM_ONLINE_ORCA_SOURCE
     /* STAPLESDOTCOM UNITS */
     // Select01
-    val staplesComUnitsSelect01DF = Utils.convertListToDFColumnWithRename(staplesComUnitsSource.renameOperation(RENAME01),
-      SelectOperation.doSelect(staplesDotComUnitsDF, staplesComUnitsSource.selectOperation(SELECT01).cols).get)
-
-    // formula
-    val staplesComUnitsFormula01DF = Utils.litColumn(staplesComUnitsSelect01DF, "Account Major", "staples")
-
-    // union
-    val staplesComUnitsFormulaLitNullDF = staplesComUnitsFormula01DF.withColumn("season_ordered", lit(null))
-      .withColumn("cal_month", lit(null))
-      .withColumn("cal_year", lit(null))
-      .withColumn("fiscal_quarter", lit(null))
-      .withColumn("fiscal_year", lit(null))
-    val staplesComUnitsUnionDF = UnionOperation.doUnion(odomOrcaJoin01InnerDF, staplesComUnitsFormulaLitNullDF).get
-
-    /* Orca 2014 16 Archive */
-    // select
-    val orca201416ArchiveSelect01 = orca201416ArchiveSource.selectOperation(SELECT01)
-    val orca201416ArchiveSelectDF = SelectOperation.doSelect(orca201416ARchive, orca201416ArchiveSelect01.cols, orca201416ArchiveSelect01.isUnknown).get
-
-    /* Orca Qry 2017 to date */
-    // select
-    val orcaQry2017ToDateSelect01 = orcaQry2017ToDateSource.selectOperation(SELECT01)
-    val orcaQry2017ToDateSelectDF = Utils.convertListToDFColumnWithRename(orcaQry2017ToDateSource.renameOperation(RENAME01), SelectOperation.doSelect(orcaQry2017ToDate, orcaQry2017ToDateSelect01.cols, orca201416ArchiveSelect01.isUnknown).get)
-
-    // union
-    val unionOrca201617AndOrca2017QryToDate = UnionOperation.doUnion(orca201416ArchiveSelectDF, orcaQry2017ToDateSelectDF).get.cache()
-
-    // group
-    val orca201617And2017QryGroup01 = orcaQry2017ToDateSource.groupOperation(GROUP01)
-    val orca201617And2017QryGroup01DF = GroupOperation.doGroup(unionOrca201617AndOrca2017QryToDate, orca201617And2017QryGroup01).get
-
-    // sort
-    val orca201617And2017QrySort01 = orcaQry2017ToDateSource.sortOperation(SORT01)
-    val orca201617And2017QrySort01DF = SortOperation.doSort(orca201617And2017QryGroup01DF, orca201617And2017QrySort01.ascending, orca201617And2017QrySort01.descending)
-
-    // browse here
-
-    // formula continued
-    val orca201617And2017QryFormulaDF = unionOrca201617AndOrca2017QryToDate.withColumn("Account Major Consol",
-      when(col("Account Major") === "Office Depot Inc", "Office Depot-Max")
-        .when(col("Account Major") === "OfficeMax North America, Inc.", "Office Depot-Max")
-        .when(col("Account Major") === "OfficeMax Inc", "Office Depot-Max")
-        .when(col("Account Major") === "Office Depot Inc (Contract Stationers)", "Office Depot-Max")
-        .when(col("Account Major") === "Amazon.com, Inc.", "Amazon.Com")
-        .when(col("Account Major") === "Frys Electronics Inc", "Fry's Electronics Inc")
-        .when(col("Account Major") === "Sams Club", "Fry's Electronics Inc")
-        .when(col("Account Major") === "Target Corporation", "Target Stores")
-        .when(col("Account Major") === "Wal Mart Online", "Wal-Mart Online")
-        .otherwise(col("Account Major")))
-
-
-    // join
-    val orca201617And2017QryAndAuxTablesJoin01 = orcaQry2017ToDateSource.joinOperation(JOIN01)
-    val orca201617And2017QryAndAuxTablesJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryFormulaDF, auxTablesWeekendselect01DF.withColumnRenamed("wed", "Right_wed"), orca201617And2017QryAndAuxTablesJoin01)
-    val orca201617And2017QryAndAuxTablesInnerJoin01 = orca201617And2017QryAndAuxTablesJoin01Map(INNER_JOIN)
-
-    // browse here
-
-    // filter
-    val orca201617And2017QryFilter01IfTrue = orcaQry2017ToDateSource.filterOperation(FILTER01)
-    val orca201617And2017QryFilter01IfTrueDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter01IfTrue, orca201617And2017QryFilter01IfTrue.conditionTypes(NUMERAL0)).get
-
-    // filter
-    val orca201617And2017QryFilter02IfTrue = orcaQry2017ToDateSource.filterOperation(FILTER02)
-    val orca201617And2017QryFilter02IfTrueDF = FilterOperation.doFilter(orca201617And2017QryFilter01IfTrueDF, orca201617And2017QryFilter02IfTrue, orca201617And2017QryFilter02IfTrue.conditionTypes(NUMERAL0)).get
-
-    // formula
-    val orca201617And2017Qry7DaysLessFormula = orca201617And2017QryFilter01IfTrueDF.withColumn("wed", date_add(col("wed").cast("timestamp"), -7))
-
-    // filter
-    val orca201617And2017QryFilter03IfFalse = orcaQry2017ToDateSource.filterOperation(FILTER03)
-    val orca201617And2017QryFilter03IfFalseDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter03IfFalse, orca201617And2017QryFilter03IfFalse.conditionTypes(NUMERAL0)).get
-
-    // union
-    val orca201617And2017QryUnion01DF = UnionOperation.doUnion(orca201617And2017Qry7DaysLessFormula, orca201617And2017QryFilter03IfFalseDF).get
-
-    // join
-    val orca201617And2017QryAndAuxTablesJoin02 = orcaQry2017ToDateSource.joinOperation(JOIN02)
-    val orca201617And2017QryAndAuxTablesJoin02Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryUnion01DF, auxTablesWeekendselect01DF, orca201617And2017QryAndAuxTablesJoin02)
-    val orca201617And2017QryAndAuxTablesInnerJoin02 = orca201617And2017QryAndAuxTablesJoin02Map(INNER_JOIN)
-
-    /* Aux Tables Online */
-    // select
-    val auxTablesOnlineSelect01 = auxTablesOnlineSource.selectOperation(SELECT01)
-    val auxTablesOnlineSelect01DF = SelectOperation.doSelect(auxTablesOnline, auxTablesOnlineSelect01.cols, auxTablesOnlineSelect01.isUnknown).get
-
-    // join
-    val auxTablesOnlineAndOrcaJoin01 = auxTablesOnlineSource.joinOperation(JOIN01)
-    val auxTablesOnlineAndOrcaJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryAndAuxTablesInnerJoin02, auxTablesOnlineSelect01DF.withColumnRenamed("Entity ID", "Right_Entity ID"), auxTablesOnlineAndOrcaJoin01)
-    val auxTablesOnlineAndOrcaJoin01leftJoin01 = auxTablesOnlineAndOrcaJoin01Map(LEFT_JOIN)
-    val auxTablesOnlineAndOrcaJoin01InnerJoin01 = auxTablesOnlineAndOrcaJoin01Map(INNER_JOIN)
-
-    // browse here
-
-    // union
-    val auxTablesOnlineLeftAndInnerJoinUnion01 = UnionOperation.doUnion(auxTablesOnlineAndOrcaJoin01leftJoin01, auxTablesOnlineAndOrcaJoin01InnerJoin01).get
-
-    // browse
-
-    // filter
-    val auxTablesOnlineFilter01 = auxTablesOnlineSource.filterOperation(FILTER01)
-    val auxTablesOnlineFilter01DF = FilterOperation.doFilter(auxTablesOnlineLeftAndInnerJoinUnion01, auxTablesOnlineFilter01, auxTablesOnlineFilter01.conditionTypes(NUMERAL0)).get
-
-    // formula with max wed for Aux Table Online
-    val auxTablesOnlineFormula01DF = auxTablesOnlineFilter01DF.withColumn("Online",
-      when(col("Type") === "Online", 1)
-        .otherwise(0))
-      .withColumn("max_wed", max("wed"))
-      .cache()
-
-    // group
-    val auxTablesOnlineGroup01 = auxTablesOnlineSource.groupOperation(GROUP01)
-    val auxTablesOnlineGroup01DF = GroupOperation.doGroup(auxTablesOnlineFormula01DF, auxTablesOnlineGroup01).get
-
-    // join Staples continued..
-    val staplesComUnitsJoin01 = staplesComUnitsSource.joinOperation(JOIN01)
-    val staplesComUnitsJoin01Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineGroup01DF, staplesComUnitsUnionDF.withColumnRenamed("wed", "Right_wed"), staplesComUnitsJoin01)
-    val staplesComUnitsJoin01LefttDF = staplesComUnitsJoin01Map(LEFT_JOIN)
-    val staplesComUnitsJoin01InnerDF = staplesComUnitsJoin01Map(INNER_JOIN).cache()
-
-
-    // select
-    val staplesComUnitsSelect02DF = SelectOperation.doSelect(staplesComUnitsJoin01InnerDF, staplesComUnitsSource.selectOperation(SELECT02).cols).get
-
-    // select -> formula
-    val staplesComUnitsSetOnline1FormalaDF = Utils.litColumn(staplesComUnitsSelect02DF, "Online", 1)
-
-    // formula
-    val staplesComUnitsCalcFormala01DF = staplesComUnitsJoin01InnerDF.withColumn("Offline Units", lit(staplesComUnitsJoin01InnerDF("Sum_POS Qty") - staplesComUnitsJoin01InnerDF("Online Units")))
-
-    // formula -> select
-    val staplesComUnitsSelect03DF = SelectOperation.doSelect(staplesComUnitsCalcFormala01DF, staplesComUnitsSource.selectOperation(SELECT03).cols).get
+    //    val staplesComUnitsSelect01DF = Utils.convertListToDFColumnWithRename(staplesComUnitsSource.renameOperation(RENAME01),
+    //      SelectOperation.doSelect(staplesDotComUnitsDF, staplesComUnitsSource.selectOperation(SELECT01).cols, staplesComUnitsSource.selectOperation(SELECT01).isUnknown).get)
+    //
+    //    // formula
+    //    val staplesComUnitsFormula01DF = Utils.litColumn(staplesComUnitsSelect01DF, "Account Major", "staples")
+    //
+    //    // union
+    //    val staplesComUnitsFormulaLitNullDF = staplesComUnitsFormula01DF.withColumn("season_ordered", lit(null))
+    //      .withColumn("cal_month", lit(null))
+    //      .withColumn("cal_year", lit(null))
+    //      .withColumn("fiscal_quarter", lit(null))
+    //      .withColumn("fiscal_year", lit(null))
+    //    val staplesComUnitsUnionDF = UnionOperation.doUnion(odomOrcaJoin01InnerDF, staplesComUnitsFormulaLitNullDF).get
+    //
+    //    /* Orca 2014 16 Archive */
+    //    // select
+    //    val orca201416ArchiveSelect01 = orca201416ArchiveSource.selectOperation(SELECT01)
+    //    val orca201416ArchiveSelectDF = SelectOperation.doSelect(orca201416ARchive, orca201416ArchiveSelect01.cols, orca201416ArchiveSelect01.isUnknown).get
+    //
+    //    /* Orca Qry 2017 to date */
+    //    // select
+    //    val orcaQry2017ToDateSelect01 = orcaQry2017ToDateSource.selectOperation(SELECT01)
+    //    val orcaQry2017ToDateSelectDF = Utils.convertListToDFColumnWithRename(orcaQry2017ToDateSource.renameOperation(RENAME01), SelectOperation.doSelect(orcaQry2017ToDate, orcaQry2017ToDateSelect01.cols, orcaQry2017ToDateSelect01.isUnknown).get)
+    //
+    //    // union
+    //    val unionOrca201617AndOrca2017QryToDate = UnionOperation.doUnion(orca201416ArchiveSelectDF, orcaQry2017ToDateSelectDF).get.cache()
+    //
+    //    // group
+    //    val orca201617And2017QryGroup01 = orcaQry2017ToDateSource.groupOperation(GROUP01)
+    //    val orca201617And2017QryGroup01DF = GroupOperation.doGroup(unionOrca201617AndOrca2017QryToDate, orca201617And2017QryGroup01).get
+    //
+    //    // sort
+    //    val orca201617And2017QrySort01 = orcaQry2017ToDateSource.sortOperation(SORT01)
+    //    val orca201617And2017QrySort01DF = SortOperation.doSort(orca201617And2017QryGroup01DF, orca201617And2017QrySort01.ascending, orca201617And2017QrySort01.descending)
+    //
+    //    // browse here
+    //
+    //    // formula continued
+    //    val orca201617And2017QryFormulaDF = unionOrca201617AndOrca2017QryToDate.withColumn("Account Major Consol",
+    //      when(col("Account Major") === "Office Depot Inc", "Office Depot-Max")
+    //        .when(col("Account Major") === "OfficeMax North America, Inc.", "Office Depot-Max")
+    //        .when(col("Account Major") === "OfficeMax Inc", "Office Depot-Max")
+    //        .when(col("Account Major") === "Office Depot Inc (Contract Stationers)", "Office Depot-Max")
+    //        .when(col("Account Major") === "Amazon.com, Inc.", "Amazon.Com")
+    //        .when(col("Account Major") === "Frys Electronics Inc", "Fry's Electronics Inc")
+    //        .when(col("Account Major") === "Sams Club", "Fry's Electronics Inc")
+    //        .when(col("Account Major") === "Target Corporation", "Target Stores")
+    //        .when(col("Account Major") === "Wal Mart Online", "Wal-Mart Online")
+    //        .otherwise(col("Account Major")))
+    //
+    //
+    //    // join
+    //    val orca201617And2017QryAndAuxTablesJoin01 = orcaQry2017ToDateSource.joinOperation(JOIN01)
+    //    val orca201617And2017QryAndAuxTablesJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryFormulaDF, auxTablesWeekendselect01DF.withColumnRenamed("wed", "Right_wed"),orca201617And2017QryAndAuxTablesJoin01)
+    //    val orca201617And2017QryAndAuxTablesInnerJoin01 = orca201617And2017QryAndAuxTablesJoin01Map(INNER_JOIN)
+    //
+    //    // browse here
+    //
+    //    // filter
+    //    val orca201617And2017QryFilter01IfTrue = orcaQry2017ToDateSource.filterOperation(FILTER01)
+    //    val orca201617And2017QryFilter01IfTrueDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter01IfTrue,orca201617And2017QryFilter01IfTrue.conditionTypes(NUMERAL0)).get
+    //
+    //    // filter
+    //    val orca201617And2017QryFilter02IfTrue = orcaQry2017ToDateSource.filterOperation(FILTER02)
+    //    val orca201617And2017QryFilter02IfTrueDF = FilterOperation.doFilter(orca201617And2017QryFilter01IfTrueDF, orca201617And2017QryFilter02IfTrue,orca201617And2017QryFilter02IfTrue.conditionTypes(NUMERAL0)).get
+    //
+    //    // formula
+    //    val orca201617And2017Qry7DaysLessFormula = orca201617And2017QryFilter01IfTrueDF.withColumn("wed",date_add(col("wed").cast("timestamp"), -7))
+    //
+    //    // filter
+    //    val orca201617And2017QryFilter03IfFalse = orcaQry2017ToDateSource.filterOperation(FILTER03)
+    //    val orca201617And2017QryFilter03IfFalseDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter03IfFalse,orca201617And2017QryFilter03IfFalse.conditionTypes(NUMERAL0)).get
+    //
+    //    // union
+    //    val orca201617And2017QryUnion01DF = UnionOperation.doUnion(orca201617And2017Qry7DaysLessFormula, orca201617And2017QryFilter03IfFalseDF).get
+    //
+    //    // join
+    //    val orca201617And2017QryAndAuxTablesJoin02 = orcaQry2017ToDateSource.joinOperation(JOIN02)
+    //    val orca201617And2017QryAndAuxTablesJoin02Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryUnion01DF, auxTablesWeekendselect01DF,orca201617And2017QryAndAuxTablesJoin02)
+    //    val orca201617And2017QryAndAuxTablesInnerJoin02 = orca201617And2017QryAndAuxTablesJoin02Map(INNER_JOIN)
+    //
+    //    /* Aux Tables Online */
+    //    // select
+    //    val auxTablesOnlineSelect01 = auxTablesOnlineSource.selectOperation(SELECT01)
+    //    val auxTablesOnlineSelect01DF = SelectOperation.doSelect(auxTablesOnline, auxTablesOnlineSelect01.cols,auxTablesOnlineSelect01.isUnknown).get
+    //
+    //    // join
+    //    val auxTablesOnlineAndOrcaJoin01 = auxTablesOnlineSource.joinOperation(JOIN01)
+    //    val auxTablesOnlineAndOrcaJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryAndAuxTablesInnerJoin02, auxTablesOnlineSelect01DF.withColumnRenamed("Entity ID", "Right_Entity ID"),auxTablesOnlineAndOrcaJoin01)
+    //    val auxTablesOnlineAndOrcaJoin01leftJoin01 = auxTablesOnlineAndOrcaJoin01Map(LEFT_JOIN)
+    //    val auxTablesOnlineAndOrcaJoin01InnerJoin01 = auxTablesOnlineAndOrcaJoin01Map(INNER_JOIN)
+    //
+    //    // browse here
+    //
+    //    // union
+    //    val auxTablesOnlineLeftAndInnerJoinUnion01 = UnionOperation.doUnion(auxTablesOnlineAndOrcaJoin01leftJoin01, auxTablesOnlineAndOrcaJoin01InnerJoin01).get
+    //
+    //    // browse
+    //
+    //    // filter
+    //    val auxTablesOnlineFilter01 = auxTablesOnlineSource.filterOperation(FILTER01)
+    //    val auxTablesOnlineFilter01DF = FilterOperation.doFilter(auxTablesOnlineLeftAndInnerJoinUnion01, auxTablesOnlineFilter01,auxTablesOnlineFilter01.conditionTypes(NUMERAL0)).get
+    //
+    //    // formula with max wed for Aux Table Online
+    //    val auxTablesOnlineFormula01DF = auxTablesOnlineFilter01DF.withColumn("Online",
+    //      when(col("Type") === "Online",1)
+    //        .otherwise(0))
+    //      .withColumn("max_wed", max("wed"))
+    //      .cache()
+    //
+    //    // group
+    //    val auxTablesOnlineGroup01 = auxTablesOnlineSource.groupOperation(GROUP01)
+    //    val auxTablesOnlineGroup01DF = GroupOperation.doGroup(auxTablesOnlineFormula01DF, auxTablesOnlineGroup01).get
+    //
+    //    // join Staples continued..
+    //    val staplesComUnitsJoin01 = staplesComUnitsSource.joinOperation(JOIN01)
+    //    val staplesComUnitsJoin01Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineGroup01DF, staplesComUnitsUnionDF.withColumnRenamed("wed", "Right_wed"), staplesComUnitsJoin01)
+    //    val staplesComUnitsJoin01LefttDF = staplesComUnitsJoin01Map(LEFT_JOIN)
+    //    val staplesComUnitsJoin01InnerDF = staplesComUnitsJoin01Map(INNER_JOIN).cache()
+    //
+    //
+    //    // select
+    //    val staplesComUnitsSelect02DF = SelectOperation.doSelect(staplesComUnitsJoin01InnerDF, staplesComUnitsSource.selectOperation(SELECT02).cols, staplesComUnitsSource.selectOperation(SELECT02).isUnknown).get
+    //
+    //    // select -> formula
+    //    val staplesComUnitsSetOnline1FormalaDF = Utils.litColumn(staplesComUnitsSelect02DF,"Online",1)
+    //
+    //    // formula
+    //    val staplesComUnitsCalcFormala01DF = staplesComUnitsJoin01InnerDF.withColumn("Offline Units", lit(staplesComUnitsJoin01InnerDF("Sum_POS Qty") - staplesComUnitsJoin01InnerDF("Online Units")))
+    //
+    //    // formula -> select
+    //    val staplesComUnitsSelect03DF = SelectOperation.doSelect(staplesComUnitsCalcFormala01DF, staplesComUnitsSource.selectOperation(SELECT03).cols, staplesComUnitsSource.selectOperation(SELECT03).isUnknown).get
+    //
 
 
     /* HP COM*/
     // select
-    val hpComSelect01DF = SelectOperation.doSelect(hpComDF, hpComSource.selectOperation(SELECT01).cols).get
+    val hpComSelect01DF = SelectOperation.doSelect(hpComDF, hpComSource.selectOperation(SELECT01).cols, hpComSource.selectOperation(SELECT01).isUnknown).get
 
     // join
     val hpComJoin01 = hpComSource.joinOperation(JOIN01)
@@ -283,8 +285,8 @@ object RetailTransform {
     val hpComJoin01InnerDF = hpComJoin01Map(INNER_JOIN)
 
     // formula
-    val hpComSubsStrFormalaDF = odomOrcaselect01DF
-      .withColumn("Product Number", substring(col("Product Number"), 0, 6))
+    val hpComSubsStrFormalaDF = hpComJoin01InnerDF
+      .withColumn("Product Number", substring(col("Product Number"),0, 6))
       .withColumn("Account Major", lit("HP Shopping"))
       .withColumn("Online", lit("1"))
 
@@ -293,30 +295,32 @@ object RetailTransform {
     // AMAZON_ARAP
     // formula
     val amazonArapFormula01DF = amazonArapDF
-      .withColumn("[Ordered Units", regexp_replace(amazonArapDF("[Ordered Units"), "[^0-9.]*", ""))
+      .withColumn("Ordered Units", regexp_replace(amazonArapDF("Ordered Units"), "[^0-9.]*",""))
 
     // select
-    val amazonArapSelectDF = SelectOperation.doSelect(amazonArapFormula01DF, amazonArapSource.selectOperation(SELECT01).cols).get
+    val amazonArapSelectDF = SelectOperation.doSelect(amazonArapFormula01DF, amazonArapSource.selectOperation(SELECT01).cols, amazonArapSource.selectOperation(SELECT01).isUnknown).get
 
     // filter
     val amazonArapFilterDF = FilterOperation.doFilter(amazonArapSelectDF, amazonArapSource.filterOperation(FILTER01), amazonArapSource.filterOperation(FILTER01).conditionTypes(NUMERAL0)).get
 
     // convert to Date (MM/dd/yyyy)
-    val amazonArapConvertDateDF = amazonArapFilterDF.withColumn("Week Beginning Conv", to_date(unix_timestamp(col("Week Beginning"), "MM/dd/yyyy").cast("timestamp")))
+    amazonArapFilterDF.printSchema()
+    val amazonArapConvertDateDF = amazonArapFilterDF.withColumn("Week Beginning", to_date(col("Week Beginning"), "MM/dd/yyyy"))
+//      .withColumnRenamed("Week Beginning", "Week Beginning Conv")
 
     // group
     val amazonArapGroup01 = amazonArapSource.groupOperation(GROUP01)
-    val amazonArapGroup01DF = GroupOperation.doGroup(amazonArapConvertDateDF.withColumn("Week Beginning", col("Week Beginning Conv")), amazonArapGroup01).get
+    val amazonArapGroup01DF = GroupOperation.doGroup(amazonArapConvertDateDF.withColumnRenamed("Week Beginning Conv", "Week Beginning"), amazonArapGroup01).get
 
     /* Amazon Asin Map*/
     // select
     val amazonAsinMapSelect01 = amazonAsinMapSource.selectOperation(SELECT01)
-    val amazonAsinMapSelectDF = SelectOperation.doSelect(amazonAsinMapDF, amazonAsinMapSelect01.cols, amazonAsinMapSelect01.isUnknown).get
+    val amazonAsinMapSelectDF =SelectOperation.doSelect(amazonAsinMapDF,amazonAsinMapSelect01.cols, amazonAsinMapSelect01.isUnknown).get
 
     /* Amazon arap continued..*/
     // join
     val amazonArapJoin01 = amazonArapSource.joinOperation(JOIN01)
-    val amazonArapJoin01Map = JoinAndSelectOperation.doJoinAndSelect(amazonArapGroup01DF, amazonAsinMapSelectDF.withColumnRenamed("ASIN", "Right_ASIN"), amazonArapJoin01)
+    val amazonArapJoin01Map = JoinAndSelectOperation.doJoinAndSelect(amazonArapGroup01DF, amazonAsinMapSelectDF.withColumnRenamed("ASIN", "Right_ASIN"),amazonArapJoin01)
     val amazonArapJoin01LefttDF = amazonArapJoin01Map(LEFT_JOIN)
     val amazonArapJoin01InnerDF = amazonArapJoin01Map(INNER_JOIN)
 
@@ -335,14 +339,14 @@ object RetailTransform {
     // browse here
 
     // formula
-    val amazonArapAddAmazonFormula01 = Utils.litColumn(amazonArapJoin01InnerDF, "Account", "Amazon.com")
-    val amazonArapAddOnlineFormula01 = Utils.litColumn(amazonArapAddAmazonFormula01, "Online", 1)
-    val amazonArapAdd6DaysMoreFormula01 = amazonArapAddOnlineFormula01.withColumn("Week_End_Date", date_add(col("Week Beginning").cast("timestamp"), 6))
+    val amazonArapAddAmazonFormula01 = Utils.litColumn(amazonArapJoin01InnerDF,"Account", "Amazon.com")
+    val amazonArapAddOnlineFormula01 = Utils.litColumn(amazonArapAddAmazonFormula01,"Online", 1)
+    val amazonArapAdd6DaysMoreFormula01 = amazonArapAddOnlineFormula01.withColumn("Week_End_Date",date_add(col("Week Beginning").cast("timestamp"), 6))
 
     // select
     val amazonArapSelect02 = amazonArapSource.selectOperation(SELECT02)
-    val amazonArapSelect02DF = Utils.convertListToDFColumnWithRename(amazonArapSource.renameOperation(RENAME02),
-      SelectOperation.doSelect(amazonArapAdd6DaysMoreFormula01, amazonArapSelect02.cols, amazonArapSelect02.isUnknown).get)
+    val amazonArapSelect02DF =Utils.convertListToDFColumnWithRename(amazonArapSource.renameOperation(RENAME02),
+      SelectOperation.doSelect(amazonArapAdd6DaysMoreFormula01,amazonArapSelect02.cols, amazonArapSelect02.isUnknown).get)
 
     // filter
     val amazonArapFilter03 = amazonArapSource.filterOperation(FILTER03)
@@ -354,12 +358,12 @@ object RetailTransform {
 
     // join
     val amazonArapJoin02 = amazonArapSource.joinOperation(JOIN02)
-    val amazonArapJoin02Map = JoinAndSelectOperation.doJoinAndSelect(amazonArapGroup03DF, auxTablesWeekendselect01DF, amazonArapJoin02)
+    val amazonArapJoin02Map = JoinAndSelectOperation.doJoinAndSelect(amazonArapGroup03DF, auxTablesWeekendselect01DF,amazonArapJoin02)
     val amazonArapJoin02InnerDF = amazonArapJoin02Map(INNER_JOIN)
 
     // select
     val amazonArapSelect03 = amazonArapSource.selectOperation(SELECT02)
-    val amazonArapSelect03DF = SelectOperation.doSelect(amazonArapJoin02InnerDF, amazonArapSelect03.cols, amazonArapSelect03.isUnknown).get
+    val amazonArapSelect03DF = SelectOperation.doSelect(amazonArapJoin02InnerDF,amazonArapSelect03.cols, amazonArapSelect03.isUnknown).get
 
     /* S Prints Historical Units */
     // convert to Date (MM/dd/yyyy)
@@ -367,7 +371,7 @@ object RetailTransform {
 
     // select
     val sPrintsHistoricalUnitsSelect01 = sPrintHistoricalUnitsSource.selectOperation(SELECT01)
-    val sPrintsHistoricalUnitsSelect01DF = SelectOperation.doSelect(sPrintsHistoricalUnitsDateConvDF, sPrintsHistoricalUnitsSelect01.cols).get
+    val sPrintsHistoricalUnitsSelect01DF = SelectOperation.doSelect(sPrintsHistoricalUnitsDateConvDF, sPrintsHistoricalUnitsSelect01.cols, sPrintsHistoricalUnitsSelect01.isUnknown).get
 
     // filter
     val sPrintsHistoricalUnitsChannelRetailFilter01 = sPrintHistoricalUnitsSource.filterOperation(FILTER01)
@@ -379,252 +383,252 @@ object RetailTransform {
 
     // formula
     val sPrintsHistoricalFormula01DF = sPrintsHistoricalUnitsGroup01DF.withColumn("Sum_Inv : Saleable Qty",
-      when(col("Sum_Inv : Saleable Qty") > lit(0), 1)
+      when(col("Sum_Inv : Saleable Qty") > lit(0),1)
         .otherwise(0))
 
     // Union
-    val mainUnion01StaplesLeftAndStaplesSelect = UnionOperation.doUnion(staplesComUnitsJoin01LefttDF, staplesComUnitsSelect03DF).get
-    val mainUnion02Union01AndStaplesFormula = UnionOperation.doUnion(mainUnion01StaplesLeftAndStaplesSelect, staplesComUnitsSetOnline1FormalaDF).get
-    val mainUnion03Union02AndHPQryFormula = UnionOperation.doUnion(mainUnion02Union01AndStaplesFormula, hpComSubsStrFormalaDF).get
-    val mainUnion04Union03AndAmazonArapSelect = UnionOperation.doUnion(mainUnion03Union02AndHPQryFormula.withColumn("Product Base Desc", lit(null)), amazonArapSelect03DF.withColumn("Product Base Desc", lit(null))).get
-    val mainUnion05Union04AndSPrintFormula = UnionOperation.doUnion(mainUnion04Union03AndAmazonArapSelect, sPrintsHistoricalFormula01DF).get
+    //    val mainUnion01StaplesLeftAndStaplesSelect = UnionOperation.doUnion(staplesComUnitsJoin01LefttDF,staplesComUnitsSelect03DF).get
+    //    val mainUnion02Union01AndStaplesFormula = UnionOperation.doUnion(mainUnion01StaplesLeftAndStaplesSelect,staplesComUnitsSetOnline1FormalaDF).get
+    //    val mainUnion03Union02AndHPQryFormula = UnionOperation.doUnion(mainUnion02Union01AndStaplesFormula,hpComSubsStrFormalaDF).get
+    //    val mainUnion04Union03AndAmazonArapSelect = UnionOperation.doUnion(mainUnion03Union02AndHPQryFormula.withColumn("Product Base Desc", lit(null)),amazonArapSelect03DF.withColumn("Product Base Desc", lit(null))).get
+    //    val mainUnion05Union04AndSPrintFormula = UnionOperation.doUnion(mainUnion04Union03AndAmazonArapSelect,sPrintsHistoricalFormula01DF).get
 
     /* Aux Table online continued.. */
 
     // formula
-    val auxTablesOnlineFormula02DF = auxTablesOnlineFormula01DF.withColumn("Product Base ID",
-      when(col("Product Base ID") === "M9L74A", "M9L75A")
-        .when((col("Product Base ID") === "J9V91A" || col("Product Base ID")) === "J9V92A", "J9V90A")
-        .when(col("Product Base ID") === "Z3M52A", "K7G93A")
-        .otherwise(col("Product Base ID")))
+    //    val auxTablesOnlineFormula02DF = auxTablesOnlineFormula01DF.withColumn("Product Base ID",
+    //      when(col("Product Base ID") === "M9L74A", "M9L75A")
+    //    .when((col("Product Base ID") === "J9V91A" || col("Product Base ID")) === "J9V92A", "J9V90A")
+    //    .when(col("Product Base ID") === "Z3M52A", "K7G93A")
+    //    .otherwise(col("Product Base ID")))
 
     // group
-    val auxTablesOnlineGroup02 = auxTablesOnlineSource.groupOperation(GROUP02)
-    val auxTablesOnlineGroup02DF = GroupOperation.doGroup(auxTablesOnlineFormula02DF, auxTablesOnlineGroup02).get
+    //    val auxTablesOnlineGroup02 = auxTablesOnlineSource.groupOperation(GROUP02)
+    //    val auxTablesOnlineGroup02DF = GroupOperation.doGroup(auxTablesOnlineFormula02DF, auxTablesOnlineGroup02).get
 
     // filter
-    val maxWedIncluding7000DaysDF = auxTablesOnlineGroup02DF.withColumn("Max_wed", date_add(col("wed").cast("timestamp"), -7000))
-    val auxTablesOnlineWedGreaterThan7000Filter02 = auxTablesOnlineSource.filterOperation(FILTER02)
-    val auxTablesOnlineWedGreaterThan7000Filter02DF = FilterOperation.doFilter(maxWedIncluding7000DaysDF, auxTablesOnlineWedGreaterThan7000Filter02, auxTablesOnlineWedGreaterThan7000Filter02.conditionTypes(NUMERAL0)).get
+    //    val maxWedIncluding7000DaysDF = auxTablesOnlineGroup02DF.withColumn("Max_wed",date_add(col("wed").cast("timestamp"), -7000))
+    //    val auxTablesOnlineWedGreaterThan7000Filter02 = auxTablesOnlineSource.filterOperation(FILTER02)
+    //    val auxTablesOnlineWedGreaterThan7000Filter02DF = FilterOperation.doFilter(maxWedIncluding7000DaysDF,auxTablesOnlineWedGreaterThan7000Filter02,auxTablesOnlineWedGreaterThan7000Filter02.conditionTypes(NUMERAL0)).get
 
     // distribution calculation starts
     // filter
-    val auxTablesOnlineIfOnline1Filter = auxTablesOnlineSource.filterOperation(FILTER03)
-    val auxTablesOnlineIfOnline1FilterDF = FilterOperation.doFilter(auxTablesOnlineWedGreaterThan7000Filter02DF, auxTablesOnlineIfOnline1Filter, auxTablesOnlineIfOnline1Filter.conditionTypes(NUMERAL0)).get.cache()
+    //    val auxTablesOnlineIfOnline1Filter = auxTablesOnlineSource.filterOperation(FILTER03)
+    //    val auxTablesOnlineIfOnline1FilterDF = FilterOperation.doFilter(auxTablesOnlineWedGreaterThan7000Filter02DF, auxTablesOnlineIfOnline1Filter, auxTablesOnlineIfOnline1Filter.conditionTypes(NUMERAL0)).get.cache()
 
     // group
-    val auxTablesOnlineGroup03 = auxTablesOnlineSource.groupOperation(GROUP03)
-    val auxTablesOnlineGroup03DF = GroupOperation.doGroup(auxTablesOnlineIfOnline1FilterDF, auxTablesOnlineGroup03).get
+    //    val auxTablesOnlineGroup03 = auxTablesOnlineSource.groupOperation(GROUP03)
+    //    val auxTablesOnlineGroup03DF = GroupOperation.doGroup(auxTablesOnlineIfOnline1FilterDF, auxTablesOnlineGroup03).get
 
     // group
-    val auxTablesOnlineGroup04 = auxTablesOnlineSource.groupOperation(GROUP04)
-    val auxTablesOnlineGroup04DF = GroupOperation.doGroup(auxTablesOnlineGroup03DF, auxTablesOnlineGroup04).get
+    //    val auxTablesOnlineGroup04 = auxTablesOnlineSource.groupOperation(GROUP04)
+    //    val auxTablesOnlineGroup04DF = GroupOperation.doGroup(auxTablesOnlineGroup03DF, auxTablesOnlineGroup04).get
+    //
+    //    // formula
+    //    val auxTablesOnlineFormula03DF = auxTablesOnlineGroup03DF.withColumn("Sum_POS Sales NDP",
+    //      when(col("Sum_POS Sales NDP") < 0 , 0 )
+    //    .otherwise(col("Sum_POS Sales NDP")))
+    //
+    //    // join
+    //    val auxTablesOnlineJoin02 = auxTablesOnlineSource.joinOperation(JOIN02)
+    //    val auxTablesOnlineFormula03ColsRenamedDF = Utils.convertListToDFColumnWithRename(auxTablesOnlineSource.renameOperation(RENAME02), auxTablesOnlineFormula03DF)
+    //    val auxTablesOnlineJoin02Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineIfOnline1FilterDF, auxTablesOnlineFormula03ColsRenamedDF,auxTablesOnlineJoin02)
+    //    val auxTablesOnlineJoin02InnerDF = auxTablesOnlineJoin02Map(INNER_JOIN)
+    //
+    //    // formula
+    //    val auxTablesOnlineFormula04DF = auxTablesOnlineJoin02InnerDF.withColumn("Store POS",
+    //      when(col("POS Qty") > 0 , col("Sum_POS Sales NDP"))
+    //    .otherwise(0))
+
+    // group
+    //    val auxTablesOnlineGroup05 = auxTablesOnlineSource.groupOperation(GROUP05)
+    //    val auxTablesOnlineGroup05DF = GroupOperation.doGroup(auxTablesOnlineFormula04DF, auxTablesOnlineGroup05).get
+    //
+    //    // join
+    //    val auxTablesOnlineJoin03 = auxTablesOnlineSource.joinOperation(JOIN03)
+    //    val auxTablesOnlineGroup05RenamedDF = Utils.convertListToDFColumnWithRename(auxTablesOnlineSource.renameOperation(RENAME03), auxTablesOnlineGroup05DF)
+    //    val auxTablesOnlineJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineGroup04DF, auxTablesOnlineGroup05RenamedDF,auxTablesOnlineJoin03)
+    //    val auxTablesOnlineJoin03InnerDF = auxTablesOnlineJoin03Map(INNER_JOIN)
 
     // formula
-    val auxTablesOnlineFormula03DF = auxTablesOnlineGroup03DF.withColumn("Sum_POS Sales NDP",
-      when(col("Sum_POS Sales NDP") < 0, 0)
-        .otherwise(col("Sum_POS Sales NDP")))
-
-    // join
-    val auxTablesOnlineJoin02 = auxTablesOnlineSource.joinOperation(JOIN02)
-    val auxTablesOnlineFormula03ColsRenamedDF = Utils.convertListToDFColumnWithRename(auxTablesOnlineSource.renameOperation(RENAME02), auxTablesOnlineFormula03DF)
-    val auxTablesOnlineJoin02Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineIfOnline1FilterDF, auxTablesOnlineFormula03ColsRenamedDF, auxTablesOnlineJoin02)
-    val auxTablesOnlineJoin02InnerDF = auxTablesOnlineJoin02Map(INNER_JOIN)
-
-    // formula
-    val auxTablesOnlineFormula04DF = auxTablesOnlineJoin02InnerDF.withColumn("Store POS",
-      when(col("POS Qty") > 0, col("Sum_POS Sales NDP"))
-        .otherwise(0))
-
-    // group
-    val auxTablesOnlineGroup05 = auxTablesOnlineSource.groupOperation(GROUP05)
-    val auxTablesOnlineGroup05DF = GroupOperation.doGroup(auxTablesOnlineFormula04DF, auxTablesOnlineGroup05).get
-
-    // join
-    val auxTablesOnlineJoin03 = auxTablesOnlineSource.joinOperation(JOIN03)
-    val auxTablesOnlineGroup05RenamedDF = Utils.convertListToDFColumnWithRename(auxTablesOnlineSource.renameOperation(RENAME03), auxTablesOnlineGroup05DF)
-    val auxTablesOnlineJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineGroup04DF, auxTablesOnlineGroup05RenamedDF, auxTablesOnlineJoin03)
-    val auxTablesOnlineJoin03InnerDF = auxTablesOnlineJoin03Map(INNER_JOIN)
-
-    // formula
-    val auxTablesOnlineFormula05DF = auxTablesOnlineJoin03InnerDF.withColumn("SKU ACV POS",
-      when(col("Sum_Sum_POS Sales NDP") < 1, 0)
-        .when((col("Sum_Store POS") / col("Sum_Sum_POS Sales NDP")) > 1, 1)
-        .otherwise(col("Sum_Store POS") / col("Sum_Sum_POS Sales NDP")))
-
-    // select with rename
-    val auxTablesOnlineSelect02 = auxTablesOnlineSource.selectOperation(SELECT02)
-    val auxTablesOnlineSelect02DF = Utils.convertListToDFColumnWithRename(auxTablesOnlineSource.renameOperation(RENAME01),
-      SelectOperation.doSelect(auxTablesOnlineFormula05DF, auxTablesOnlineSelect02.cols).get)
-
-    // browse here
-    // distribution calculation Ends
-
-    /* Aux Table SKU Hierarchy */
-    //select
-    val auxTablesSKUHierarchySelect01 = auxTablesSKUHierarchySource.selectOperation(SELECT01)
-    val auxTablesSKUHierarchySelect01DF = SelectOperation.doSelect(auxTablesSKUHierarchy, auxTablesSKUHierarchySelect01.cols).get
-
-    // join
-    val auxTablesSKUHierarchyJoin01 = auxTablesSKUHierarchySource.joinOperation(JOIN01)
-    val auxTablesSKUHierarchyJoin01Map = JoinAndSelectOperation.doJoinAndSelect(mainUnion05Union04AndSPrintFormula, auxTablesSKUHierarchySelect01DF, auxTablesSKUHierarchyJoin01)
-    val auxTablesSKUHierarchyJoin01LeftDF = auxTablesSKUHierarchyJoin01Map(LEFT_JOIN)
-    val auxTablesSKUHierarchyJoin01InnerDF = auxTablesSKUHierarchyJoin01Map(INNER_JOIN)
-
-    // group
-    val auxTablesSKUHierarchyGroup01 = auxTablesSKUHierarchySource.groupOperation(GROUP01)
-    val auxTablesSKUHierarchyGroup01DF = GroupOperation.doGroup(auxTablesSKUHierarchyJoin01LeftDF, auxTablesSKUHierarchyGroup01).get
-
-    // sort
-    val auxTablesSKUHierarchySort01 = auxTablesSKUHierarchySource.sortOperation(SORT01)
-    val auxTablesSKUHierarchySort01DF = SortOperation.doSort(auxTablesSKUHierarchyGroup01DF, auxTablesSKUHierarchySort01.ascending, auxTablesSKUHierarchySort01.descending).get
+    //    val auxTablesOnlineFormula05DF = auxTablesOnlineJoin03InnerDF.withColumn("SKU ACV POS",
+    //      when(col("Sum_Sum_POS Sales NDP") < 1, 0)
+    //    .when((col("Sum_Store POS") / col("Sum_Sum_POS Sales NDP")) > 1 ,1)
+    //    .otherwise(col("Sum_Store POS") / col("Sum_Sum_POS Sales NDP")))
+    //
+    //    // select with rename
+    //    val auxTablesOnlineSelect02 = auxTablesOnlineSource.selectOperation(SELECT02)
+    //    val auxTablesOnlineSelect02DF = Utils.convertListToDFColumnWithRename(auxTablesOnlineSource.renameOperation(RENAME01),
+    //      SelectOperation.doSelect(auxTablesOnlineFormula05DF,auxTablesOnlineSelect02.cols, auxTablesOnlineSelect02.isUnknown).get)
+    //
+    //    // browse here
+    //    // distribution calculation Ends
+    //
+    //    /* Aux Table SKU Hierarchy */
+    //    //select
+    //    val auxTablesSKUHierarchySelect01 = auxTablesSKUHierarchySource.selectOperation(SELECT01)
+    //    val auxTablesSKUHierarchySelect01DF = SelectOperation.doSelect(auxTablesSKUHierarchy, auxTablesSKUHierarchySelect01.cols, auxTablesSKUHierarchySelect01.isUnknown).get
+    //
+    //    // join
+    //    val auxTablesSKUHierarchyJoin01 = auxTablesSKUHierarchySource.joinOperation(JOIN01)
+    //    val auxTablesSKUHierarchyJoin01Map = JoinAndSelectOperation.doJoinAndSelect(mainUnion05Union04AndSPrintFormula, auxTablesSKUHierarchySelect01DF,auxTablesSKUHierarchyJoin01)
+    //    val auxTablesSKUHierarchyJoin01LeftDF = auxTablesSKUHierarchyJoin01Map(LEFT_JOIN)
+    //    val auxTablesSKUHierarchyJoin01InnerDF = auxTablesSKUHierarchyJoin01Map(INNER_JOIN)
+    //
+    //    // group
+    //    val auxTablesSKUHierarchyGroup01 = auxTablesSKUHierarchySource.groupOperation(GROUP01)
+    //    val auxTablesSKUHierarchyGroup01DF = GroupOperation.doGroup(auxTablesSKUHierarchyJoin01LeftDF, auxTablesSKUHierarchyGroup01).get
+    //
+    //    // sort
+    //    val auxTablesSKUHierarchySort01 = auxTablesSKUHierarchySource.sortOperation(SORT01)
+    //    val auxTablesSKUHierarchySort01DF = SortOperation.doSort(auxTablesSKUHierarchyGroup01DF, auxTablesSKUHierarchySort01.ascending, auxTablesSKUHierarchySort01.descending).get
 
     // browse or write to CSV
 
     // group
-    val auxTablesSKUHierarchyGroup02 = auxTablesSKUHierarchySource.groupOperation(GROUP02)
-    val auxTablesSKUHierarchyGroup02DF = Utils.convertListToDFColumnWithRename(auxTablesSKUHierarchySource.renameOperation(RENAME01), GroupOperation.doGroup(auxTablesSKUHierarchyJoin01InnerDF, auxTablesSKUHierarchyGroup02).get).cache()
-
-    // formula
-    val auxTablesSKUHierarchyFormula01 = auxTablesSKUHierarchyGroup02DF.withColumn("Raw POS Qty", col("POS Qty"))
-
-    // unique
-    val auxTablesSKUHierarchyDistinctDF = auxTablesSKUHierarchyGroup02DF.dropDuplicates(List("Account Major", "Online", "SKU", "WED"))
-
-    // browse here
-
-    // filter
-    val auxTablesSKUHierarchyFilter01 = auxTablesSKUHierarchySource.filterOperation(FILTER01)
-    val auxTablesSKUHierarchyFilter01DF = FilterOperation.doFilter(auxTablesSKUHierarchyGroup02DF, auxTablesSKUHierarchyFilter01, auxTablesSKUHierarchyFilter01.conditionTypes(NUMERAL0)).get
-
-    /* BBY Bundle Info */
-    // TODO
-    // transpose
-    //    val bbyBundleInfoTranspose = bbyBundleInfo.withColumn("dummy",lit(1))
-    //    val bbyBundleInfoTransposeDF = bbyBundleInfoTranspose.groupBy(col("dummy")).count()
-
-    val bbyBundleInfoTransposeDF = bbyBundleInfo.withColumn("newCol", explode(array(struct(col("B&M Units").as("Name"), col("_COM Units").as("Value")))))
-      .select(col("Week Ending"), col("Units"), col("HP SKU"), col("newCol.*"))
-      .withColumnRenamed("Name", "Online")
-      .withColumnRenamed("Value", "Bundle Qty Raw")
-    // select
-    val bbyBundleInfoSelect01 = bbyBundleInfoSource.selectOperation(SELECT01)
-    val bbyBundleInfoSelect01DF = SelectOperation.doSelect(bbyBundleInfoTransposeDF, bbyBundleInfoSelect01.cols, bbyBundleInfoSelect01.isUnknown).get
-
-    // formula
-    val bbyBundleInfoFormula01DF = bbyBundleInfoSelect01DF.withColumn("Online",
-      when(col("Online") === "B&M Units", 0)
-        .otherwise(1))
-
-    // group
-    val bbyBundleInfoGroup01 = bbyBundleInfoSource.groupOperation(GROUP01)
-    val bbyBundleInfoGroup01DF = GroupOperation.doGroup(bbyBundleInfoFormula01DF, bbyBundleInfoGroup01).get
-
-    // join
-    val bbyBundleInfoJoin01 = bbyBundleInfoSource.joinOperation(JOIN01)
-    val bbyBundleInfoJoin01Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFilter01DF, bbyBundleInfoGroup01DF.withColumnRenamed("Online", "Right_Online"), bbyBundleInfoJoin01)
-    val bbyBundleInfoJoin01InnerDF = bbyBundleInfoJoin01Map(INNER_JOIN)
-
-    // unique
-    val bbyBundleInfoDistinctDF = bbyBundleInfoJoin01InnerDF.dropDuplicates(List("Online", "SKU", "WED"))
-
-    // browse here
-
-    // group
-    val bbyBundleInfoGroup02 = bbyBundleInfoSource.groupOperation(GROUP02)
-    val bbyBundleInfoGroup02DF = GroupOperation.doGroup(bbyBundleInfoJoin01InnerDF, bbyBundleInfoGroup02).get
-
-    // join
-    val bbyBundleInfoJoin02 = bbyBundleInfoSource.joinOperation(JOIN02)
-    val bbyBundleInfoJoin01InnerRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME03), bbyBundleInfoJoin01InnerDF)
-    val bbyBundleInfoJoin02Map = JoinAndSelectOperation.doJoinAndSelect(bbyBundleInfoGroup02DF, bbyBundleInfoJoin01InnerRenamedDF, bbyBundleInfoJoin02)
-    val bbyBundleInfoJoin02InnerDF = bbyBundleInfoJoin02Map(INNER_JOIN)
-
-    // formula
-    val bbyBundleInfoFormula02DF = bbyBundleInfoJoin02InnerDF.withColumn("Ratio", (col("POS Qty") / col("Sum_POS Qty")))
-
-    // formula
-    val bbyBundleInfoFormula03DF = bbyBundleInfoFormula02DF.withColumn("Bundle Qty Est",
-      when(col("online") === 1, floor(col("Ratio") * col("Units")))
-        .otherwise(ceil(col("Ratio") * col("Units"))))
-
-    // formula
-    val bbyBundleInfoFormula04DF = bbyBundleInfoFormula03DF.withColumn("Bundle Qty",
-      when(!isnull(col("Bundle Qty Raw")), col("Bundle Qty Raw"))
-        .otherwise(col("Bundle Qty Est")))
-
-    // formula
-    val bbyBundleInfoFormula05DF = bbyBundleInfoFormula04DF.withColumn("POS Qty", (col("POS Qty") - col("Bundle Qty")))
-
-    // join
-    val bbyBundleInfoJoin03 = bbyBundleInfoSource.joinOperation(JOIN03)
-    val bbyBundleInfoFormula05RenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME04), bbyBundleInfoFormula05DF)
-    val bbyBundleInfoJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFilter01DF.withColumnRenamed("POS QTY", "Raw POS Qty"), bbyBundleInfoFormula05RenamedDF, bbyBundleInfoJoin03)
-    val bbyBundleInfoJoin03LeftDF = bbyBundleInfoJoin03Map(LEFT_JOIN)
-    val bbyBundleInfoJoin03InnerDF = bbyBundleInfoJoin03Map(INNER_JOIN)
-
-    // union
-    val unionLeftAndInnerJoinDF = UnionOperation.doUnion(bbyBundleInfoJoin03LeftDF, bbyBundleInfoJoin03InnerDF).get
-
-    // join
-    val bbyBundleInfoAndAuxTablesOnlineJoin04 = bbyBundleInfoSource.joinOperation(JOIN04)
-
-    val auxTablesOnlineSelect02LeftRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME05), auxTablesOnlineSelect02DF)
-    val unionLeftAndInnerJoinDFRightRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME06), unionLeftAndInnerJoinDF)
-    val bbyBundleInfoJoin04Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineSelect02LeftRenamedDF, unionLeftAndInnerJoinDFRightRenamedDF, bbyBundleInfoAndAuxTablesOnlineJoin04)
-    val bbyBundleInfoJoin04LeftDF = bbyBundleInfoJoin04Map(LEFT_JOIN)
-    val bbyBundleInfoJoin04InnerDF = bbyBundleInfoJoin04Map(INNER_JOIN)
-    val bbyBundleInfoJoin04RightDF = bbyBundleInfoJoin04Map(RIGHT_JOIN)
-
-    // formula
-    val bbyBundleInfoFormula06DF = bbyBundleInfoJoin04LeftDF.withColumn("Distribution_Inv",
-      when(col("POS Qty") > 0, 1)
-        otherwise (0))
-
-    // union with append max weekend date
-    val unionFormulaAndInnerJoinDF = UnionOperation.doUnion(bbyBundleInfoFormula06DF, bbyBundleInfoJoin04InnerDF).get
-      .withColumn("Max_Week_End_Date", max("Week_End_Date"))
-
-
-    // browse here
-
-    // filter
-    val maxWedIncluding70000DaysDF = unionFormulaAndInnerJoinDF.withColumn("Max_Week_End_date", date_add(col("Week_End_Date").cast("timestamp"), -70000))
-    val bbyBundleInfoWedGreaterThan70000Filter01 = bbyBundleInfoSource.filterOperation(FILTER01)
-    val bbyBundleInfoWedGreaterThan70000Filter01DF = FilterOperation.doFilter(maxWedIncluding70000DaysDF, bbyBundleInfoWedGreaterThan70000Filter01, bbyBundleInfoWedGreaterThan70000Filter01.conditionTypes(NUMERAL0)).get
-
-
-    /* Existing POS */
-    val existingPOSSelect01 = existingPOSSource.selectOperation(SELECT01)
-    val existingPOSSelect01DF = SelectOperation.doSelect(existingPOS, existingPOSSelect01.cols).get
-
-    // join
-    val bbyBundleInfoAndAuxTablesOnlineJoin05 = bbyBundleInfoSource.joinOperation(JOIN05)
-    val unionLeftAndInnerJoinRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), unionFormulaAndInnerJoinDF)
-    val bbyBundleInfoJoin05Map = JoinAndSelectOperation.doJoinAndSelect(existingPOSSelect01DF, unionLeftAndInnerJoinRenamedDF, bbyBundleInfoAndAuxTablesOnlineJoin05)
-    val bbyBundleInfoJoin05LeftDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), bbyBundleInfoJoin05Map(LEFT_JOIN))
-
-    // union
-    val unionFilterAndJoin05DF = UnionOperation.doUnion(bbyBundleInfoJoin05LeftDF, bbyBundleInfoWedGreaterThan70000Filter01DF)
-
-    // formula
-    val bbyBundleInfoFormula07DF = bbyBundleInfoFormula03DF.withColumn("Season",
-      when(col("IPSLES") === "IPS", col("Season")
-        .otherwise(when(col("Week_End_date") === "2016-10-01", "BTS'16")
-          .when(col("Week_End_date") === "2016-12-31", "HOL'16")
-          .when(col("Week_End_date") === "2017-04-01", "BTB'17")
-          .when(col("Week_End_date") === "2017-07-01", "STS'17")
-          .otherwise(col("Season")))))
-
-    // sort
-    val bbyBundleInfoSort01 = bbyBundleInfoSource.sortOperation(SORT01)
-    val bbyBundleInfoSort01DF = SortOperation.doSort(bbyBundleInfoFormula07DF, bbyBundleInfoSort01.ascending, bbyBundleInfoSort01.descending).get
-
-    // unique
-    val bbyBundleInfoDistinct01DF = bbyBundleInfoSort01DF.dropDuplicates(List("Account", "Online", "SKU", "Week_End_Date", "Max_Week_End_Date"))
-
-    // formula
-    val bbyBundleInfoFormula08DF = bbyBundleInfoSort01DF.withColumn("Workflow Run Date", current_date())
+    //    val auxTablesSKUHierarchyGroup02 = auxTablesSKUHierarchySource.groupOperation(GROUP02)
+    //    val auxTablesSKUHierarchyGroup02DF = Utils.convertListToDFColumnWithRename(auxTablesSKUHierarchySource.renameOperation(RENAME01),GroupOperation.doGroup(auxTablesSKUHierarchyJoin01InnerDF, auxTablesSKUHierarchyGroup02).get).cache()
+    //
+    //    // formula
+    //    val auxTablesSKUHierarchyFormula01 = auxTablesSKUHierarchyGroup02DF.withColumn("Raw POS Qty", col("POS Qty"))
+    //
+    //    // unique
+    //    val auxTablesSKUHierarchyDistinctDF = auxTablesSKUHierarchyGroup02DF.dropDuplicates(List("Account Major", "Online","SKU", "WED"))
+    //
+    //    // browse here
+    //
+    //    // filter
+    //    val auxTablesSKUHierarchyFilter01 = auxTablesSKUHierarchySource.filterOperation(FILTER01)
+    //    val auxTablesSKUHierarchyFilter01DF = FilterOperation.doFilter(auxTablesSKUHierarchyGroup02DF,auxTablesSKUHierarchyFilter01, auxTablesSKUHierarchyFilter01.conditionTypes(NUMERAL0)).get
+    //
+    //    /* BBY Bundle Info */
+    //    // TODO
+    //    // transpose
+    ////    val bbyBundleInfoTranspose = bbyBundleInfo.withColumn("dummy",lit(1))
+    ////    val bbyBundleInfoTransposeDF = bbyBundleInfoTranspose.groupBy(col("dummy")).count()
+    //
+    //    val bbyBundleInfoTransposeDF = bbyBundleInfo.withColumn("newCol", explode(array(struct(col("B&M Units").as("Name"),col("_COM Units").as("Value")))))
+    //      .select(col("Week Ending"), col("Units"), col("HP SKU"), col("newCol.*"))
+    //      .withColumnRenamed("Name" , "Online")
+    //      .withColumnRenamed("Value", "Bundle Qty Raw")
+    //    // select
+    //    val bbyBundleInfoSelect01 = bbyBundleInfoSource.selectOperation(SELECT01)
+    //    val bbyBundleInfoSelect01DF = SelectOperation.doSelect(bbyBundleInfoTransposeDF, bbyBundleInfoSelect01.cols, bbyBundleInfoSelect01.isUnknown).get
+    //
+    //    // formula
+    //    val bbyBundleInfoFormula01DF = bbyBundleInfoSelect01DF.withColumn("Online",
+    //      when(col("Online") === "B&M Units", 0)
+    //    .otherwise(1))
+    //
+    //    // group
+    //    val bbyBundleInfoGroup01 = bbyBundleInfoSource.groupOperation(GROUP01)
+    //    val bbyBundleInfoGroup01DF = GroupOperation.doGroup(bbyBundleInfoFormula01DF,bbyBundleInfoGroup01).get
+    //
+    //    // join
+    //    val bbyBundleInfoJoin01 = bbyBundleInfoSource.joinOperation(JOIN01)
+    //    val bbyBundleInfoJoin01Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFilter01DF, bbyBundleInfoGroup01DF.withColumnRenamed("Online","Right_Online"), bbyBundleInfoJoin01)
+    //    val bbyBundleInfoJoin01InnerDF = bbyBundleInfoJoin01Map(INNER_JOIN)
+    //
+    //    // unique
+    //    val bbyBundleInfoDistinctDF = bbyBundleInfoJoin01InnerDF.dropDuplicates(List("Online","SKU", "WED"))
+    //
+    //    // browse here
+    //
+    //    // group
+    //    val bbyBundleInfoGroup02 = bbyBundleInfoSource.groupOperation(GROUP02)
+    //    val bbyBundleInfoGroup02DF = GroupOperation.doGroup(bbyBundleInfoJoin01InnerDF,bbyBundleInfoGroup02).get
+    //
+    //    // join
+    //    val bbyBundleInfoJoin02 = bbyBundleInfoSource.joinOperation(JOIN02)
+    //    val bbyBundleInfoJoin01InnerRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME03), bbyBundleInfoJoin01InnerDF)
+    //    val bbyBundleInfoJoin02Map = JoinAndSelectOperation.doJoinAndSelect(bbyBundleInfoGroup02DF, bbyBundleInfoJoin01InnerRenamedDF, bbyBundleInfoJoin02)
+    //    val bbyBundleInfoJoin02InnerDF = bbyBundleInfoJoin02Map(INNER_JOIN)
+    //
+    //    // formula
+    //    val bbyBundleInfoFormula02DF = bbyBundleInfoJoin02InnerDF.withColumn("Ratio", (col("POS Qty") / col("Sum_POS Qty")))
+    //
+    //    // formula
+    //    val bbyBundleInfoFormula03DF = bbyBundleInfoFormula02DF.withColumn("Bundle Qty Est",
+    //      when(col("online") === 1, floor(col("Ratio") * col("Units")))
+    //    .otherwise(ceil(col("Ratio") * col("Units"))))
+    //
+    //    // formula
+    //    val bbyBundleInfoFormula04DF = bbyBundleInfoFormula03DF.withColumn("Bundle Qty",
+    //      when(!isnull(col("Bundle Qty Raw")), col("Bundle Qty Raw"))
+    //    .otherwise(col("Bundle Qty Est")))
+    //
+    //    // formula
+    //    val bbyBundleInfoFormula05DF = bbyBundleInfoFormula04DF.withColumn("POS Qty", (col("POS Qty") - col("Bundle Qty")))
+    //
+    //    // join
+    //    val bbyBundleInfoJoin03 = bbyBundleInfoSource.joinOperation(JOIN03)
+    //    val bbyBundleInfoFormula05RenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME04), bbyBundleInfoFormula05DF)
+    //    val bbyBundleInfoJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFilter01DF.withColumnRenamed("POS QTY", "Raw POS Qty"), bbyBundleInfoFormula05RenamedDF, bbyBundleInfoJoin03)
+    //    val bbyBundleInfoJoin03LeftDF = bbyBundleInfoJoin03Map(LEFT_JOIN)
+    //    val bbyBundleInfoJoin03InnerDF = bbyBundleInfoJoin03Map(INNER_JOIN)
+    //
+    //    // union
+    //    val unionLeftAndInnerJoinDF =UnionOperation.doUnion(bbyBundleInfoJoin03LeftDF, bbyBundleInfoJoin03InnerDF).get
+    //
+    //    // join
+    //    val bbyBundleInfoAndAuxTablesOnlineJoin04 = bbyBundleInfoSource.joinOperation(JOIN04)
+    //
+    //    val auxTablesOnlineSelect02LeftRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME05), auxTablesOnlineSelect02DF)
+    //    val unionLeftAndInnerJoinDFRightRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME06), unionLeftAndInnerJoinDF)
+    //    val bbyBundleInfoJoin04Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineSelect02LeftRenamedDF, unionLeftAndInnerJoinDFRightRenamedDF, bbyBundleInfoAndAuxTablesOnlineJoin04)
+    //    val bbyBundleInfoJoin04LeftDF = bbyBundleInfoJoin04Map(LEFT_JOIN)
+    //    val bbyBundleInfoJoin04InnerDF = bbyBundleInfoJoin04Map(INNER_JOIN)
+    //    val bbyBundleInfoJoin04RightDF = bbyBundleInfoJoin04Map(RIGHT_JOIN)
+    //
+    //    // formula
+    //    val bbyBundleInfoFormula06DF = bbyBundleInfoJoin04LeftDF.withColumn("Distribution_Inv",
+    //      when(col("POS Qty") > 0, 1)
+    //    otherwise(0))
+    //
+    //    // union with append max weekend date
+    //    val unionFormulaAndInnerJoinDF = UnionOperation.doUnion(bbyBundleInfoFormula06DF, bbyBundleInfoJoin04InnerDF).get
+    //      .withColumn("Max_Week_End_Date", max("Week_End_Date"))
+    //
+    //
+    //    // browse here
+    //
+    //    // filter
+    //    val maxWedIncluding70000DaysDF = unionFormulaAndInnerJoinDF.withColumn("Max_Week_End_date",date_add(col("Week_End_Date").cast("timestamp"), -70000))
+    //    val bbyBundleInfoWedGreaterThan70000Filter01 = bbyBundleInfoSource.filterOperation(FILTER01)
+    //    val bbyBundleInfoWedGreaterThan70000Filter01DF = FilterOperation.doFilter(maxWedIncluding70000DaysDF,bbyBundleInfoWedGreaterThan70000Filter01,bbyBundleInfoWedGreaterThan70000Filter01.conditionTypes(NUMERAL0)).get
+    //
+    //
+    //    /* Existing POS */
+    //    val existingPOSSelect01 = existingPOSSource.selectOperation(SELECT01)
+    //    val existingPOSSelect01DF = SelectOperation.doSelect(existingPOS, existingPOSSelect01.cols, existingPOSSelect01.isUnknown).get
+    //
+    //    // join
+    //    val bbyBundleInfoAndAuxTablesOnlineJoin05 = bbyBundleInfoSource.joinOperation(JOIN05)
+    //    val unionLeftAndInnerJoinRenamedDF  = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), unionFormulaAndInnerJoinDF)
+    //    val bbyBundleInfoJoin05Map = JoinAndSelectOperation.doJoinAndSelect(existingPOSSelect01DF, unionLeftAndInnerJoinRenamedDF, bbyBundleInfoAndAuxTablesOnlineJoin05)
+    //    val bbyBundleInfoJoin05LeftDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), bbyBundleInfoJoin05Map(LEFT_JOIN))
+    //
+    //    // union
+    //    val unionFilterAndJoin05DF = UnionOperation.doUnion(bbyBundleInfoJoin05LeftDF, bbyBundleInfoWedGreaterThan70000Filter01DF)
+    //
+    //    // formula
+    //    val bbyBundleInfoFormula07DF = bbyBundleInfoFormula03DF.withColumn("Season",
+    //      when(col("IPSLES") === "IPS", col("Season")
+    //        .otherwise(when(col("Week_End_date") === "2016-10-01" , "BTS'16")
+    //            .when(col("Week_End_date") === "2016-12-31" , "HOL'16")
+    //            .when(col("Week_End_date") === "2017-04-01" , "BTB'17")
+    //            .when(col("Week_End_date") === "2017-07-01" , "STS'17")
+    //          .otherwise(col("Season")))))
+    //
+    //    // sort
+    //    val bbyBundleInfoSort01 = bbyBundleInfoSource.sortOperation(SORT01)
+    //    val bbyBundleInfoSort01DF = SortOperation.doSort(bbyBundleInfoFormula07DF, bbyBundleInfoSort01.ascending, bbyBundleInfoSort01.descending).get
+    //
+    //    // unique
+    //    val bbyBundleInfoDistinct01DF = bbyBundleInfoSort01DF.dropDuplicates(List("Account", "Online","SKU", "Week_End_Date", "Max_Week_End_Date"))
+    //
+    //    // formula
+    //    val bbyBundleInfoFormula08DF = bbyBundleInfoSort01DF.withColumn("Workflow Run Date", current_date())
 
     // browse
   }
