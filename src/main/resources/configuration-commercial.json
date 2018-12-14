@@ -191,7 +191,7 @@
           "cols": ["SKU","Week_End_Date","Option Type"],
           "aggregations": {"max": {"Rebate Amount": "IR"},
                            "first": {"C2B Promo Code":"First_C2B Promo Code"}},
-          "selectCriteria": ["SKU","C2B Promo Code","Promo Name","Season","BU","Product","Rebate Amount","Week_End_Date","Option Type","Source_season","Source_Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year"]
+          "selectCriteria": ["SKU","C2B Promo Code","Promo Name","Season","BU","Product","Rebate Amount","Week_End_Date","Option Type","Source_Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year"]
         },
         "group06": {
           "cols": ["Week End Date","Base SKU","C2B Promo Code"],
@@ -250,7 +250,7 @@
           "isUnknown":"y",
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
-            "left": ["Reseller","Season"], "right": ["Base Account","Season"]
+            "left": ["Reseller","Season"], "right": ["Base Account","Right_Season"]
           },
           "selectCriteria": {
             "left": [], "right": ["Base Account","Right_Season"]
@@ -305,7 +305,7 @@
       "group" : {
         "group01": {
           "cols" : ["Product Base ID","Product Base Desc"],
-          "aggregations": {"sum" : {"ST Qty":"Sum_ST Qty", "STT Qty":  "Sum_STT Qty"}},
+          "aggregations": {"sum" : {"ST Qty":"Sum_ST Qty", "STT Qty":"Sum_STT Qty"}},
           "selectCriteria": ["Product Base ID","Product Base Desc","Reseller","ST Big Deal Qty","ST Qty","ST Non Big Deal Qty","STT Big Deal Qty","STT Qty","STT Non Big Deal Qty","Week_End_Date","Season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Promo Option","Reseller Category","Reseller_Cluster","Qty","Big Deal Qty","Non Big Deal Qty"]
         }
       },
@@ -407,11 +407,11 @@
           "typeOfJoin": ["right","inner"],
           "joinCriteria": {
             "left": ["Week End Date","Product Base ID","Account Company"],
-            "right": ["Week End Date","Product Base ID","Account Company"]
+            "right": ["Right_Week End Date","Right_Product Base ID","Right_Account Company"]
           },
           "selectCriteria": {
             "left": [],
-            "right": ["Right_Product Base ID","Right_Product Base Desc","Right_Account Company","Right_Week End Date","Right_Week"]
+            "right": ["Right_Product Base ID","Right_Product Base Desc","Right_Account Company","Right_Week End Date"]
           }
         },
         "join03": {
@@ -430,21 +430,21 @@
         "group01": {
           "cols" : ["Big Deal Nbr","Account Company","Product Base ID"],
           "aggregations": {"sum" : {"Qty":"Sum_Qty"}},
-          "selectCriteria": ["Week","Week Desc","Distributor","Big Deal Desc","Big Deal Eclipse Customer Desc","Account Company","Product Base Desc","Product Category Desc","Big Deal Nbr","Product Base ID","Dist Qty","POS Qty","Qty","Big Deal","Week End Date","C2B Promo Code"]
+          "selectCriteria": ["Week","Distributor","Week Desc","Big Deal Desc","Big Deal Eclipse Customer Desc","Account Company","Product Base Desc","Product Category Desc","Big Deal Nbr","Product Base ID","Dist Qty","POS Qty","Qty","Big Deal","Week End Date","C2B Promo Code"]
         },
         "group02": {
           "cols" : ["Product Base ID","Product Base Desc","Account Company","Week End Date"],
           "aggregations": {"sum" : {"Qty":"Qty"}},
-          "selectCriteria": ["Week","Week Desc","Distributor","Big Deal Desc","Big Deal Eclipse Customer Desc","Account Company","Product Base Desc","Product Category Desc","Big Deal Nbr","Product Base ID","Dist Qty","POS Qty","Qty","Big Deal","Week End Date","C2B Promo Code"]
+          "selectCriteria": ["Week","Distributor","Week Desc","Big Deal Desc","Big Deal Eclipse Customer Desc","Account Company","Product Base Desc","Product Category Desc","Big Deal Nbr","Product Base ID","Dist Qty","POS Qty","Qty","Big Deal","Week End Date","C2B Promo Code"]
         },
         "group03":{
           "cols" : ["Product Base ID","Product Base Desc","Account Company","Week End Date"],
           "aggregations": {"sum" : {"Qty":"Qty"}},
-          "selectCriteria": ["Week","Week Desc","Distributor","Big Deal Desc","Big Deal Eclipse Customer Desc","Account Company","Product Base Desc","Product Category Desc","Big Deal Nbr","Product Base ID","Dist Qty","POS Qty","Qty","Big Deal","Week End Date","C2B Promo Code"]
+          "selectCriteria": ["Week","Distributor","Week Desc","Big Deal Desc","Big Deal Eclipse Customer Desc","Account Company","Product Base Desc","Product Category Desc","Big Deal Nbr","Product Base ID","Dist Qty","POS Qty","Qty","Big Deal","Week End Date","C2B Promo Code"]
         },
         "group04":{
           "cols" : ["Partner Desc","Base SKU","Week End Date"],
-          "aggregations": {"sum" : {"Claim Quantity":""}},
+          "aggregations": {"sum" : {"Claim Quantity":"Claim Quantity"}},
           "selectCriteria": ["Partner Desc","Big Deal ID","Base SKU","Week End Date","Claim Quantity"]
         }
       },
@@ -481,21 +481,21 @@
           "typeOfJoin": ["right","inner"],
           "joinCriteria": {
             "left": ["Week End Date","Product Base ID","Account Company"],
-            "right": ["Week End Date","Product Base ID","Account Company"]
+            "right": ["Right_Week End Date","Right_Product Base ID","Right_Account Company"]
           },
           "selectCriteria": {
-            "left": [], "right": ["Right_Product Base ID","Right_Product Base Desc","Right_Account Company","Right_Week End Date","Right_Week"]
+            "left": [], "right": ["Right_Product Base ID","Right_Product Base Desc","Right_Account Company","Right_Week End Date"]
           }
         },
         "join03": {
           "isUnknown":"y",
-          "typeOfJoin": ["right","inner"],
+          "typeOfJoin": ["right","inner","left"],
           "joinCriteria": {
             "left": ["Product Base ID","Account Company","Week End Date"],
-            "right": ["Product Base ID","Account Company","Week End Date"]
+            "right": ["Right_Product Base ID","Right_Account Company","Right_Week End Date"]
           },
           "selectCriteria": {
-            "left": [], "right": ["Right_Product Base ID","Right_Product Base Desc","Right_Account Company","Right_Week End Date","Right_Week"]
+            "left": [], "right": ["Right_Product Base ID","Right_Product Base Desc","Right_Account Company","Right_Week End Date"]
           }
         },
         "join04": {
@@ -514,7 +514,7 @@
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["SKU"],
-            "right": ["SKU"]
+            "right": ["Right_SKU"]
           },
           "selectCriteria": {
             "left": [], "right": ["Right_SKU","Max_Week_End_Date"]
@@ -534,17 +534,17 @@
         },
         "group03": {
           "cols" : ["Product Base ID","Product Base Desc","Account Company","Week End Date"],
-          "aggregations": {"sum" : {"Qty":""}},
+          "aggregations": {"sum" : {"Qty":"Qty"}},
           "selectCriteria": ["Week","Week Desc","Account Company","Big Deal Desc","Big Deal Eclipse Customer Desc","Product Base Desc","Product Category Desc","Big Deal Nbr","Product Base ID","Dist Qty","POS Qty","Qty","Big Deal","Week End Date","C2B Promo Code"]
         },
         "group04": {
           "cols" : ["Product Base ID","Product Base Desc","Account Company","Week End Date"],
-          "aggregations": {"sum" : {"Qty":""}},
+          "aggregations": {"sum" : {"Qty":"Qty"}},
           "selectCriteria": ["Week","Week Desc","Account Company","Big Deal Desc","Big Deal Eclipse Customer Desc","Product Base Desc","Product Category Desc","Big Deal Nbr","Product Base ID","Dist Qty","POS Qty","Qty","Big Deal","Week End Date","C2B Promo Code"]
         },
         "group05": {
           "cols" : ["Account Company","Week End Date","Product Base ID","Product Base Desc"],
-          "aggregations": {"sum" : {"ST Big Deal Qty":"", "ST Qty": "", "ST Non Big Deal Qty": "", "STT Big Deal Qty": "", "STT Qty": "", "STT  Non Big Deal Qty": ""}},
+          "aggregations": {"sum" : {"ST Big Deal Qty":"ST Big Deal Qty", "ST Qty": "ST Qty", "ST Non Big Deal Qty": "ST Non Big Deal Qty", "STT Big Deal Qty": "STT Big Deal Qty", "STT Qty": "STT Qty", "STT Non Big Deal Qty": "STT Non Big Deal Qty"}},
           "selectCriteria": ["Product Base ID","Product Base Desc","Account Company","Week End Date","ST Big Deal Qty","ST Qty","ST Non Big Deal Qty","STT Big Deal Qty","STT Qty","STT Non Big Deal Qty"]
         }
       },
@@ -640,7 +640,7 @@
           "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["SKU"],
-            "right": ["Righ_SKU"]
+            "right": ["Right_SKU"]
           },
           "selectCriteria": {
             "left": [],

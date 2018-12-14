@@ -20,10 +20,12 @@ class App(args: Array[String]) extends ConfigurationFactory[AppConfiguration](ar
       .master(configuration.sparkConfig.master)
       .appName(configuration.sparkConfig.appName)
       .getOrCreate
+    spark.sparkContext.setLogLevel("WARN")
     val executionContext = ExecutionContext(spark, configuration)
     try {
       //TODO: Based on cli options, call appropriate Transformation.
-      RetailTransform.execute(executionContext)
+      //RetailTransform.execute(executionContext)
+      CommercialTransform.execute(executionContext)
     } finally {
       spark.close()
     }

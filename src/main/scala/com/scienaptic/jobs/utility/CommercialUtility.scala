@@ -16,7 +16,7 @@ object CommercialUtility {
 
 
   val createBaseSKUFromProductIDUDF = udf((productID: String) => {
-    println(s"ProductID recieved: $productID")
+    //println(s"ProductID recieved: $productID")
     if (productID.takeRight(4).charAt(0) == "#")
       productID.substring(0, productID.length()-4)
     else
@@ -70,14 +70,14 @@ object CommercialUtility {
     returnDiffBetweenDates(startDate,endDate,"days")
   })*/
 
-  val dateTimeParseWithLastCharacters = udf((dateStr: String, format: String, chars: Int) => {
-    println(s"::::::::::::::::::::::::::::::::::::got dateStr: $dateStr with format $format and chars $chars")
+  val dateTimeParseWithLastCharacters = udf((dateStr: String, chars: Int) => {
+    ////println(s"::::::::::::::::::::::::::::::::::::got dateStr: $dateStr with format $format and chars $chars")
     dateStr.takeRight(chars)
     //convertStringToSimpleDate(dateStr.takeRight(chars), format)
   })
 
   val findMaxBetweenTwo = udf((first: String, second: String) => {
-    println(s":::::::::::::::::::::::::::::::::::: Got first $first and second $second")
+    //println(s":::::::::::::::::::::::::::::::::::: Got first $first and second $second")
     math.max(first.toDouble, second.toDouble)
   })
 
@@ -90,7 +90,7 @@ object CommercialUtility {
 
   //Not using
   /*val convertDatetoFormat = udf((dateStr: String, currentFormat: String) => {
-    println(s"Inside convertDatetoFormat : got dateStr:  $dateStr")
+    //println(s"Inside convertDatetoFormat : got dateStr:  $dateStr")
     val dateObj = convertStringToSimpleDate(dateStr, currentFormat)
     //new SimpleDateFormat(targetFormat).format(dateObj)
     //TODO: Return timestamp
@@ -100,7 +100,7 @@ object CommercialUtility {
 
   /* Private functions */
   private def returnDiffBetweenDates(firstDateString: String, secDateString: String, intFormat: String): Int = {
-    println(s":::::::::::::::::::::::::::::::::::: Got firstDateString: $firstDateString and second $secDateString")
+    //println(s":::::::::::::::::::::::::::::::::::: Got firstDateString: $firstDateString and second $secDateString")
     val firstDate = convertStringToLocalDate(firstDateString)
     val secondDate = convertStringToLocalDate(secDateString)
     val per = Period.between(firstDate, secondDate)
@@ -121,7 +121,7 @@ object CommercialUtility {
   }
 
   private def convertStringToSimpleDate(dateStr: String, format: String = "yyyy-MM-dd"): Date = {
-    println(s"::::::::::Got dateStr $dateStr and format $format")
+    //println(s"::::::::::Got dateStr $dateStr and format $format")
     val simpleFormat = new SimpleDateFormat(format)
     simpleFormat.parse(dateStr)
   }
