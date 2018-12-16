@@ -137,7 +137,8 @@ object CommercialTransform {
 
     //126 - Formula
     val baseSKUproductDF = xsClaimsUnionDF.withColumn("Base SKU",createBaseSKUFromProductIDUDF(col("Product ID")))
-    val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String", weekofyear(to_date(col("Partner Ship Calendar Date"))))//.withColumn("Temp Date Calc String",extractWeekFromDateUDF(col("Partner Ship Calendar Date"), col("week")))
+    val tempDateCalDF = baseSKUproductDF
+      .withColumn("Temp Date Calc String",extractWeekFromDateUDF(col("Partner Ship Calendar Date").cast("string"), lit("yyyy-MM-dd")))//.withColumn("Temp Date Calc String", weekofyear(to_date(col("Partner Ship Calendar Date"))))
       .withColumn("Temp Date Calc", col("Temp Date Calc String").cast(DoubleType))
     val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",addDaystoDateStringUDF(col("Partner Ship Calendar Date"), col("Temp Date Calc")))
     val xsClaimsBaseSKUDF = weekEndDateDF.withColumn("Base SKU",baseSKUFormulaUDF(col("Base SKU")))
@@ -195,7 +196,7 @@ object CommercialTransform {
     val xsAuxSKUHierUnionDF = doUnion(xsAuxSkuLeftJoinDF, xsAuxSkuInnerJoinDF).get
 
     //291
-    //xsAuxSKUHierUnionDF.show()
+    xsAuxSKUHierUnionDF.show(100,false)
     //xsAuxSKUHierUnionDF.write.mode(SaveMode.Append).csv("/home/avik/Scienaptic/Projects/HP/HPData/outputs/iec_xs_claims.csv")
     //TODO: create WriteCSV utility and make changes to Source bean to accept 'outFilePath' attribute, name: claims_consolidated.csv
 
