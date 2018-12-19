@@ -1,11 +1,13 @@
 package com.scienaptic.jobs.utility
 
 import java.util.Date
-import java.text.SimpleDateFormat
 import org.apache.spark.sql.functions.udf
 import java.time._
 import java.util.concurrent.TimeUnit
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
+import java.text.SimpleDateFormat
+import java.util.GregorianCalendar
 
 
 object CommercialUtility {
@@ -24,14 +26,20 @@ object CommercialUtility {
   })
 
   //Not being used
-  /*val extractWeekFromDateUDF = udf((dateStr: String) => {
-    //DateTimeFormat([Partner Ship Calendar Date],"%w")
-    var  simpleDateFormat:SimpleDateFormat = new SimpleDateFormat("dd/mm/yyyy")
-    val dateObj = simpleDateFormat.parse(dateStr)
-    val cal = Calendar.getInstance
-    cal.setTime(dateObj)
-    cal.get(Calendar.WEEK_OF_YEAR)
-  })*/
+  val extractWeekFromDateUDF = udf((dateStr: String,format: String) => {
+    /*import org.joda.time.DateTime
+    import org.joda.time.format.DateTimeFormat
+    val sourceFormat = DateTimeFormat.forPattern("yyyy-MM-dd")
+    val sail_dt = DateTime.parse(dateStr, sourceFormat)*/
+    val calendar = new GregorianCalendar()
+    val dt = new SimpleDateFormat(format).parse(dateStr)
+    calendar.setTime(dt)
+    val dec = calendar.get(Calendar.DAY_OF_YEAR)/7
+    if (calendar.get(Calendar.DAY_OF_YEAR)%7!=0)
+      dec+1
+    else
+      dec
+  })
 
   val addDaystoDateStringUDF = udf((dateString: String, days: Int) => {
     //DateTimeAdd([Partner Ship Calendar Date],6-[Temp Date Calc],"days")
@@ -115,12 +123,12 @@ object CommercialUtility {
   }
 
   private def addIntervalToDate(dateStr: String, interval: Int, intFormat: String): String = {
-    val dateVal = convertStringToSimpleDate(dateStr)
+    val dateVal = convertStringToSimpleDate(dateStr, "yyyy-MM-dd")
     //val dattime = Date
     "test"
   }
 
-  private def convertStringToSimpleDate(dateStr: String, format: String = "yyyy-MM-dd"): Date = {
+  private def convertStringToSimpleDate(dateStr: String, format: String): Date = {
     //println(s"::::::::::Got dateStr $dateStr and format $format")
     val simpleFormat = new SimpleDateFormat(format)
     simpleFormat.parse(dateStr)

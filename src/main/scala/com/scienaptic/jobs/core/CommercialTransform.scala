@@ -14,6 +14,8 @@ import org.apache.spark.sql.types._
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+import org.apache.spark.sql.SaveMode
+
 
 object CommercialTransform {
 
@@ -94,6 +96,8 @@ object CommercialTransform {
     val iecDF = Utils.loadCSV(executionContext, iecSource.filePath).get.cache()
     val xsClaimsDF = Utils.loadCSV(executionContext, xsClaimsSource.filePath).get.cache()
     val rawCalendarDF = Utils.loadCSV(executionContext, rawCalendarSource.filePath).get.cache()
+      .withColumn("Start Date",unix_timestamp(col("Start Date"),"mm/dd/yy").cast("timestamp"))
+      .withColumn("End Date",unix_timestamp(col("End Date"),"mm/dd/yy").cast("timestamp"))
     val auxWEDDF = Utils.loadCSV(executionContext, auxWEDSource.filePath).get.cache()
     val auxSKUHierDF = Utils.loadCSV(executionContext, auxSkuHierarchySource.filePath).get.cache()
     val stORCADF = Utils.loadCSV(executionContext, stORCASource.filePath).get.cache()
@@ -102,6 +106,7 @@ object CommercialTransform {
     val auxEtailerDF = Utils.loadCSV(executionContext, auxEtailerSource.filePath).get.cache()
     val ciORCADF = Utils.loadCSV(executionContext, ciORCASource.filePath).get.cache()
     //val archivePOSDF = Utils.loadCSV(executionContext, archivePOSSource.filePath).get.cache()
+    println("--------------- >>>>>>>>>>>>>>>> <<<<<<<<<<<<<<< --------------------")
 
     //141
     val auxWEDSelect01 = auxWEDSource.selectOperation(SELECT01)
@@ -109,6 +114,7 @@ object CommercialTransform {
     val auxWEDRename022 = auxWEDSource.renameOperation(RENAME02)
     auxWEDSelectDF = Utils.convertListToDFColumnWithRename(auxWEDRename022, auxWEDSelectDF)
         .withColumnRenamed("Season","wed_season")
+        .withColumn("Week_End_Date",to_date(unix_timestamp(col("Week_End_Date"),"mm/dd/yyyy").cast("timestamp"),"yyyy-mm-dd"))
 
     //233 - Select
     val iecSelect01 = iecSource.selectOperation(SELECT01)
@@ -117,7 +123,7 @@ object CommercialTransform {
     //286 - Filter
     val iecClaimFilter01 = iecSource.filterOperation(FILTER01)
     //val iecFiltered01DF = doFilter(iecSelectDF, iecClaimFilter01, iecClaimFilter01.conditionTypes(NUMERAL0))
-    val iecFiltered01DF = iecSelectDF.filter(col("Partner Ship Calendar Date") > lit("2018-10-31"))
+    val iecFiltered01DF = iecSelectDF.filter(col("Partner Ship Calendar Date") > lit("2013-10-31"))
 
     //285 - Select
     val xsClaimsSelect01 = xsClaimsSource.selectOperation(SELECT01)
@@ -131,7 +137,8 @@ object CommercialTransform {
 
     //126 - Formula
     val baseSKUproductDF = xsClaimsUnionDF.withColumn("Base SKU",createBaseSKUFromProductIDUDF(col("Product ID")))
-    val tempDateCalDF = baseSKUproductDF.withColumn("Temp Date Calc String", weekofyear(to_date(col("Partner Ship Calendar Date"))))//.withColumn("Temp Date Calc String",extractWeekFromDateUDF(col("Partner Ship Calendar Date"), col("week")))
+    val tempDateCalDF = baseSKUproductDF
+      .withColumn("Temp Date Calc String",extractWeekFromDateUDF(col("Partner Ship Calendar Date").cast("string"), lit("yyyy-MM-dd")))//.withColumn("Temp Date Calc String", weekofyear(to_date(col("Partner Ship Calendar Date"))))
       .withColumn("Temp Date Calc", col("Temp Date Calc String").cast(DoubleType))
     val weekEndDateDF = tempDateCalDF.withColumn("Week End Date",addDaystoDateStringUDF(col("Partner Ship Calendar Date"), col("Temp Date Calc")))
     val xsClaimsBaseSKUDF = weekEndDateDF.withColumn("Base SKU",baseSKUFormulaUDF(col("Base SKU")))
@@ -171,6 +178,7 @@ object CommercialTransform {
       .withColumn("Total Amount",col("Claim Partner Unit Rebate")*col("Sum_Claim Quantity"))
     //246 - Union
     val iecXSUnionDF = doUnion(iecXSLeftJoinPromoAmountDF, iecXSInnerJoinPromoAmountDF).get
+      .withColumn("Week End Date",to_date(unix_timestamp(col("Week End Date"),"yyyy-mm-dd").cast("timestamp"),"yyyy-mm-dd"))
 
     //252 - Join
     val iecXsClaimsJoin02 = xsClaimsSource.joinOperation(JOIN02)
@@ -188,7 +196,8 @@ object CommercialTransform {
     val xsAuxSKUHierUnionDF = doUnion(xsAuxSkuLeftJoinDF, xsAuxSkuInnerJoinDF).get
 
     //291
-    xsAuxSKUHierUnionDF.show()
+    xsAuxSKUHierUnionDF.show(100,false)
+    //xsAuxSKUHierUnionDF.write.mode(SaveMode.Append).csv("/home/avik/Scienaptic/Projects/HP/HPData/outputs/iec_xs_claims.csv")
     //TODO: create WriteCSV utility and make changes to Source bean to accept 'outFilePath' attribute, name: claims_consolidated.csv
 
     //121 - Join
@@ -199,10 +208,13 @@ object CommercialTransform {
 
     //129
     val rawXSJoinChkOutsidePromoDF = rawXSInnerJoin01DF/*.withColumn("Outside Promo Date", checkOutsidePromoDateUDF(col("Partner Ship Calendar Date"),col("End Date")))*/
+/*      .withColumn("Start Date",unix_timestamp(col("Start Date"),"mm/dd/yy").cast("timestamp"))
+      .withColumn("End Date",unix_timestamp(col("End Date"),"mm/dd/yy").cast("timestamp"))*/
       .withColumn("EndDatePlus3", date_add(col("End Date").cast("timestamp"), 3))
       .withColumn("Outside Promo Date", when(col("Partner Ship Calendar Date").cast("timestamp")>col("EndDatePlus3").cast("timestamp"),"Y")
         .otherwise("N"))
-    /*CHECK THIS PART*/
+        .drop("EndDatePlus3")
+
     //131
     val rawCalendarFilter01 = rawCalendarSource.filterOperation(FILTER01)
     val rawXSJoinOutsidePromoTrueDF = doFilter(rawXSJoinChkOutsidePromoDF, rawCalendarFilter01, rawCalendarFilter01.conditionTypes(NUMERAL0)).get
@@ -251,7 +263,7 @@ object CommercialTransform {
 
     //148 - Formula
     val rawCalendarInnJNewEndDateDF = rawCalendarInnerJoin03DF/*.withColumn("New End Date", newEndDateFromMaxWED(col("Max_Week_End_Date"), col("End Date")))*/
-      .withColumn("MaxWeekDiff", datediff(col("Max_Week_End_Date").cast("timestamp"), col("End Date").cast("timestamp")))
+      .withColumn("MaxWeekDiff", datediff(to_date(unix_timestamp(col("Max_Week_End_Date"),"yyyy-mm-dd").cast("timestamp"),"yyyy-mm-dd"), col("End Date")))
       .withColumn("New End Date",when(col("MaxWeekDiff")>14, date_add(col("End Date").cast("timestamp"), 14))
         .when(col("Max_Week_End_Date").cast("timestamp")>col("End Date").cast("timestamp"),col("Max_Week_End_Date"))
         .otherwise(col("End Date"))).drop("MaxWeekDiff")
@@ -277,6 +289,9 @@ object CommercialTransform {
       .withColumnRenamed("season","Source_season")
       .withColumnRenamed("Season_Ordered","Source_Season_Ordered")
     val rawCalendarnAuxWEDAppendDF = rawCalendarEndDateChangeUnionDF.join(auxWEDSelectRenamedForAppendDF)
+    println("rawCalendarnAuxWEDAppendDF ::::::::::::::::::::::::::")
+    rawCalendarnAuxWEDAppendDF.show(2)
+
 
     //159 - Formula
     val rawCalStartsubWEDDF = rawCalendarnAuxWEDAppendDF/*.withColumn("Start - Week End", dateTimeDiff(col("Start Date"),col("Week.End.Date")))
@@ -287,17 +302,23 @@ object CommercialTransform {
         when(col("Promo Name").contains("Option B"),"Option B")
         .when(col("Promo Name").contains("Option C"),"Option C")
         .otherwise("All"))
+    println("rawCalStartsubWEDDF ::::::::::::::;")
+    rawCalStartsubWEDDF.show(2)
 
     //160 - Filter [Start - Week End]<=-3 AND [Week End - End]<=3
     //CHECK THIS
     val rawCalendarEndDateFilteredDF = rawCalStartsubWEDDF.withColumn("StartMinusEnd", col("Start - Week End"))
       .withColumn("WeekEndMinusEnd", col("Week End - End"))
       .filter("StartMinusEnd <= -3").filter("WeekEndMinusEnd <= 3")
+    println("rawCalendarEndDateFilteredDF ::::::::::::::::::;")
+    rawCalendarEndDateFilteredDF.show(2)
 
     //161 - Select
     val rawCalendarSelect02 = rawCalendarSource.selectOperation(SELECT02)
     val rawCalendarEndDateFilterSelectDF = doSelect(rawCalendarEndDateFilteredDF, rawCalendarSelect02.cols, rawCalendarSelect02.isUnknown).get
     rawCalendarEndDateFilterSelectDF.cache()
+    println("rawCalendarEndDateFilterSelectDF  :::::::::::::::::::::::")
+    rawCalendarEndDateFilterSelectDF.show()
     /*  -------------  USED TWICE ---------  */
 
     //162 - Sort
@@ -311,6 +332,7 @@ object CommercialTransform {
     //196 - Join
     val rawCalendarJoin04 = rawCalendarSource.joinOperation(JOIN04)
     val rawCalendarDistinctLeftJoinDF = doJoinAndSelect(xsClaimsGroupSumClaimQuanAggDF, rawCalendarSortDistinctDF, rawCalendarJoin04)("left")
+    rawCalendarDistinctLeftJoinDF.show()
     /*  ------------- USED IN 2nd SECTION --------------*/
 
     //19 - Summarize (Group on C2B Promo Code)
@@ -322,6 +344,7 @@ object CommercialTransform {
     //85 - Summarize
     val rawCalendarGroup05 = rawCalendarSource.groupOperation(GROUP05)
     val rawCalendarSortGroupDF = doGroup(rawCalendarSelectSortDF, rawCalendarGroup05).get
+    rawCalendarSortGroupDF.show()
     /*val wind = Window.partitionBy(col("C2B Promo Code"))
     rawCalendarSortGroupDF = rawCalendarSortGroupDF.withColumn("rn",row_number.over(wind))
       .where(col("rn") === 1)
@@ -334,9 +357,11 @@ object CommercialTransform {
     val stORCASelectDF = doSelect(stORCADF, stORCASelect01.cols, stORCASelect01.isUnknown).get
       .withColumnRenamed("Account Company","Distributor")
       .withColumnRenamed("Buyer Account Company","Account Company")
+    stORCASelectDF.show(10)
 
     //3 - Filter
     val stORCAProductIDNotNullDF = stORCASelectDF.filter(col("Product Base ID").isNotNull)
+    stORCAProductIDNotNullDF.show(10)
 
     //16 - Formula
     var stORCAFormulaDF = stORCAProductIDNotNullDF.withColumn("Product Base ID",
@@ -356,22 +381,27 @@ object CommercialTransform {
       .withColumn("Week End Date Str", dateTimeParseWithLastCharacters(col("Week Desc"),lit(12)))
         .withColumn("Week End Date", to_date(col("Week End Date Str"),"MMM dd, yyyy"))
         .drop("Week End Date Str")
+    stORCAFormulaDF.show(10)
 
     //20 - join
     val stORCAJoin01 = stORCASource.joinOperation(JOIN01)
     val stORCAJoin01Map = doJoinAndSelect(stORCAFormulaDF, rawCalendarEndDateSelectGroupDF, stORCAJoin01)
     val stORCAInnerJoinDF = stORCAJoin01Map("inner")
     val stORCALeftJoinDF = stORCAJoin01Map("left")
+    stORCAInnerJoinDF.show(10)
+    stORCALeftJoinDF.show(10)
 
     //21 - Formula
     val stORCAInnerBigDealDF = stORCAInnerJoinDF.withColumn("Big Deal",lit(0))
 
     //22 - Union
     val stORCAUnionDF = doUnion(stORCALeftJoinDF, stORCAInnerBigDealDF).get
+    stORCAUnionDF.show()
 
     //12 - Select
     val sttORCASelect01 = sttORCASource.selectOperation(SELECT01)
     val sttORCASelectDF = doSelect(sttORCADF, sttORCASelect01.cols, sttORCASelect01.isUnknown).get
+    sttORCASelectDF.show(10)
 
     //6 - Filter
     val sttORCAFilterProdctIDNotNullDF = sttORCASelectDF.filter(col("Product Base ID").isNotNull)
@@ -442,6 +472,7 @@ object CommercialTransform {
 
     //170 - Unique
     val stSttUnionDistinctDF = stSttUnionDF.dropDuplicates(List("Big Deal Nbr","Account Company","Product Base ID"))
+    stSttUnionDistinctDF.show(10)
 
     //171 - Join
     val stORCAJoin03 = stORCASource.joinOperation(JOIN03)
@@ -451,13 +482,16 @@ object CommercialTransform {
     //183 - Summarize
     val stORCAGroup04 = stORCASource.groupOperation(GROUP04)
     val stORCAGroupPartnerSKUWEDDF = doGroup(stORCAJoin03DF, stORCAGroup04).get
+    stORCAGroupPartnerSKUWEDDF.show(10)
 
     //30 - Union
     val stORCAInnerRightJoinUnionDF = doUnion(stORCAInnerJoin02DF, stORCARightJoin02DF).get
+    stORCAInnerRightJoinUnionDF.show(10)
 
     //33 - Multi-field
     val stORCAJoinUnionCastDF = stORCAInnerRightJoinUnionDF.withColumn("Big Deal Qty",col("Big Deal Qty").cast(DoubleType))
       .withColumn("Qty", col("Qty").cast(DoubleType))
+    stORCAJoinUnionCastDF.show(10)
 
     //31 - Formula
     val stORCANonBigDealDF = stORCAJoinUnionCastDF.withColumn("Non Big Deal Qty",col("Qty")-col("Big Deal Qty"))
@@ -465,6 +499,7 @@ object CommercialTransform {
     //34 - Filter
     val sttORCAFilter01 = sttORCASource.filterOperation(FILTER01)
     val sttORCABigDealFilterDF = doFilter(sttORCAUnionDF, sttORCAFilter01, sttORCAFilter01.conditionTypes(NUMERAL0)).get
+    sttORCABigDealFilterDF.show(10)
 
     //35 - Summarize
     val sttORCAGroup03 = sttORCASource.groupOperation(GROUP03)
@@ -484,9 +519,11 @@ object CommercialTransform {
     val sttORCAJoin02Map = doJoinAndSelect(sttORCAGroup03DF.withColumnRenamed("Qty","Big Deal Qty"), sttORCAGroup04WithRenamedDF, sttORCAJoin02)
     val sttORCAInnerJoin02DF = sttORCAJoin02Map("inner")
     val sttORCARightJoin02DF = sttORCAJoin02Map("right")
+    sttORCAInnerJoin02DF.show(10)
 
     //38 - Union
     val sttORCAInnerRightJoinUnionDF = doUnion(sttORCAInnerJoin02DF, sttORCARightJoin02DF).get
+    sttORCAInnerRightJoinUnionDF.show(10)
 
     //41 - Multi field
     val sttORCACastedDF = sttORCAInnerRightJoinUnionDF.withColumn("Big Deal Qty",col("Big Deal Qty").cast(DoubleType))
@@ -509,6 +546,7 @@ object CommercialTransform {
     val sttORCAInnerJoin03DF = sttORCAJoin03Map("inner")
     val sttORCALeftJoin03DF = sttORCAJoin03Map("left")
     val sttORCARightJoin03DF = sttORCAJoin03Map("right")
+    sttORCAInnerJoin03DF.show(10)
 
     //47 - Union
     val sttORCALeftJoin03ReArrangedDF = sttORCALeftJoin03DF
@@ -543,15 +581,18 @@ object CommercialTransform {
     //182 - Summarize
     val sttORCAGroup05 = sttORCASource.groupOperation(GROUP05)
     val sttORCAAccountWEDProductGroupedDF = doGroup(sttORCAJoinsUnionCastedDF, sttORCAGroup05).get
+    sttORCAAccountWEDProductGroupedDF.show(10)
 
     //176 - Join
     val sttORCAJoin04 = sttORCASource.joinOperation(JOIN04)
     val sttORCAJoin04Map = doJoinAndSelect(sttORCAAccountWEDProductGroupedDF, stORCAGroupPartnerSKUWEDDF.withColumnRenamed("Week End Date","Right_Week End Date"), sttORCAJoin04)
     val sttORCALeftJoin04DF = sttORCAJoin04Map("left")
     val sttORCAInnerJoin04DF = sttORCAJoin04Map("inner")
+    sttORCAInnerJoin04DF.show(10)
 
     //185 - Unique
     val sttORCALeftJoin04UniqueDF = sttORCALeftJoin04DF.dropDuplicates(List("Account Company","Week End Date","Product Base ID"))
+    sttORCALeftJoin04UniqueDF.show(10)
 
     //184 - Unique
     val sttORCAInnerJoin04UniqueDF = sttORCAInnerJoin04DF.dropDuplicates(List("Account Company","Week End date", "Product Base ID"))
@@ -562,6 +603,7 @@ object CommercialTransform {
       .withColumn("STT Non Big Deal Qty", when(col("STT Qty")===0,col("STT Non Big Deal Qty")).otherwise(col("STT Non Big Deal Qty")-col("Claim Quantity")))
       .withColumn("ST Big Deal Qty", when(col("ST Qty")===0,col("ST Big Deal Qty")).otherwise(col("ST Big Deal Qty")+col("Claim Quantity")))
       .withColumn("ST Non Big Deal Qty", when(col("ST Qty")===0, col("ST Non Big Deal Qty")).otherwise(col("ST Non Big Deal Qty")-col("Claim Quantity")))
+    sttORCAJoin04STnSTTDealQty.show(10)
 
     /* Note: All operations 185, 184 outputs used in browse */
 
@@ -574,6 +616,7 @@ object CommercialTransform {
       .when(col("Account Company")==="CDW Logistics Inc",lit("CDW"))
       .when(col("Account Company")==="PCM Sales",lit("PCM"))
       .otherwise(col("Account Company")))
+    sttORCAUnionWithResellerFeatureDF.show(10)
 
     //199 - Summarize
     //val sttORCAwithDummyDF = sttORCAUnionDF//.withColumn("dummy",lit(1)) ---Changed 13 Dec
