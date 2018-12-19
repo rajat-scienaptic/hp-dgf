@@ -1,0 +1,125 @@
+{
+  "sparkConfig": {
+    "master": "local",
+    "appName": "hp-commercial-simplified"
+  },
+  "sources": {
+    "IEC_CLAIMS": {
+      "name": "iec_claims",
+      "filePath": "",
+      "select": {
+        "INITIAL_SELECT": {
+          "isUnknown":"n",
+          "cols": ["Big Deal ID","Deal Description","Business Model Description","Partner Desc","Partner Ship Calendar Date","Product ID","Claim Quantity","Claim Partner Unit Rebate"]
+        }
+      }
+    },
+    "XS_CLAIMS": {
+      "name": "",
+      "filePath": "",
+      "select": {
+        "INITIAL_SELECT": {
+          "isUnknown":"n",
+          "cols": ["Deal ID","Deal Description","Business Model Description","Claim Partner Name","Partner Ship Calendar Date","Manufacturing Product Identifier","Claim Quantity","Claim Partner Unit Rebate USD"]
+        }
+      },
+      "rename": {
+        "RENAME_INITIAL_SELECT": {
+          "Deal ID": "Big Deal ID",
+          "Claim Partner Name": "Partner Desc",
+          "Manufacturing Product Identified": "Product ID",
+          "Claim Partner Unit Rebate USD": "Claim Partner Unit Rebate"
+        }
+      }
+    },
+    "RAW_MASTER_CALENDAR" :{
+      "name": "",
+      "filePath": "",
+      "select": {
+        "INITIAL_SELECT": {
+          "isUnknown":"Y",
+          "cols": []
+        }
+      }
+    },
+    "WEEK_END_DATE": {
+      "name": "",
+      "filePath": "",
+      "select": {
+        "INITIAL_SELECT": {
+          "isUnknown":"n",
+          "cols": ["fy_week","wed","season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year"]
+        }
+      },
+      "rename": {
+        "RENAME_INITIAL_SELECT": {
+          "wed": "Week_End_Date",
+          "season_ordered": "Season_Ordered",
+          "cal_month": "Cal_Month",
+          "cal_year": "Cal_Year",
+          "fiscal_quarter": "Fiscal_Qtr",
+          "fiscal_year": "Fiscal_Year"
+        }
+      }
+    },
+    "SKU_HIERARCHY": {
+      "name": "",
+      "filePath": "",
+      "select": {
+        "INITIAL_SELECT": {
+          "isUnknown":"n",
+          "cols": ["SKU","Street Price","Consol SKU","Abbreviated Name","Full Name","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1: Use Case","L2: Key functionality","PLC Status","GA date","ES date"]
+        }
+      }
+    },
+    "COMM_ACCOUNTS": {
+      "name": "",
+      "filePath": "",
+      "select": {
+        "INITIAL_SELECT": {
+          "isUnknown":"n",
+          "cols": ["Account Company","Account Consol","Grouping","Reseller Cluster","VPA"]
+        }
+      }
+    },
+    "ONYX_ST": {
+      "name": "",
+      "filePath": "",
+      "select": {
+        "INITIAL_SELECT": {
+          "isUnknown":"Y",
+          "cols": ["eTailers Grp ID"]
+        }
+      }
+    },
+    "ONYX_STT": {
+      "name": "",
+      "filePath": "",
+      "select": {
+        "INITIAL_SELECT": {
+          "isUnknown":"Y",
+          "cols": ["Inventory Total Qty"]
+        }
+      }
+    },
+    "TIDY_HPS_2016_17_HISTORICAL_POS": {
+      "name": "",
+      "filePath": "",
+      "select": {
+        "INITIAL_SELECT": {
+          "isUnknown":"n",
+          "cols": ["Account","Account Consol","Channel","Inv : Saleable Qty","Sales : Net Qty","season","HP_SKU_Short","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Week_End_Date"]
+        }
+      },
+      "rename": {
+        "RENAME_INITIAL_SELECT": {
+          "Account": "Reseller",
+          "Account Consol": "Reseller_Cluster",
+          "Inv : Saleable Qty": "Inv_Qty_Raw",
+          "Sales : Net Qty": "Qty",
+          "season": "Season"
+        }
+      }
+    }
+  }
+}
