@@ -69,6 +69,17 @@ object CommercialSimplifiedTransform {
   val STT_ONYX_AND_WED_MERGE_WED="STT_ONYX_AND_WED_MERGE_WED"
   val RESELLER_SKU_WED_SUM_AGG_INVENTORY_TOTAL="RESELLER_SKU_WED_SUM_AGG_INVENTORY_TOTAL"
   val DEAL_ETAILERS_ACCOUNT_SEASON_CAL_SKU_FISCAL_SUM_AGG_SELL_THRU_TO_QTY="DEAL_ETAILERS_ACCOUNT_SEASON_CAL_SKU_FISCAL_SUM_AGG_SELL_THRU_TO_QTY"
+  val ST_ONYX_AND_PROMO_ID="ST_ONYX_AND_PROMO_ID"
+  val GROUP_ALL_SUM_AGG_BIG_NON_BIG_DEAL_QTY="GROUP_ALL_SUM_AGG_BIG_NON_BIG_DEAL_QTY"
+  val GROUP_ALL_EXCEPT_ACCOUNT_GROUPING_PROMO_SUM_AGG_QTY_AND_DEAL_QTS="GROUP_ALL_EXCEPT_ACCOUNT_GROUPING_PROMO_SUM_AGG_QTY_AND_DEAL_QTS"
+  val FILTER_ETAILERS_EQ_Y="FILTER_ETAILERS_EQ_Y"
+  val FILTER_ETAILERS_NOT_EQ_Y="FILTER_ETAILERS_NOT_EQ_Y"
+  val ST_ONYX_AND_CLAIMS_AGGREGATED="ST_ONYX_AND_CLAIMS_AGGREGATED"
+  val ST_ONYX_OPTION_C_JOIN="ST_ONYX_OPTION_C_JOIN"
+  val FILTER_OPTION_C_QTY_ADJ_GR_0="FILTER_OPTION_C_QTY_ADJ_GR_0"
+  val ST_ONYX_PROMO_JOIN="ST_ONYX_PROMO_JOIN"
+  val ST_ONYX_MERGE_INVENTORY="ST_ONYX_MERGE_INVENTORY"
+  val SELECT_BEFORE_OUTPUT="SELECT_BEFORE_OUTPUT"
 
   def execute(executionContext: ExecutionContext): Unit = {
     /* Source Map with all sources' information */
@@ -371,7 +382,7 @@ object CommercialSimplifiedTransform {
     val claimsOptionTypeNotEqOptionCFilterDF = doFilter(claimsSKUWEDRebateAmountSortDF, claimsOptionTypeNotEqOptionCFilter, claimsOptionTypeNotEqOptionCFilter.conditionTypes(NUMERAL0)).get
 
     /*
-    * Group SKU, WED, Promo Code and max aggregate Rebate Amount
+    * Group SKU, WED, Promo Code and max aggregate Rebate Amount - 364
     * */
     val claimsSKUWEDPromoCodeGroup = xsClaimsSource.groupOperation(SKU_WED_PROMO_CODE_MAX_REBATE_AMOUNT)
     val claimsSKUWEDPromoCodeGroupDF = doGroup(claimsOptionTypeNotEqOptionCFilterDF, claimsSKUWEDPromoCodeGroup).get
@@ -446,7 +457,7 @@ object CommercialSimplifiedTransform {
     val sttOnyxAndWEDInnerJoinDF = doJoinAndSelect(sttOnyxAndSkuHierInnerJoinDF, wedSelectDF, sttOnyxAndWEDJoin)(INNER)
 
     /*
-    * Group Reseller Cluster, SKU, Week_End_Date - 411 AND add 7 days to Week_End_Date - 414
+    * Group Reseller Cluster, SKU, Week_End_Date - 411 AND add 7 days to Week_End_Date - 414 - Week shift
     * */
     val sttOnyxResellerSKUWEDGroup = sttOnyxSource.groupOperation(RESELLER_SKU_WED_SUM_AGG_INVENTORY_TOTAL)
     val sttOnyxResellerSKUWEDGroupDF = doGroup(sttOnyxAndWEDInnerJoinDF, sttOnyxResellerSKUWEDGroup).get
@@ -513,9 +524,175 @@ object CommercialSimplifiedTransform {
     /*
     * Join ST and Promo ID list - 352
     * */
+    val stOnyxAndPromoIDJoin = stOnyxSource.joinOperation(ST_ONYX_AND_PROMO_ID)
+    val stOnyxAndPromoIDJoinMap = doJoinAndSelect(stOnyxGroupDF, masterCalSelectForDistinctDF, stOnyxAndPromoIDJoin)
+    val stOnyxAndPromoIDLeftJoinDF = stOnyxAndPromoIDJoinMap(LEFT)
+    val stOnyxAndPromoIDInnerJoinDF = stOnyxAndPromoIDJoinMap(INNER)
+
+    /*
+    * Add 'Big Deal Qty', 'Non Big Deal Qty', 'Qty', 'Promo' variables - 355
+    * AND 356
+    * */
+    val stOnyxAndPromoLeftJoinWithDealQtyPromoDF = stOnyxAndPromoIDLeftJoinDF
+      .withColumn("Big Deal Qty", when(col("Deal ID 1").isNull, 0).otherwise(col("ST Qty")+col("STT Qty")))
+      .withColumn("Non Big Deal Qty", when(col("Deal ID 1").isNull, col("ST Qty")+col("STT Qty")).otherwise(0))
+      .withColumn("Qty", col("STT Qty")+col("ST Qty"))
+      .withColumn("Promo", lit("No Promo"))
+
+    val stOnyxAndPromoIDInnerJoinWithDealQtyPromoDF = stOnyxAndPromoIDInnerJoinDF
+      .withColumn("Big Deal Qty",lit(0))
+      .withColumn("Non Big Deal Qty", col("ST Qty")+col("STT Qty"))
+      .withColumn("Qty", col("ST Qty")+col("STT Qty"))
+      .withColumn("Promo", when(col("Promo Name")===lit("Option C"), "Option C").otherwise("Commercial"))
 
 
+    val stOnyxAndPromoJoinsUnionDF = doUnion(stOnyxAndPromoLeftJoinWithDealQtyPromoDF, stOnyxAndPromoIDInnerJoinWithDealQtyPromoDF).get
 
+    /*
+    * Group on all columns and compote sum for Big Deal, Non Big deal Qty and Qty - 359
+    * */
+    val stOnyxAllColumSumAggQtyGroup = stOnyxSource.groupOperation(GROUP_ALL_SUM_AGG_BIG_NON_BIG_DEAL_QTY)
+    val stOnyxAllColumSumAggQtyGroupDF = doGroup(stOnyxAndPromoJoinsUnionDF, stOnyxAllColumSumAggQtyGroup).get
+
+    /*
+    * Group All columns except Account, Promo, Grouping and Sum aggregation Qty, Big deal Qty, Non big deal qty - 369
+    * */
+    val stOnyxAllExceptAccountGroupPromoGroup = stOnyxSource.groupOperation(GROUP_ALL_EXCEPT_ACCOUNT_GROUPING_PROMO_SUM_AGG_QTY_AND_DEAL_QTS)
+    val stOnyxAllExceptAccountGroupPromoGroupDF = doGroup(stOnyxAllColumSumAggQtyGroupDF, stOnyxAllExceptAccountGroupPromoGroup).get
+
+    /*
+    * Filter eTailers Equals and not equals 'Y'
+    * */
+    val stOnyxETailersNotEqYFilter = stOnyxSource.filterOperation(FILTER_ETAILERS_NOT_EQ_Y)
+    val stOnyxETailersEqYFilter = stOnyxSource.filterOperation(FILTER_ETAILERS_EQ_Y)
+    val stOnyxETailersNotEqYFilterDF = doFilter(stOnyxAllExceptAccountGroupPromoGroupDF, stOnyxETailersNotEqYFilter, stOnyxETailersNotEqYFilter.conditionTypes(NUMERAL0)).get
+    val stOnyxETailersEqYFilterDF = doFilter(stOnyxAllExceptAccountGroupPromoGroupDF, stOnyxETailersEqYFilter, stOnyxETailersEqYFilter.conditionTypes(NUMERAL0)).get
+
+    /*
+    * Join ST ONYX With Aggregated Claims on Reseller Cluster, SKU, Week End Date
+    * */
+    val stOnyxAndAggClaimsJoin = stOnyxSource.joinOperation(ST_ONYX_AND_CLAIMS_AGGREGATED)
+    val claimsGroupResellerWEDSKUSumClaimQuantRenamedDF = claimsGroupResellerWEDSKUSumClaimQuantDF
+      .withColumnRenamed("Reseller Cluster","Right_Reseller Cluster")
+    val stOnyxAndAggClaimsJoinMap = doJoinAndSelect(stOnyxETailersNotEqYFilterDF, claimsGroupResellerWEDSKUSumClaimQuantRenamedDF, stOnyxAndAggClaimsJoin)
+    val stOnyxAndAggClaimsLeftJoinDF = stOnyxAndAggClaimsJoinMap(LEFT)
+    val stOnyxAndAggClaimsInnerJoinDF = stOnyxAndAggClaimsJoinMap(INNER)
+
+    /*
+    * Add Variables 'Big Deal Claim Difference', 'Big_Deal_Qty','Non_Big_Deal_Qty' - 381
+    * AND
+    * Union Left and inner join (With new variables) - 382
+    * */
+    val stOnyxAndAggClaimsInnerJoinWithClaimDifferenceDealQtyDF = stOnyxAndAggClaimsInnerJoinDF
+      .withColumn("Big Deal Claim Difference", when(col("Claimed Big Deal Qty")<col("Qty"), col("Claimed Big Deal Qty")-col("Big_Deal_Qty")))
+      .withColumn("Big_Deal_Qty", col("Big_Deal_Qty")+col("Big Deal Claim Difference"))
+      .withColumn("Non_Big_Deal_Qty", col("Non_Big_Deal_Qty")+col("Big Deal Claim Difference"))
+
+    val stOnyAndAggClaimsJoinsUnion = doUnion(stOnyxAndAggClaimsLeftJoinDF, stOnyxAndAggClaimsInnerJoinWithClaimDifferenceDealQtyDF).get
+
+    /*
+    * Option C Join
+    * */
+    val stOnyxOptionCJoin = stOnyxSource.joinOperation(ST_ONYX_OPTION_C_JOIN)
+    val claimsProgramFilterPromoOptionCRenamedDF = claimsProgramFilterPromoOptionCDF
+      .withColumnRenamed("Reseller Cluster","Right_Reseller Cluster")
+      .withColumnRenamed("Claim Partner Unit Rebate", "Option C IR")
+      .withColumnRenamed("Sum_Sum_Claim Quantity", "Claimed Option C Qty")
+    val stOnyxOptionCJoinMap = doJoinAndSelect(stOnyAndAggClaimsJoinsUnion, claimsProgramFilterPromoOptionCRenamedDF, stOnyxOptionCJoin)
+    val stOnyxOptionCLeftJoinDF = stOnyxOptionCJoinMap(LEFT)
+    val stOnyxOptionCInnerJoinDF = stOnyxOptionCJoinMap(INNER)
+
+    /*
+    * Add Variables Option C Qty Adj, Non_Big_Deal_Qty, Qty
+    * */
+    val stOnyxOptionCInnerJoinWithOptionCQtyDealQty = stOnyxOptionCInnerJoinDF
+      .withColumn("Option C Qty Adj", when(col("Claimed Option C Qty")>col("Qty"), col("Qty")).otherwise(col("Claimed Option C Qty")))
+      .withColumn("Non_Big_Deal_Qty", col("Non_Big_Deal_Qty")-col("Option C Qty Adj"))
+      .withColumn("Qty", col("Qty")-col("Option C Qty Adj"))
+
+    /*
+    * Union 395 - Bring back eTailers
+    */
+    val stOnyxUnionETailersOptionCDF = doUnion(stOnyxOptionCLeftJoinDF, doUnion(stOnyxOptionCInnerJoinWithOptionCQtyDealQty, stOnyxETailersEqYFilterDF).get).get
+
+    /*
+    * Filter Option C Qty Adj > 0 - 388
+    * */
+    val stOnyxOptionCQtyAdjFilter = stOnyxSource.filterOperation(FILTER_OPTION_C_QTY_ADJ_GR_0)
+    val stOnyxOptionCQtyAdjFilterDF = doFilter(stOnyxUnionETailersOptionCDF, stOnyxOptionCQtyAdjFilter, stOnyxOptionCQtyAdjFilter.conditionTypes(NUMERAL0)).get
+
+    /*
+    * Add Reseller Cluster, Qty, Non_Big_Deal_Qty, Big_Deal_Qty, IR, Promo Flag
+    * */
+    val stOnyxOptionCWithResellerQtyIRPromoFlagDF = stOnyxOptionCQtyAdjFilterDF
+      .withColumn("Reseller Cluster", lit("Other - Option C"))
+      .withColumn("Qty", col("Option C Qty Adj"))
+      .withColumn("Non_Big_Deal_Qty", col("Option C Qty Adj"))
+      .withColumn("Big_Deal_Qty", lit(0))
+      .withColumn("IR", col("Option C IR"))
+      .withColumn("Promo Flag", lit(1))
+
+    /*
+    * Promo Join - 370
+    * */
+    val stOnyxPromoJoin = stOnyxSource.joinOperation(ST_ONYX_PROMO_JOIN)
+    val claimsSKUWEDPromoCodeGroupRenamedDF = claimsSKUWEDPromoCodeGroupDF
+      .withColumnRenamed("SKU","Right_SKU")
+      .withColumnRenamed("Week_End_Date","Right_Week_End_Date")
+    val stOnyxPromoJoinMap = doJoinAndSelect(stOnyxUnionETailersOptionCDF, claimsSKUWEDPromoCodeGroupRenamedDF, stOnyxPromoJoin)
+    val stOnyxPromoLeftJoinDF = stOnyxPromoJoinMap(LEFT)
+    val stOnyxPromoInnerJoinDF = stOnyxPromoJoinMap(INNER)
+
+    /*
+    * Add Promo Flag = 0 to Left join - 372
+    * AND Add Promo Flag = 1 to  Inner Join 371
+    * */
+    val stOnyxPromoLeftJoinWithPromoFlagDF = stOnyxPromoLeftJoinDF.withColumn("Promo Flag", lit(0))
+    val stOnyxPromoInnerJoinWithPromoFlagDF = stOnyxPromoInnerJoinDF.withColumn("Promo Flag", lit(1))
+
+    /*
+    * Union St Onyx joins - Bring back Option C - 373
+    * */
+    val stOnyxPromoJoinsWithPromoFlagUnionDF = doUnion(stOnyxPromoLeftJoinWithPromoFlagDF, stOnyxPromoInnerJoinWithPromoFlagDF).get
+
+    /*
+    * Merge inventory Join - 412
+    * */
+    val stOnyxMergeInventoryJoin = stOnyxSource.joinOperation(ST_ONYX_MERGE_INVENTORY)
+    val sttOnyxResellerSKUWEDGroupRenamedDF = sttOnyxResellerSKUWEDGroupDF
+      .withColumnRenamed("SKU","Right_SKU")
+      .withColumnRenamed("Reseller Cluster","Right_Reseller Cluster")
+      .withColumnRenamed("Week_End_Date","Right_Week_End_Date")
+    val stOnyxMergeInventoryJoinMap = doJoinAndSelect(stOnyxPromoJoinsWithPromoFlagUnionDF, sttOnyxResellerSKUWEDGroupRenamedDF, stOnyxMergeInventoryJoin)
+    val stOnyxMergeInventoryInnerJoinDF = stOnyxMergeInventoryJoinMap(INNER)
+    val stOnyxMergeInventoryLeftJoinDF = stOnyxMergeInventoryJoinMap(LEFT)
+
+    /*
+    * Union Inventory and S-Print Union - 413
+    * */
+    val stOnyxInventorySPrintUnionDF = doUnion(tidyHistAndSKUHierInnerJoinDF, doUnion(stOnyxMergeInventoryInnerJoinDF, stOnyxMergeInventoryLeftJoinDF).get).get
+
+    /*
+    * Calculate Promo Spend, eTailer, Reseller Cluster - 398
+    * */
+    val stOnyxWithPromoSpendETailerResellerClusterDF = stOnyxInventorySPrintUnionDF
+      .withColumn("Promo Spend", col("IR")*col("Non_Big_Deal_Qty"))
+      .withColumn("eTailer", when(col("eTailer")==="Y",1).otherwise(0))
+      .withColumn("Reseller Cluster", when(col("Reseller Cluster")==="Other", "Other - Option B").otherwise(col("Reseller Cluster")))
+
+    /*
+    * NULL Impute for numerical column with 0
+    * TODO: Implement Utility
+    * */
+    val stOnyxWithPromoSpendETailerResellerAndNullImputeDF = stOnyxWithPromoSpendETailerResellerClusterDF
+
+    /*
+    * Select before output - 402
+    * */
+    val stOnyxFinalFeaturesSelect = stOnyxSource.selectOperation(SELECT_BEFORE_OUTPUT)
+    val posqtyOutputCommercialDF = doSelect(stOnyxWithPromoSpendETailerResellerAndNullImputeDF, stOnyxFinalFeaturesSelect.cols, stOnyxFinalFeaturesSelect.isUnknown).get
+
+    posqtyOutputCommercialDF.show()
 
 
   }

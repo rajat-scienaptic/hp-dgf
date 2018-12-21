@@ -254,6 +254,10 @@
         "INITIAL_SELECT": {
           "isUnknown":"Y",
           "cols": ["eTailers Grp ID"]
+        },
+        "SELECT_BEFORE_OUTPUT": {
+          "isUnknown": "Y",
+          "cols": ["eTailers", "Claimed Big Deal Qty", "Big Deal Claim Difference", "Option C IR","Claimed Option C Qty", "Option C Qty Adj"]
         }
       },
       "join": {
@@ -290,6 +294,66 @@
             "left": ["Quarter","Month","Week","Week Desc","Account Company","Account HQ","Account Major","Flag Direct","Product Base Desc","Product Category Desc","Product Base ID"],
             "right": ["fy_week"]
           }
+        },
+        "ST_ONYX_AND_PROMO_ID":{
+          "isUnknown": "y",
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["Deal ID 1"],
+            "right": ["C2B Promo Code"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["C2B Promo Code"]
+          }
+        },
+        "ST_ONYX_AND_CLAIMS_AGGREGATED": {
+          "isUnknown": "y",
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["Reseller Cluster","SKU","Week_End_Date"],
+            "right": ["Right_Reseller Cluster","Consol SKU","Week End Date"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Right_Reseller Cluster","Week End Date","Consol SKU","Program"]
+          }
+        },
+        "ST_ONYX_OPTION_C_JOIN": {
+          "isUnknown": "y",
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["Reseller Cluster","SKU","Week_End_Date"],
+            "right": ["Right_Reseller Cluster","Consol SKU","Week End Date"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Right_Reseller Cluster","Week End Date","Consol SKU","Program"]
+          }
+        },
+        "ST_ONYX_PROMO_JOIN": {
+          "isUnknown": "y",
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["SKU","Week_End_Date"],
+            "right": ["Right_SKU","Right_Week_End_Date"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Right_SKU","Right_Week_End_Date"]
+          }
+        },
+        "ST_ONYX_MERGE_INVENTORY": {
+          "isUnknown": "y",
+          "typeOfJoin": ["left","inner"],
+          "joinCriteria": {
+            "left": ["SKU","Reseller Cluster","Week_End_Date"],
+            "right": ["Right_SKU","Right_Reseller Cluster","Right_Week_End_Date"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Right_SKU","Right_Reseller Cluster","Right_Week_End_Date"]
+          }
         }
       },
       "group": {
@@ -302,12 +366,39 @@
           "cols" : ["Deal ID 1","eTailers","Account Consol","Grouping","VPA","Reseller Cluster","Street Price","SKU","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1: Use Case","L2: Key functionality","PLC Status","GA date","ES date","Week_End_Date","season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","SKU_Name"],
           "aggregations": {"sum":{"Sell-Thru Qty":"STT Qty", "Sell-To Qty":"ST Qty"}},
           "selectCriteria": []
+        },
+        "GROUP_ALL_SUM_AGG_BIG_NON_BIG_DEAL_QTY": {
+          "cols": ["Account Consol","Grouping","VPA","Reseller Cluster","eTailers","Street Price","SKU","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1: Use Case","L2: Key functionality","PLC Status","GA date","ES date","Week_End_Date","season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","SKU_Name","Promo"],
+          "aggregations": {"sum": {"Big Deal Qty": "Big_Deal_Qty", "Non Big Deal Qty": "Non_Big_Deal_Qty", "Qty": "Qty"}},
+          "selectCriteria": []
+        },
+        "GROUP_ALL_EXCEPT_ACCOUNT_GROUPING_PROMO_SUM_AGG_QTY_AND_DEAL_QTS": {
+          "cols": ["Reseller Cluster","VPA","eTailers","Street Price","SKU","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1: Use Case","L2: Key functionality","PLC Status","GA date","ES date","Week_End_Date","Season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","SKU_Name"],
+          "aggregations": {"sum": {"Big_Deal_Qty":"Big_Deal_Qty", "Non_Big_Deal_Qty": "Non_Big_Deal_Qty", "Qty":"Qty"}},
+          "selectCriteria": []
         }
       },
       "sort": {
         "DESC_SELL_THRU_SELL_TO": {
           "asc": [],
           "desc": ["Sum_Sell-Thru Qty","Sum_Sell-To Qty"]
+        }
+      },
+      "filter": {
+        "FILTER_ETAILERS_NOT_EQ_Y": {
+          "multiWordMap": {},
+          "conditionTypes": ["and"],
+          "conditions": ["eTailers != Y"]
+        },
+        "FILTER_ETAILERS_EQ_Y": {
+          "multiWordMap": {},
+          "conditionTypes": ["and"],
+          "conditions": ["eTailers = Y"]
+        },
+        "FILTER_OPTION_C_QTY_ADJ_GR_0": {
+          "multiWordMap": {"opt_c_qty_adj":"Option C Qty Adj"},
+          "conditionTypes": ["and"],
+          "conditions": ["opt_c_qty_adj > 0"]
         }
       }
     },
