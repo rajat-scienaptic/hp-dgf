@@ -143,7 +143,7 @@ object RetailTransform {
       SelectOperation.doSelect(staplesDotComUnitsDF, staplesComUnitsSource.selectOperation(SELECT01).cols, staplesComUnitsSource.selectOperation(SELECT01).isUnknown).get)
 
     // formula
-    val staplesComUnitsFormula01DF = Utils.litColumn(staplesComUnitsSelect01DF, "Account Major", "staples")
+    val staplesComUnitsFormula01DF = Utils.litColumn(staplesComUnitsSelect01DF, "Account Major", "Staples")
 
     // union
     val staplesComUnitsFormulaLitNullDF = staplesComUnitsFormula01DF.withColumn("season_ordered", lit(null))
@@ -192,8 +192,8 @@ object RetailTransform {
 
     // join
     val orca201617And2017QryAndAuxTablesJoin01 = orcaQry2017ToDateSource.joinOperation(JOIN01)
-    val orca201617And2017QryAndAuxTablesJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryFormulaDF, auxTablesWeekendselect01DF.withColumnRenamed("wed", "Right_wed"),orca201617And2017QryAndAuxTablesJoin01)
-    val orca201617And2017QryAndAuxTablesInnerJoin01 = orca201617And2017QryAndAuxTablesJoin01Map(INNER_JOIN)
+    val orca201617And2017QryAndAuxTablesJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryFormulaDF, auxTablesWeekendselect01DF,orca201617And2017QryAndAuxTablesJoin01)
+    val orca201617And2017QryAndAuxTablesInnerJoin01 = orca201617And2017QryAndAuxTablesJoin01Map(INNER_JOIN).withColumn("wed",to_date(unix_timestamp(col("wed"), "dd-MM-yyyy").cast("timestamp"), "yyyy-MM-dd"))
 
     // browse here
 
@@ -206,18 +206,18 @@ object RetailTransform {
     val orca201617And2017QryFilter02IfTrueDF = FilterOperation.doFilter(orca201617And2017QryFilter01IfTrueDF, orca201617And2017QryFilter02IfTrue,orca201617And2017QryFilter02IfTrue.conditionTypes(NUMERAL0)).get
 
     // formula
-    val orca201617And2017Qry7DaysLessFormula = orca201617And2017QryFilter01IfTrueDF.withColumn("wed",date_add(col("wed").cast("timestamp"), -7))
+    val orca201617And2017Qry7DaysLessFormula = orca201617And2017QryFilter02IfTrueDF.withColumn("wed",date_sub(to_date(unix_timestamp(col("wed"), "dd-MM-yyyy").cast("timestamp"), "yyyy-MM-dd"), 7))
 
     // filter
     val orca201617And2017QryFilter03IfFalse = orcaQry2017ToDateSource.filterOperation(FILTER03)
-    val orca201617And2017QryFilter03IfFalseDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter03IfFalse,orca201617And2017QryFilter03IfFalse.conditionTypes(NUMERAL0)).get
+    val orca201617And2017QryFilter03IfFalseDF = FilterOperation.doFilter(orca201617And2017QryFilter01IfFalseDF, orca201617And2017QryFilter03IfFalse,orca201617And2017QryFilter03IfFalse.conditionTypes(NUMERAL0)).get
 
     // union
     val orca201617And2017QryUnion01DF = UnionOperation.doUnion(orca201617And2017Qry7DaysLessFormula, orca201617And2017QryFilter03IfFalseDF).get
 
     // join
     val orca201617And2017QryAndAuxTablesJoin02 = orcaQry2017ToDateSource.joinOperation(JOIN02)
-    val orca201617And2017QryAndAuxTablesJoin02Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryUnion01DF, auxTablesWeekendselect01DF,orca201617And2017QryAndAuxTablesJoin02)
+    val orca201617And2017QryAndAuxTablesJoin02Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryUnion01DF, auxTablesWeekendselect01DF.withColumnRenamed("wed", "Right_wed"),orca201617And2017QryAndAuxTablesJoin02)
     val orca201617And2017QryAndAuxTablesInnerJoin02 = orca201617And2017QryAndAuxTablesJoin02Map(INNER_JOIN)
 
     /* Aux Tables Online */
@@ -243,10 +243,11 @@ object RetailTransform {
     val auxTablesOnlineFilter01DF = FilterOperation.doFilter(auxTablesOnlineLeftAndInnerJoinUnion01, auxTablesOnlineFilter01,auxTablesOnlineFilter01.conditionTypes(NUMERAL0)).get
 
     // formula with max wed for Aux Table Online
+    val maxWed = auxTablesOnlineFilter01DF.agg(max("wed")).head().getDate(NUMERAL0)
     val auxTablesOnlineFormula01DF = auxTablesOnlineFilter01DF.withColumn("Online",
       when(col("Type") === "Online",1)
         .otherwise(0))
-      .withColumn("max_wed", max("wed"))
+      .withColumn("Max_wed", lit(maxWed))
       .cache()
 
     // group
@@ -396,7 +397,7 @@ object RetailTransform {
     // formula
     val auxTablesOnlineFormula02DF = auxTablesOnlineFormula01DF.withColumn("Product Base ID",
       when(col("Product Base ID") === "M9L74A", "M9L75A")
-        .when((col("Product Base ID") === "J9V91A" || col("Product Base ID")) === "J9V92A", "J9V90A")
+        .when((col("Product Base ID") === "J9V91A") || (col("Product Base ID")) === "J9V92A", "J9V90A")
         .when(col("Product Base ID") === "Z3M52A", "K7G93A")
         .otherwise(col("Product Base ID")))
 
@@ -405,7 +406,7 @@ object RetailTransform {
     val auxTablesOnlineGroup02DF = GroupOperation.doGroup(auxTablesOnlineFormula02DF, auxTablesOnlineGroup02).get
 
     // filter
-    val maxWedIncluding7000DaysDF = auxTablesOnlineGroup02DF.withColumn("Max_wed",date_add(col("wed").cast("timestamp"), -7000))
+    val maxWedIncluding7000DaysDF = auxTablesOnlineGroup02DF.withColumn("date_last_52weeks",date_sub(col("Max_wed"), 365))
     val auxTablesOnlineWedGreaterThan7000Filter02 = auxTablesOnlineSource.filterOperation(FILTER02)
     val auxTablesOnlineWedGreaterThan7000Filter02DF = FilterOperation.doFilter(maxWedIncluding7000DaysDF,auxTablesOnlineWedGreaterThan7000Filter02,auxTablesOnlineWedGreaterThan7000Filter02.conditionTypes(NUMERAL0)).get
 
@@ -632,3 +633,4 @@ object RetailTransform {
   }
 
 }
+

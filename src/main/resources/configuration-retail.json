@@ -1,6 +1,6 @@
 {
   "sparkConfig": {
-    "master": "local",
+    "master": "local[*]",
     "appName": "hp-retail"
   },
   "sources": {
@@ -279,7 +279,7 @@
       "select": {
         "select01": {
           "isUnknown" : "N",
-          "cols": ["Account Consol", "Online", "Channel", "Inv : Saleable Qty", "Sales : Net Qty", "season","HP.SKU.Short","season.ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year", "Week.End.Date"]
+          "cols": ["Account Consol", "Online", "Channel", "Inv : Saleable Qty", "Sales : Net Qty", "season","HP_SKU_Short","season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year", "Week_End_Date"]
         }
       },
       "filter" : {
@@ -297,13 +297,13 @@
               "Sales : Net Qty" : "Sum_Sales : New Qty"
             }
           },
-          "selectCriteria" : ["Account Consol","Online","Channel","Inv : Saleable Qty","Sales : Net Qty","season","HP.SKU.Short","season.ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","wed"]
+          "selectCriteria" : ["Account Consol","Online","Channel","Inv : Saleable Qty","Sales : Net Qty","season","HP_SKU_Short","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","wed"]
         }
       }
     },
     "ORCA_2014_16_ARCHIVE": {
       "name": "ORCA_2014_16_ARCHIVE",
-      "filePath": "D:\\Documents\\HP-Docs\\US ODOM Online.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\2014-16_Filtered.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -313,11 +313,11 @@
     },
     "ORCA_QRY_2017_TO_DATE": {
       "name": "ORCA_QRY_2017_TO_DATE",
-      "filePath": "D:\\Documents\\HP-Docs\\US ODOM Online.csv",
+      "filePath": "D:\\Documents\\HP-Docs\\2017-18_Filtered.csv",
       "select": {
         "select01": {
-          "isUnknown" : "N",
-          "cols": ["Product Family Desc","Product Business Unit Desc","Product Business Area Desc","Store Nbr"]
+          "isUnknown" : "Y",
+          "cols": ["Product Family Desc","Product Business Unit Desc","Product Business Area Desc","Entity Store Nbr"]
         }
       },
       "rename" : {
@@ -328,7 +328,7 @@
       },
       "group" : {
         "group01": {
-          "cols" : ["Week", "Week Desc", "Account Manager"],
+          "cols" : ["Week", "Week Desc", "Account Major"],
           "aggregations": {
             "sum" : {
               "POS Qty" : "Sum_POS Qty",
@@ -380,7 +380,7 @@
             "accountMajorConsol" : "Account Major Consol"
           },
           "conditionTypes": ["and","or","if-else"],
-          "conditions": ["accountMajorConsol = Amazon.Com","wed > 2015-11-07"]
+          "conditions": ["accountMajorConsol != Amazon.Com","wed <= 2015-11-07"]
         },
         "filter02": {
           "multiWordMap" : {
@@ -396,7 +396,7 @@
             "costcoWholesale" : "Costco Wholesale"
           },
           "conditionTypes": ["and","or","if-else"],
-          "conditions": ["accountMajorConsol !=costcoWholesale"]
+          "conditions": ["accountMajorConsol != costcoWholesale"]
         }
       }
     },
@@ -523,7 +523,7 @@
             "or",
             "if-else"
           ],
-          "conditions": ["wed > Max_wed"]
+          "conditions": ["wed > 2014-11-07"]
         },
         "filter03": {
           "conditionTypes": [
@@ -539,7 +539,7 @@
           "cols" : ["Account Major Consol", "Online", "Product Base ID", "Product Base Desc", "wed", "season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year"],
           "aggregations": {"sum" : { "POS Qty" : "Sum_POS Qty"}
           },
-          "selectCriteria" : ["Account Major","Entity Desc","Entity ID","Product Base ID","Product Base Desc","Inventory Total Qty","POS Qty","POS Sales NDP","Account Major Consol","wed","season","season.ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Type","Online"]
+          "selectCriteria" : ["Account Major","Entity Desc","Entity ID","Product Base ID","Product Base Desc","Inventory Total Qty","POS Qty","POS Sales NDP","Account Major Consol","wed","season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Type","Online"]
         },
         "group02": {
           "cols" : ["Product Base ID", "season", "Type", "Account Major Consol", "Product Base Desc", "Online", "Account Major", "Entity ID", "Max_wed", "wed"],
@@ -550,7 +550,7 @@
               "POS Qty" : "POS Qty"
             }
           },
-          "selectCriteria" : ["Account Major","Entity Desc","Entity ID","Product Base ID","Product Base Desc","Inventory Total Qty","POS Qty","POS Sales NDP","Account Major Consol","wed","season","season.ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Type","Online","Max_wed"]
+          "selectCriteria" : ["Account Major","Entity Desc","Entity ID","Product Base ID","Product Base Desc","Inventory Total Qty","POS Qty","POS Sales NDP","Account Major Consol","wed","season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Type","Online","Max_wed"]
         },
         "group03": {
           "cols" : ["Account Major Consol", "Entity ID"],
