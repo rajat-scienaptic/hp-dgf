@@ -19,8 +19,8 @@ object GroupOperation {
       val aggregations = groupOp.aggregations
       var selectCols = groupOp.selectCols
       if (selectCols.isEmpty) selectCols=dataFrame.columns.toList
-      val df = dataFrame.select(Utils.convertListToDFColumn(selectCols, dataFrame): _*)
-
+      //val df = dataFrame.select(Utils.convertListToDFColumn(selectCols, dataFrame): _*)
+      val df = dataFrame
       var renameMap = scala.collection.mutable.Map[String, String]()
       var aggregationMap = scala.collection.mutable.Map[String, String]()
       var aggregationColumns = List[String]()
