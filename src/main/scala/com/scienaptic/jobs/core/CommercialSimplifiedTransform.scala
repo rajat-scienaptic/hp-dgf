@@ -684,7 +684,7 @@ object CommercialSimplifiedTransform {
     * NULL Impute for numerical column with 0
     * TODO: Implement Utility
     * */
-    val stOnyxWithPromoSpendETailerResellerAndNullImputeDF = stOnyxWithPromoSpendETailerResellerClusterDF
+    val stOnyxWithPromoSpendETailerResellerAndNullImputeDF = Utils.nullImputationForNumeralColumns(stOnyxWithPromoSpendETailerResellerClusterDF)
 
     /*
     * Select before output - 402
