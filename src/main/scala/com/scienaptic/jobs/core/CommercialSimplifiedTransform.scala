@@ -110,7 +110,7 @@ object CommercialSimplifiedTransform {
     * */
     val iecInitialSelect = iecSource.selectOperation(INITIAL_SELECT)
     val xsInitialSelect = xsClaimsSource.selectOperation(INITIAL_SELECT)
-    val rawCalendarInitalSelect = rawCalendarSource.selectOperation(INITIAL_SELECT)
+    //val rawCalendarInitalSelect = rawCalendarSource.selectOperation(INITIAL_SELECT)
     val wedInitialSelect = wedSource.selectOperation(INITIAL_SELECT)
     val skuHierarchyInitialSelect = skuHierarchySource.selectOperation(INITIAL_SELECT)
     val commAccountsInitialSelect = commAccountsSource.selectOperation(INITIAL_SELECT)
@@ -119,12 +119,17 @@ object CommercialSimplifiedTransform {
     val tidyHistInitialSelect = tidyHistSource.selectOperation(INITIAL_SELECT)
 
     val iecSelectDF = doSelect(iecDF, iecInitialSelect.cols,iecInitialSelect.isUnknown).get
+      .withColumn("Partner Ship Calendar Date",unix_timestamp(col("Partner Ship Calendar Date"),"yyyy-mm-dd").cast("timestamp"))
     val xsClaimsSelectDF = doSelect(xsClaimsDF, xsInitialSelect.cols,xsInitialSelect.isUnknown).get
+      .withColumn("Partner Ship Calendar Date",unix_timestamp(col("Partner Ship Calendar Date"),"mm/dd/yyyy hh:mm").cast("timestamp"))
     val rawCalendarSelectDF = rawCalendarDF/*doSelect(rawCalendarDF, iecInitialSelect.cols,iecInitialSelect.isUnknown).get*/
       .withColumn("Start Date",unix_timestamp(col("Start Date"),"mm/dd/yy").cast("timestamp"))
       .withColumn("End Date",unix_timestamp(col("End Date"),"mm/dd/yy").cast("timestamp"))
     val wedSelectDF = doSelect(WEDDF, wedInitialSelect.cols,wedInitialSelect.isUnknown).get
+      .withColumn("wed",unix_timestamp(col("wed"),"mm/dd/yyyy").cast("timestamp"))
     val skuHierarchySelectDF = doSelect(SKUHierDF, skuHierarchyInitialSelect.cols,skuHierarchyInitialSelect.isUnknown).get
+      .withColumn("GA date",unix_timestamp(col("GA date"),"mm/dd/yyyy").cast("timestamp"))
+      .withColumn("ES date",unix_timestamp(col("ES date"),"mm/dd/yyyy").cast("timestamp"))
     val commAccountsSelectDF = doSelect(commAccountDF, commAccountsInitialSelect.cols,commAccountsInitialSelect.isUnknown).get
     val stONYXSelectDF = doSelect(stONYXDF, stONYXInitialSelect.cols,stONYXInitialSelect.isUnknown).get
     val sttONYXSelectDF = doSelect(sttONYXDF, sttONYXInitialSelect.cols,sttONYXInitialSelect.isUnknown).get
@@ -142,11 +147,6 @@ object CommercialSimplifiedTransform {
     val xsClaimsRenamedDF = Utils.convertListToDFColumnWithRename(xsClaimsInitialRename, xsClaimsSelectDF)
     val wedRenamedDF = Utils.convertListToDFColumnWithRename(rawCalendarInitialRename, wedSelectDF)
     val tidyHistRenamedDF = Utils.convertListToDFColumnWithRename(tidyHistInitialRename, tidyHistSelectDF)
-
-    /*
-    * TODO: Convert all dates to date type:
-    * .withColumn("Start Date",unix_timestamp(col("Start Date"),"mm/dd/yy").cast("timestamp"))
-    */
 
     /*
     * Filter IEC Claims for Partner Ship Calendar Date  */
@@ -402,7 +402,7 @@ object CommercialSimplifiedTransform {
     val tidyHistChannelEqCommercialFilterDF = doFilter(tidyHistRenamedDF, tidyHistChannelEqCommercialFilter, tidyHistChannelEqCommercialFilter.conditionTypes(NUMERAL0)).get
 
     /*
-    * Group SKU, Resller, WED, Season, Cal, fiscal year, quarter and sum Qty
+    * Group SKU, Reseller, WED, Season, Cal, fiscal year, quarter and sum Qty
     * AND
     * Rename grouping columns - 421
     * */
@@ -470,7 +470,7 @@ object CommercialSimplifiedTransform {
     val stOnyxAndAccountsJoin = stOnyxSource.joinOperation(ST_ONYX_AND_AUX_ACCOUNTS)
     val commAccountsSelectRenamedDF = commAccountsSelectDF
       .withColumnRenamed("Account Company","Right_Account Company")
-    val stOnyxAndAccountsJoinMap = doJoinAndSelect(tidyHistAndSKUHierInnerJoinDF, commAccountsSelectRenamedDF, stOnyxAndAccountsJoin)
+    val stOnyxAndAccountsJoinMap = doJoinAndSelect(stONYXSelectDF/*tidyHistAndSKUHierInnerJoinDF*/, commAccountsSelectRenamedDF, stOnyxAndAccountsJoin)
     val stOnyxAndAccountsLeftJoinDF = stOnyxAndAccountsJoinMap(LEFT)
     val stOnyxAndAccountsInnerJoinDF = stOnyxAndAccountsJoin(INNER)
 
@@ -507,6 +507,7 @@ object CommercialSimplifiedTransform {
     val stOnyxProductBaseGroupDF = doGroup(stOnyxAndSKUHierLeftJoinDF, stOnyxProductBaseGroup).get
     val stOnyxSellThruAndToSort = stOnyxSource.sortOperation(DESC_SELL_THRU_SELL_TO)
     val stOnyxSellThruAndToSortDF = doSort(stOnyxProductBaseGroupDF, stOnyxSellThruAndToSort.ascending, stOnyxSellThruAndToSort.descending).get
+    stOnyxSellThruAndToSortDF.show(10)
     /* Used only for Browse */
 
     /*
@@ -591,10 +592,10 @@ object CommercialSimplifiedTransform {
     val stOnyAndAggClaimsJoinsUnion = doUnion(stOnyxAndAggClaimsLeftJoinDF, stOnyxAndAggClaimsInnerJoinWithClaimDifferenceDealQtyDF).get
 
     /*
-    * Option C Join
+    * Option C Join - 386
     * */
     val stOnyxOptionCJoin = stOnyxSource.joinOperation(ST_ONYX_OPTION_C_JOIN)
-    val claimsProgramFilterPromoOptionCRenamedDF = claimsProgramFilterPromoOptionCDF
+    val claimsProgramFilterPromoOptionCRenamedDF = claimsProgramOptionCUniqueDF
       .withColumnRenamed("Reseller Cluster","Right_Reseller Cluster")
       .withColumnRenamed("Claim Partner Unit Rebate", "Option C IR")
       .withColumnRenamed("Sum_Sum_Claim Quantity", "Claimed Option C Qty")
@@ -622,7 +623,7 @@ object CommercialSimplifiedTransform {
     val stOnyxOptionCQtyAdjFilterDF = doFilter(stOnyxUnionETailersOptionCDF, stOnyxOptionCQtyAdjFilter, stOnyxOptionCQtyAdjFilter.conditionTypes(NUMERAL0)).get
 
     /*
-    * Add Reseller Cluster, Qty, Non_Big_Deal_Qty, Big_Deal_Qty, IR, Promo Flag
+    * Add Reseller Cluster, Qty, Non_Big_Deal_Qty, Big_Deal_Qty, IR, Promo Flag  - 394
     * */
     val stOnyxOptionCWithResellerQtyIRPromoFlagDF = stOnyxOptionCQtyAdjFilterDF
       .withColumn("Reseller Cluster", lit("Other - Option C"))
@@ -653,7 +654,7 @@ object CommercialSimplifiedTransform {
     /*
     * Union St Onyx joins - Bring back Option C - 373
     * */
-    val stOnyxPromoJoinsWithPromoFlagUnionDF = doUnion(stOnyxPromoLeftJoinWithPromoFlagDF, stOnyxPromoInnerJoinWithPromoFlagDF).get
+    val stOnyxPromoJoinsWithPromoFlagUnionDF = doUnion(doUnion(stOnyxPromoLeftJoinWithPromoFlagDF, stOnyxPromoInnerJoinWithPromoFlagDF).get,stOnyxOptionCWithResellerQtyIRPromoFlagDF).get
 
     /*
     * Merge inventory Join - 412
@@ -682,7 +683,6 @@ object CommercialSimplifiedTransform {
 
     /*
     * NULL Impute for numerical column with 0
-    * TODO: Implement Utility
     * */
     val stOnyxWithPromoSpendETailerResellerAndNullImputeDF = Utils.nullImputationForNumeralColumns(stOnyxWithPromoSpendETailerResellerClusterDF)
 

@@ -408,7 +408,7 @@
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"Y",
-          "cols": ["Inventory Total Qty"]
+          "cols": ["eTailers Grp ID","Sell-Thru Qty","Sell-To Qty"]
         }
       },
       "join": {
