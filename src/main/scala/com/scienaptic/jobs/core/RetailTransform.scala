@@ -438,6 +438,9 @@ object RetailTransform {
     val auxTablesOnlineFormula04DF = auxTablesOnlineJoin02InnerDF.withColumn("Store POS",
       when(col("POS Qty") > 0 , col("Sum_POS Sales NDP"))
         .otherwise(0))
+      .withColumn("Store Inv",
+        when(col("Inventory Total Qty") > 0 , col("Sum_POS Sales NDP"))
+          .otherwise(0))
 
     // group
     val auxTablesOnlineGroup05 = auxTablesOnlineSource.groupOperation(GROUP05)

@@ -335,7 +335,7 @@
               "POS Sales NDP" : "Sum_POS Sales NDP"
             }
           },
-          "selectCriteria" : ["Quarter","Month","Week","Week Desc","Account Major","Entity Desc","Entity ID","Product Base ID","Product Base Desc","Product Category Desc","Inventory Total Qty","POS Qty","POS Sales NDP"]
+          "selectCriteria" : ["Quarter","Month","Week","Week Desc","Account Major","Entity Desc","Entity ID","Product Base ID","Product Base Desc","Product Category Desc","Inventory Total Qty","Sum_POS Qty","Sum_POS Sales NDP"]
         }
       },
       "sort" : {
@@ -450,8 +450,7 @@
         },
         "rename02" : {
           "Account Major Consol" : "Right_Account Major Consol",
-          "Entity ID" : "Right_Entity ID",
-          "Product Base ID" : "Right_Product Base ID"
+          "Entity ID" : "Right_Entity ID"
         },
         "rename03" : {
           "Account Major Consol" : "Right_Account Major Consol",
@@ -480,7 +479,7 @@
           },
           "selectCriteria": {
             "left": ["Account Major"],
-            "right": ["Right_Account Major Consol","Right_Entity ID", "Right_Product Base ID"]
+            "right": ["Right_Account Major Consol","Right_Entity ID"]
           }
         },
         "join03": {
@@ -545,7 +544,7 @@
           "cols" : ["Product Base ID", "season", "Type", "Account Major Consol", "Product Base Desc", "Online", "Account Major", "Entity ID", "Max_wed", "wed"],
           "aggregations": {
             "sum" : {
-              "POS Sales NDP" : "Sum_POS NDP",
+              "POS Sales NDP" : "POS Sales NDP",
               "Inventory Total Qty" :  "Inventory Total Qty",
               "POS Qty" : "POS Qty"
             }
@@ -560,7 +559,7 @@
               "POS Sales NDP" : "Sum_POS Sales NDP"
             }
           },
-          "selectCriteria" : ["Product Base ID","season","Type","Account Major Consol","Product Base Desc","Online","Account Major","Entity ID","Max_wed","wed","POS Sales NDP","Inventory Total Qty","POS Qty"]
+          "selectCriteria" : ["Product Base ID","season","Type","Account Major Consol","Product Base Desc","Online","Account Major","Entity ID","Max_wed","wed","Sum_POS Sales NDP","Inventory Total Qty","Sum_POS Qty"]
         },
         "group04": {
           "cols" : ["Account Major Consol"],
@@ -570,7 +569,7 @@
               "Sum_POS Sales NDP" : "Sum_Sum_POS Sales NDP"
             }
           },
-          "selectCriteria" : ["Account Major", "Entity ID", "Sum_POS Qty", "Sum_POS Sales NDP "]
+          "selectCriteria" : ["Account Major", "Entity ID", "Sum_Sum_POS Qty", "Sum_Sum_POS Sales NDP"]
         },
         "group05": {
           "cols" : ["wed", "Product Base ID", "Product Base Desc", "Account Major Consol"],
