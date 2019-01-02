@@ -231,7 +231,7 @@ object CommercialSimplifiedTransform {
     * OUTPUT - claims_consolidated.csv*/
     claimsAndSKUJoinsUnionDF.show()
 
-    /*Group RESELLER_WED_SKU_PROGRAM_AGG_CLAIM_REBATE_QUANTITY*/
+    /*Group RESELLER_WED_SKU_PROGRAM_AGG_CLAIM_REBATE_QUANTITY - 385*/
     val claimsResellerWEDSKUProgramGroup = xsClaimsSource.groupOperation(RESELLER_WED_SKU_PROGRAM_AGG_CLAIM_REBATE_QUANTITY)
     val claimsResellerWEDSKUProgramGroupDF = doGroup(claimsAndSKUJoinsUnionDF, claimsResellerWEDSKUProgramGroup).get
 
@@ -472,7 +472,7 @@ object CommercialSimplifiedTransform {
       .withColumnRenamed("Account Company","Right_Account Company")
     val stOnyxAndAccountsJoinMap = doJoinAndSelect(stONYXSelectDF/*tidyHistAndSKUHierInnerJoinDF*/, commAccountsSelectRenamedDF, stOnyxAndAccountsJoin)
     val stOnyxAndAccountsLeftJoinDF = stOnyxAndAccountsJoinMap(LEFT)
-    val stOnyxAndAccountsInnerJoinDF = stOnyxAndAccountsJoin(INNER)
+    val stOnyxAndAccountsInnerJoinDF = stOnyxAndAccountsJoinMap(INNER)
 
     /*
     * Add Features - 'Account Consol', 'Grouping', 'VPA', 'Reseller Cluster'
