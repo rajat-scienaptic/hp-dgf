@@ -25,6 +25,7 @@ object Utils {
   def loadCSV(context: ExecutionContext, file: String): Try[DataFrame] = {
     Try {
       val scienapticDataframe = context.spark.read
+        .format("org.apache.spark.csv")
         .option("header", true)
         .option("inferSchema", true)
         .csv(file)

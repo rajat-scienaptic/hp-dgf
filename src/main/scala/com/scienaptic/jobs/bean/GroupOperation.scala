@@ -36,16 +36,16 @@ object GroupOperation {
           aggregationMap(aggrCol) = operation
         }
       }
-      //selectCols = selectCols ::: aggrRenamedColumns
+//      selectCols = selectCols ::: aggrRenamedColumns
       val aggMap = aggregationMap.toMap
       val groupedDataSet = df.groupBy(Utils.convertListToDFColumn(cols, df): _*)
-      val aggregatedDataSet = groupedDataSet.agg(aggMap)
+      val aggregatedDataSet = Utils.convertListToDFColumnWithRename(renameMap.toMap, groupedDataSet.agg(aggMap))
       Utils.convertListToDFColumnWithRename(renameMap.toMap, aggregatedDataSet)
-      /*val groupWithAllColumnsDF = df.drop(aggregationColumns.toList:_*).join(groupedDF, cols.toSeq, "inner")
-      if (selectCols.size == 0) {
-        selectCols = (selectCols ::: dataFrame.columns.toList) filterNot aggregationColumns.toSet
-      }
-      groupWithAllColumnsDF.select(Utils.convertListToDFColumn(selectCols, groupWithAllColumnsDF): _*)*/
+//      val groupWithAllColumnsDF = df.drop(aggregationColumns.toList:_*).join(aggregatedDataSet, cols.toSeq, "inner")
+//      if (selectCols.size == 0) {
+//        selectCols = (selectCols ::: dataFrame.columns.toList) filterNot aggregationColumns.toSet
+//      }
+//      groupWithAllColumnsDF.select(Utils.convertListToDFColumn(selectCols, groupWithAllColumnsDF): _*)
     }
   }
 }

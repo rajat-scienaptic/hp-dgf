@@ -5,7 +5,8 @@ import com.fasterxml.jackson.annotation.{JsonInclude, JsonProperty}
 import com.scienaptic.jobs.bean._
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-case class AppConfiguration(@JsonProperty("sparkConfig") val sparkConfig: SparkConfig,
+case class AppConfiguration(@JsonProperty("config") val config : String,
+                             @JsonProperty("sparkConfig") val sparkConfig: SparkConfig,
                             @JsonProperty("sources") sources: Map[String, Source]) extends Configuration
 
 case class SparkConfig(@JsonProperty("master") master: String,
