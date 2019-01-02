@@ -210,7 +210,7 @@ object RetailTransform {
 
     // filter
     val orca201617And2017QryFilter03IfFalse = orcaQry2017ToDateSource.filterOperation(FILTER03)
-    val orca201617And2017QryFilter03IfFalseDF = FilterOperation.doFilter(orca201617And2017QryFilter01IfFalseDF, orca201617And2017QryFilter03IfFalse,orca201617And2017QryFilter03IfFalse.conditionTypes(NUMERAL0)).get
+    val orca201617And2017QryFilter03IfFalseDF = FilterOperation.doFilter(orca201617And2017QryFilter01IfTrueDF, orca201617And2017QryFilter03IfFalse,orca201617And2017QryFilter03IfFalse.conditionTypes(NUMERAL0)).get
 
     // union
     val orca201617And2017QryUnion01DF = UnionOperation.doUnion(orca201617And2017Qry7DaysLessFormula, orca201617And2017QryFilter03IfFalseDF).get

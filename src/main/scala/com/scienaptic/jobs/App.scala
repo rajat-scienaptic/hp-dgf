@@ -1,7 +1,7 @@
 package com.scienaptic.jobs
 
 import com.scienaptic.jobs.config.{AppConfiguration, ConfigurationFactory}
-import com.scienaptic.jobs.core.{CommercialTransform, RetailTransform}
+import com.scienaptic.jobs.core.{CommercialTransform, HPDataProcessor, RetailTransform}
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
@@ -27,9 +27,7 @@ class App(args: Array[String]) extends ConfigurationFactory[AppConfiguration](ar
     spark.sparkContext.setLogLevel("WARN")
     val executionContext = ExecutionContext(spark, configuration)
     try {
-      //TODO: Based on cli options, call appropriate Transformation.
-      //RetailTransform.execute(executionContext)
-      CommercialTransform.execute(executionContext)
+      HPDataProcessor.execute(executionContext)
     } finally {
       spark.close()
     }

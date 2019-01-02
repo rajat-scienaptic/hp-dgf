@@ -1,4 +1,5 @@
 {
+  "config" : "retail",
   "sparkConfig": {
     "master": "local[*]",
     "appName": "hp-retail"
