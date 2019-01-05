@@ -1,4 +1,5 @@
 {
+  "config": "commercial",
   "sparkConfig": {
     "master": "local[*]",
     "appName": "hp-commercial-simplified"
@@ -6,7 +7,7 @@
   "sources": {
     "IEC_CLAIMS": {
       "name": "iec_claims",
-      "filePath": "",
+      "filePath": "/home/avik/Scienaptic/Projects/HP/HPData/iec_claims_archive.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
@@ -16,7 +17,7 @@
     },
     "XS_CLAIMS": {
       "name": "",
-      "filePath": "",
+      "filePath": "/home/avik/Scienaptic/Projects/HP/HPData/03_Xs_Claims.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
@@ -71,13 +72,13 @@
         },
         "CLAIMS_AND_SKU_HIER": {
           "isUnknown": "n",
-          "typeOfJoin": ["inner"],
+          "typeOfJoin": ["left","inner"],
           "joinCriteria": {
             "left": ["Base SKU"],
             "right": ["SKU"]
           },
           "selectCriteria": {
-            "left": ["Account Consol","Grouping","Reseller Cluster","VPA","Week End Date","Big Deal ID","Base SKU","Claim Partner Unit Rebate","Sum_Claim Quantity","Partner Ship Calendar Date","Program","Total Amount","season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Promo"],
+            "left": ["Account Consol","Grouping","Reseller Cluster","VPA","Week End Date","Big Deal ID","Base SKU","Claim Partner Unit Rebate","Sum_Claim Quantity","Partner Ship Calendar Date","Program","Total Amount","season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Promo Name"],
             "right": ["SKU","Street Price","Consol SKU","Abbreviated Name","Full Name","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom"]
           }
         },
@@ -114,7 +115,7 @@
         },
         "RESELLER_WED_SKU_PROGRAM_AGG_CLAIM_REBATE_QUANTITY": {
           "cols" : ["Reseller Cluster","Week End Date","Consol SKU","Program"],
-          "aggregations": {"sum":{"Claim Quantity":"Sum_Claim Quantity"},
+          "aggregations": {"sum":{"Sum_Claim Quantity":"Sum_Sum_Claim Quantity"},
                            "max":{"Claim Partner Unit Rebate": "Claim Partner Unit Rebate"}},
           "selectCriteria": []
         },
@@ -190,7 +191,7 @@
     },
     "RAW_MASTER_CALENDAR" :{
       "name": "",
-      "filePath": "",
+      "filePath": "/home/avik/Scienaptic/Projects/HP/HPData/master_calendar_raw_commercial.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"Y",
@@ -209,7 +210,7 @@
     },
     "WEEK_END_DATE": {
       "name": "",
-      "filePath": "",
+      "filePath": "/home/avik/Scienaptic/Projects/HP/HPData/AUX_week_end_date.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
@@ -229,7 +230,7 @@
     },
     "SKU_HIERARCHY": {
       "name": "",
-      "filePath": "",
+      "filePath": "/home/avik/Scienaptic/Projects/HP/HPData/AUX_sku_hierarchy.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
@@ -239,7 +240,7 @@
     },
     "COMM_ACCOUNTS": {
       "name": "",
-      "filePath": "",
+      "filePath": "/home/avik/Scienaptic/Projects/HP/HPData/comm_accounts.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
@@ -249,7 +250,7 @@
     },
     "ONYX_ST": {
       "name": "",
-      "filePath": "",
+      "filePath": "/home/avik/Scienaptic/Projects/HP/HPData/US Comm ST v7 NGO.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"Y",
@@ -404,7 +405,7 @@
     },
     "ONYX_STT": {
       "name": "",
-      "filePath": "",
+      "filePath": "/home/avik/Scienaptic/Projects/HP/HPData/US Comm STT v7 NGO.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"Y",
@@ -458,11 +459,11 @@
     },
     "TIDY_HPS_2016_17_HISTORICAL_POS": {
       "name": "",
-      "filePath": "",
+      "filePath": "/home/avik/Scienaptic/Projects/HP/HPData/Tidy_HP_Sprt_2016-2017_v2_(historical_pos_units).csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
-          "cols": ["Account","Account Consol","Channel","Inv : Saleable Qty","Sales : Net Qty","season","HP_SKU_Short","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Week_End_Date"]
+          "cols": ["Account","Account Consol","Channel","Inv : Saleable Qty","Sales : Net Qty","season","HP_SKU_Short","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","wed"]
         }
       },
       "rename": {
@@ -472,6 +473,13 @@
           "Inv : Saleable Qty": "Inv_Qty_Raw",
           "Sales : Net Qty": "Qty",
           "season": "Season"
+        },
+        "RENAME_SEASON_CAL_FISCAL_AFTER_GROUP":{
+          "season_ordered": "Season_Ordered",
+          "cal_month": "Cal_Month",
+          "cal_year": "Cal_Year",
+          "fiscal_quarter": "Fiscal_Qtr",
+          "fiscal_year": "Fiscal_Year"
         }
       },
       "filter": {
@@ -486,15 +494,6 @@
           "cols" : ["HP_SKU_Short","Reseller_Cluster","Week_End_Date","Season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year"],
           "aggregations": {"sum":{"Qty":"Sum_Qty", "Inv_Qty_Raw":"Inv_Qty"}},
           "selectCriteria": []
-        }
-      },
-      "rename": {
-        "RENAME_SEASON_CAL_FISCAL_AFTER_GROUP":{
-          "season_ordered": "Season_Ordered",
-          "cal_month": "Cal_Month",
-          "cal_year": "Cal_Year",
-          "fiscal_quarter": "Fiscal_Qtr",
-          "fiscal_year": "Fiscal_Year"
         }
       },
       "join": {

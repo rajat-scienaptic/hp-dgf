@@ -19,34 +19,47 @@ object CommercialUtility {
 
   val createBaseSKUFromProductIDUDF = udf((productID: String) => {
     //println(s"ProductID recieved: $productID")
-    if (productID.takeRight(4).charAt(0) == "#")
+    if (productID.takeRight(4).charAt(0).toString == "#")
       productID.substring(0, productID.length()-4)
     else
       productID
   })
 
-  //Not being used
   val extractWeekFromDateUDF = udf((dateStr: String,format: String) => {
     /*import org.joda.time.DateTime
     import org.joda.time.format.DateTimeFormat
     val sourceFormat = DateTimeFormat.forPattern("yyyy-MM-dd")
     val sail_dt = DateTime.parse(dateStr, sourceFormat)*/
-    val calendar = new GregorianCalendar()
-    val dt = new SimpleDateFormat(format).parse(dateStr)
-    calendar.setTime(dt)
-    val dec = calendar.get(Calendar.DAY_OF_YEAR)/7
-    if (calendar.get(Calendar.DAY_OF_YEAR)%7!=0)
-      dec+1
-    else
-      dec
+    //try {
+      val calendar = new GregorianCalendar()
+      val dt = new SimpleDateFormat(format).parse(dateStr)
+      calendar.setTime(dt)
+      val dec = calendar.get(Calendar.DAY_OF_YEAR)/7
+      if (calendar.get(Calendar.DAY_OF_YEAR)%7!=0)
+        dec+1
+      else
+        dec
+    /*}
+    catch {
+      case nullPoint: NullPointerException => dateStr
+      case e: Exception => dateStr
+    }*/
   })
 
   val addDaystoDateStringUDF = udf((dateString: String, days: Int) => {
     //DateTimeAdd([Partner Ship Calendar Date],6-[Temp Date Calc],"days")
-    val sdf = new SimpleDateFormat("yyyy-MM-dd")
+    try {
+      val sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
+      val result = new Date(sdf.parse(dateString).getTime() + TimeUnit.DAYS.toMillis(6-days))
+      sdf.format(result)
+    }
+    catch {
+      case nullPoint: NullPointerException => dateString
+      case e: Exception => dateString
+    }
+    val sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
     val result = new Date(sdf.parse(dateString).getTime() + TimeUnit.DAYS.toMillis(6-days))
     sdf.format(result)
-    /*new Date()*/
   })
 
   val baseSKUFormulaUDF = udf((baseSKU: String) => {
