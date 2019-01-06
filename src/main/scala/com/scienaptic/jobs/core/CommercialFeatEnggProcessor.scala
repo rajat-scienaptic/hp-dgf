@@ -31,6 +31,8 @@ object CommercialFeatEnggProcessor {
 
   def execute(executionContext: ExecutionContext): Unit = {
 
+    //TODO: Only group with mutate will have join back to original dataframe but group with summarize wont have join. summarize gives only 1 row per group.
+
     val sparkConf = new SparkConf().setAppName("Test")
     val spark = SparkSession.builder
       .master("local[*]")
@@ -297,8 +299,8 @@ object CommercialFeatEnggProcessor {
         if(missing(...))
           x[] <- sum(x, na.rm = T)
         else {
-          g <- interaction(...)
-          z <- unsplit(lapply(split(x*y, g), sum, na.rm = T),g)
+          g <- interaction(...)  //Interaction just concatenates all arguments with '.' in between
+          z <- unsplit(lapply(split(x*y, g), sum, na.rm = T),g)    //lapply just applies sum function to all values obtained from split
           w <- unsplit(lapply(split(y, g), sum, na.rm = T),g)
         }
         (z-(x*y))/(w-y)
@@ -465,8 +467,9 @@ object CommercialFeatEnggProcessor {
 
     /*TODO
     * EOL_criterion_commercial <- function (x) {
-      Qty <- as.numeric(do.call(rbind, strsplit(x, split=";"))[,1])
-      baseline <- as.numeric(do.call(rbind, strsplit(x, split=";"))[,2])
+       #Argument comes as A:B
+      Qty <- as.numeric(do.call(rbind, strsplit(x, split=";"))[,1])   #Extracts A
+      baseline <- as.numeric(do.call(rbind, strsplit(x, split=";"))[,2])    #Extracts B
       temp <- NULL
       d <- NULL
       for (i in length(Qty):1){
@@ -492,9 +495,10 @@ object CommercialFeatEnggProcessor {
       .join(commercialWithCompCannDF, Seq("SKU_Name","Reseller_Cluster","Week_End_Date"), "right")
       .sort("SKU_Name","Reseller_Cluster","Week_End_Date")
       .withColumn("Qty&no_promo_med", concat_ws(";",col("Qty"), col("no_promo_med")))
-        .withColumn("SKU&Reseller", concat(col("SKU_Name"), col("Reseller_Cluster")))
-    //TODO: EOL_criterion$EOL_criterion <- ave(Qty&no_promo_med, SKU&Reseller, EOL_criterion_commercial)
-    //  Already created 2 columns. It would be -------> ave(Qty&no_promo_med, SKU&Reseller, EOL_criterion_commercial)
+      .withColumn("SKU&Reseller", concat(col("SKU_Name"), col("Reseller_Cluster")))
+      //TODO: EOL_criterion$EOL_criterion <- ave(Qty&no_promo_med, SKU&Reseller, EOL_criterion_commercial)
+      //Already created 2 columns. It would be -------> ave(Qty&no_promo_med, SKU&Reseller, EOL_criterion_commercial)
+
     EOLcriterion = EOLcriterion
 
     val EOLCriterionLast = EOLcriterion.where(col("EOL_criterion")===1)
