@@ -8,10 +8,10 @@ import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.StringIndexer
 import com.scienaptic.jobs.bean.UnionOperation.doUnion
 import java.util.UUID
+import org.apache.spark.sql.functions.rank
 
-import com.scienaptic.jobs.utility.CommercialUtility.{addDaystoDateStringUDF, extractWeekFromDateUDF}
-import org.apache.spark.sql.catalyst.expressions.aggregate.Percentile
-import org.apache.spark.sql.expressions.Window
+import com.scienaptic.jobs.utility.CommercialUtility.{addDaystoDateStringUDF, extractWeekFromDateUDF, createlist}
+  import org.apache.spark.sql.expressions.Window
 
 object CommercialFeatEnggProcessor {
   val Cat_switch=1
@@ -28,11 +28,9 @@ object CommercialFeatEnggProcessor {
   val indexerForResellerCluster = new StringIndexer().setInputCol("Reseller_Cluster").setOutputCol("Reseller_Cluster_fact")
   val pipelineForResellerCluster= new Pipeline().setStages(Array(indexerForResellerCluster))
 
-
   def execute(executionContext: ExecutionContext): Unit = {
 
-    //TODO: Only group with mutate will have join back to original dataframe but group with summarize wont have join. summarize gives only 1 row per group.
-
+    //Only group with mutate will have join back to original dataframe but group with summarize wont have join. summarize gives only 1 row per group.
     val sparkConf = new SparkConf().setAppName("Test")
     val spark = SparkSession.builder
       .master("local[*]")
@@ -41,6 +39,21 @@ object CommercialFeatEnggProcessor {
       .getOrCreate
 
     val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
+
+    import spark.implicits._
+
+    val christmasDF = Seq(("2014-12-27",1),("2015-12-26",1),("2016-12-31",1),("2017-12-30",1),("2018-12-29",1),("2019-12-28",1)).toDF("Week_End_Date","USChristmasDay")
+    val columbusDF = Seq(("2014-10-18",1),("2015-10-17",1),("2016-10-15",1),("2017-10-14",1),("2018-10-13",1),("2019-10-19",1)).toDF("Week_End_Date","USColumbusDay")
+    val independenceDF = Seq(("2014-07-05",1),("2015-07-04",1),("2016-07-09",1),("2017-07-08",1),("2018-07-07",1),("2019-07-06",1)).toDF("Week_End_Date","USIndependenceDay")
+    val laborDF = Seq(("2014-09-06",1),("2015-09-12",1),("2016-09-10",1),("2017-09-09",1),("2018-09-08",1),("2019-09-07",1)).toDF("Week_End_Date","USLaborDay")
+    val linconsBdyDF = Seq(("2014-02-15",1),("2015-02-14",1),("2016-02-13",1),("2017-02-18",1),("2018-02-17",1),("2019-02-16",1)).toDF("Week_End_Date","USLincolnsBirthday")
+    val memorialDF = Seq(("2014-05-31",1),("2015-05-30",1),("2016-06-04",1),("2017-06-03",1),("2018-06-02",1),("2019-06-01",1)).toDF("Week_End_Date","USMemorialDay")
+    val MLKingsDF = Seq(("2014-01-25",1),("2015-01-24",1),("2016-01-23",1),("2017-01-21",1),("2018-01-20",1),("2019-01-26",1)).toDF("Week_End_Date","USMLKingsBirthday")
+    val newYearDF = Seq(("2014-01-04",1),("2015-01-03",1),("2016-01-02",1),("2017-01-07",1),("2018-01-06",1),("2019-01-05",1)).toDF("Week_End_Date","USNewYearsDay")
+    val presidentsDayDF = Seq(("2014-02-22",1),("2015-02-21",1),("2016-02-20",1),("2017-02-25",1),("2018-02-24",1),("2019-02-23",1)).toDF("Week_End_Date","USPresidentsDay")
+    val veteransDayDF = Seq(("2014-11-15",1),("2015-11-14",1),("2016-11-12",1),("2017-11-11",1),("2018-11-17",1),("2019-11-16",1)).toDF("Week_End_Date","USVeteransDay")
+    val washingtonBdyDF = Seq(("2014-02-22",1),("2015-02-28",1),("2016-02-27",1),("2017-02-25",1),("2018-02-24",1),("2019-02-23",1)).toDF("Week_End_Date","USWashingtonsBirthday")
+    val thanksgngDF = Seq(("2014-11-29",1),("2015-11-28",1),("2016-11-26",1),("2017-11-25",1),("2018-11-24",1),("2019-11-30",1)).toDF("Week_End_Date","USThanksgivingDay")
 
     val commercial = spark.read.option("header","true").option("inferSchema","true").csv("posqty_output_commercial.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"yyyy-MM-dd").cast("timestamp")))
@@ -62,25 +75,24 @@ object CommercialFeatEnggProcessor {
       .drop("Street_Price_Org","Changed_Street_Price","Valid_Start_Date","Valid_End_Date")
 
 
-    val commercialWithQtyFilterResellerAndSpProgramsFacDF = commercialMergeifs2DF.withColumn("Qty",col("Non_Big_Deal_Qty"))
+    var commercialWithQtyFilterResellerAndSpProgramsFacDF = commercialMergeifs2DF.withColumn("Qty",col("Non_Big_Deal_Qty"))
       .withColumn("Reseller",when(col("Reseller")==="B & H PHOTO VIDEO CORP", lit("B & H Foto and Electronics Inc")).otherwise(col("Reseller")))
       .withColumn("Special_Programs",lit("None"))
       .withColumn("Special_Programs_LEVELS", col("Special_Programs"))
-    //TODO: DOUBT: commercial$Special.Programs <- as.factor(commercial$Special.Programs)   Why to convert it to factor when it has just 1 value.
+    val indexer = new StringIndexer().setInputCol("Special_Programs").setOutputCol("Special_Programs_fact")
+    val pipeline = new Pipeline().setStages(Array(indexer))
+    commercialWithQtyFilterResellerAndSpProgramsFacDF = pipeline.fit(commercialWithQtyFilterResellerAndSpProgramsFacDF).transform(commercialWithQtyFilterResellerAndSpProgramsFacDF)
+      .drop("Special_Programs").withColumnRenamed("Special_Programs_fact","Special_Programs").drop("Special_Programs_fact")
 
 
     val commercialSpclPrgmFactDF = pipelineForSpecialPrograms.fit(commercialWithQtyFilterResellerAndSpProgramsFacDF).transform(commercialWithQtyFilterResellerAndSpProgramsFacDF)
       .drop("Special_Programs").withColumnRenamed("Special_Programs_fact","Special_Programs").drop("Special_Programs_fact")
       .withColumn("Special_Programs", (col("Special_Programs")+lit(1)).cast("int"))
 
-
-    //**** Get levels mapping back from stringIndexer: https://stackoverflow.com/questions/43575374/retrieve-spark-mllib-stringindexer-column-mapping/43575554
-
-    //Checking if total =0, means division will be infinite
     val stockpiler_dealchaser = commercialSpclPrgmFactDF
       .groupBy("Reseller")
       .agg(sum("Qty").alias("Qty_total"), sum(when(col("IR")>0,"Qty")).alias("Qty_promo"))
-      .join(commercialSpclPrgmFactDF, Seq("Reseller"),"right")
+      //.join(commercialSpclPrgmFactDF, Seq("Reseller"),"right")
       .withColumn("proportion_on_promo", when((col("Qty_total")===0) || (col("proportion_on_promo").isNull), 0).otherwise(col("Qty_promo")/col("Qty_total")))
       .where(col("proportion_on_promo")>0.95)
 
@@ -99,13 +111,13 @@ object CommercialFeatEnggProcessor {
     val commercialHPDF = commercialResFacNotPL
       .groupBy("SKU","SKU_Name","Reseller_Cluster","Week_End_Date","Season","Street_Price","IPSLES","HPS_OPS","Series","Category","Category_Subgroup","Category_1","Category_2","Category_3","Category_Custom","Line","PL","L2_Category","L2_Category","PLC_Status","GA_date","ES_date","Inv_Qty","Special_Programs")
       .agg(sum("QtY").as("Qty"), max("IR").as("IR"), sum("Big_Deal_Qty").as("Big_Deal_Qty"), sum("Non_Big_Deal_Qty").as("Non_Big_Deal_Qty"))
-      .join(commercialResFacNotPL, Seq("SKU","SKU_Name","Reseller_Cluster","Week_End_Date","Season","Street_Price","IPSLES","HPS_OPS","Series","Category","Category_Subgroup","Category_1","Category_2","Category_3","Category_Custom","Line","PL","L2_Category","L2_Category","PLC_Status","GA_date","ES_date","Inv_Qty","Special_Programs"),"right")
+      //.join(commercialResFacNotPL, Seq("SKU","SKU_Name","Reseller_Cluster","Week_End_Date","Season","Street_Price","IPSLES","HPS_OPS","Series","Category","Category_Subgroup","Category_1","Category_2","Category_3","Category_Custom","Line","PL","L2_Category","L2_Category","PLC_Status","GA_date","ES_date","Inv_Qty","Special_Programs"),"right")
 
     val commercialResFacPL = commercialResellerClusterFactDF.where(col("PL").isin("E4","E0","ED"))
     val commercialSSDF = commercialResFacPL
       .groupBy("SKU","SKU_Name","Reseller_Cluster","Week_End_Date","Season","Special_Programs")
       .agg(sum("QtY").as("Qty"), sum("Inv_Qty").as("Inv_Qty"), max("IR").as("IR"), sum("Big_Deal_Qty").as("Big_Deal_Qty"), sum("Non_Big_Deal_Qty").as("Non_Big_Deal_Qty"))
-      .join(commercialResFacPL, Seq("SKU","SKU_Name","Reseller_Cluster","Week_End_Date","Season","Special_Programs"), "right")
+      //.join(commercialResFacPL, Seq("SKU","SKU_Name","Reseller_Cluster","Week_End_Date","Season","Special_Programs"), "right")
 
     val auxTable = spark.read.option("header","true").option("inferSchema","true").csv("sku_hierarchy.csv")
 
@@ -115,7 +127,8 @@ object CommercialFeatEnggProcessor {
       .withColumnRenamed("HPS/OPS","HPS_OPS")
       .withColumn("Mono/Color", lit(null))
       .withColumn("Added", lit(null))
-      .withColumnRenamed("L2:_Use_Case", "L2_Category")
+      .withColumnRenamed("L1:_Use_Case", "L1_Category")
+      .withColumnRenamed("L2:_Key_functionality", "L2_Category")
       .withColumn("L3:_IDC_Category", lit(null))
       .withColumn("L0:_Format", lit(null))
       .withColumn("Need_Big_Data", lit(null))
@@ -125,13 +138,9 @@ object CommercialFeatEnggProcessor {
       .withColumn("NPD_Product_Company", lit(null))
       .withColumn("Sales_Product_Name", lit(null))
 
-    /*.withColumnRenamed("L2:_Key_functionality", )
-    TODO: names(commercial_SS)[names(commercial_SS)=="L2:.Key.functionality"] <- "L2.Category"   #DOUBT why 2 columns with same name
-    */
-
     var commercialSSFactorsDF = commercialSSJoinSKUDF
 
-    val commercialSSFactorColumnsList = List("IPSLES", "HPS_OPS","Series","Category","Category_Subgroup","Category_1","Category_2","Category_3","Line","PL","Category_Custom","L2_Category","PLC_Status","GA_date","ES_date")
+    val commercialSSFactorColumnsList = List("IPSLES","HPS_OPS","Series","Category","Category_Subgroup","Category_1","Category_2","Category_3","Line","PL","Category_Custom","L2_Category","PLC_Status","GA_date","ES_date")
     commercialSSFactorColumnsList.foreach(column => {
       val indexer = new StringIndexer().setInputCol(column).setOutputCol(column+"_fact")
       val pipeline = new Pipeline().setStages(Array(indexer))
@@ -154,8 +163,25 @@ object CommercialFeatEnggProcessor {
       .withColumn("Inv_Qty_log", when(col("Inv_Qty_log").isNull, 0).otherwise(col("Inv_Qty_log")))
       .na.fill(0, Seq("log_Qty","price","Inv_Qty_log"))
 
-    //TODO: Holidays custom function
+
+    val usCyberMonday = thanksgngDF.withColumn("Week_End_Date", date_add(col("Week_End_Date").cast("timestamp"), 7))
     val commercialwithHolidaysDF = commercialHPandSSDF
+      .join(christmasDF, Seq("Week_End_Date"), "left")
+      .join(columbusDF, Seq("Week_End_Date"), "left")
+      .join(independenceDF, Seq("Week_End_Date"), "left")
+      .join(laborDF, Seq("Week_End_Date"), "left")
+      .join(linconsBdyDF, Seq("Week_End_Date"), "left")
+      .join(memorialDF, Seq("Week_End_Date"), "left")
+      .join(MLKingsDF, Seq("Week_End_Date"), "left")
+      .join(newYearDF, Seq("Week_End_Date"), "left")
+      .join(presidentsDayDF, Seq("Week_End_Date"), "left")
+      .join(veteransDayDF, Seq("Week_End_Date"), "left")
+      .join(washingtonBdyDF, Seq("Week_End_Date"), "left")
+      .join(thanksgngDF, Seq("Week_End_Date"), "left")
+      .join(usCyberMonday, Seq("Week_End_Date", "left"))
+
+
+
 
     val npd = spark.read.option("header","true").option("inferSchema","true").csv("npd_weekly.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"yyyy-MM-dd").cast("timestamp")))
@@ -165,11 +191,11 @@ object CommercialFeatEnggProcessor {
     val npdChannelBrandFilterNotRetail = npd.where((col("Channel") =!= "Retail") && (col("Brand").isin("Canon","Epson","Brother","Lexmark","Samsung")))
       .where((col("DOLLARS")>0) && (col("MSRP__")>0))
 
-    val L1Competition =  npdChannelBrandFilterNotRetail  //TODO: Check if column name 'MSRP__' is correct or not
+    val L1Competition =  npdChannelBrandFilterNotRetail
       .groupBy("L1_Category","Week_End_Date","Brand")
       .agg((sum("DOLLARS")/sum("MSRP__")).as("dolMSRPRatio"))
       .withColumn("L1_competition", lit(1)-col("dolMSRPRatio")).drop("dolMSRPRatio")
-      .join(npdChannelBrandFilterNotRetail, Seq("L1_Category","Week_End_Date","Brand"), "right")
+      //.join(npdChannelBrandFilterNotRetail, Seq("L1_Category","Week_End_Date","Brand"), "right")
 
     val generateUUID = udf(() => UUID.randomUUID().toString)
     var L1Comp = L1Competition.withColumn("uuid",generateUUID()).groupBy("L1_Category","Week_End_Date","uuid").pivot("Brand").agg(first("L1_competition")).drop("uuid")
@@ -189,7 +215,7 @@ object CommercialFeatEnggProcessor {
       .groupBy("L2_Category","Week_End_Date","Brand")
       .agg((sum("DOLLARS")/sum("MSRP__")).as("dolMSRPRatio"))
       .withColumn("L2_competition", lit(1)-col("dolMSRPRatio")).drop("dolMSRPRatio")
-      .join(npdChannelBrandFilterNotRetail, Seq("L2_Category","Week_End_Date","Brand"), "right")
+      //.join(npdChannelBrandFilterNotRetail, Seq("L2_Category","Week_End_Date","Brand"), "right")
 
     var L2Comp = L2Competition.withColumn("uuid",generateUUID())
       .groupBy("L2_Category","Week_End_Date","uuid")
@@ -208,10 +234,12 @@ object CommercialFeatEnggProcessor {
 
     var commercialWithCompetitionDF = commercialwithHolidaysDF.join(L1Comp, Seq("L1_Category","Week_End_Date"), "left")
       .join(L2Comp, Seq("L2_Category","Week_End_Date"), "left")
+
     allBrands.foreach(x => {
-      val l1Name = "L1_competition_"+x; val l2Name = "L2_competition_"+x
+      val l1Name = "L1_competition_"+x
+      val l2Name = "L2_competition_"+x
       commercialWithCompetitionDF = commercialWithCompetitionDF.withColumn(l1Name, when((col(l1Name).isNull) || (col(l1Name)<0), 0).otherwise(col(l1Name)))
-          .withColumn(l2Name, when((col(l2Name).isNull) || (col(l2Name)<0), 0).otherwise(col(l2Name)))
+          .withColumn(l2Name, when(col(l2Name).isNull || col(l2Name)<0, 0).otherwise(col(l2Name)))
     })
     commercialWithCompetitionDF= commercialWithCompetitionDF.na.fill(0, Seq("L1_competition_Brother","L1_competition_Canon","L1_competition_Epson","L1_competition_Lexmark","L1_competition_Samsung"))
         .na.fill(0, Seq("L2_competition_Brother","L2_competition_Epson","L2_competition_Canon","L2_competition_Lexmark","L2_competition_Samsung"))
@@ -225,13 +253,13 @@ object CommercialFeatEnggProcessor {
       .groupBy("L1_Category","Week_End_Date")
       .agg(sum("DOLLARS")/sum("MSRP__").as("dolMSRPRatio"))
       .withColumn("L1_competition", lit(1)-col("dolMSRPRatio")).drop("dolMSRPRatio")
-      .join(npdChannelNotRetailBrandNotHP, Seq("L1_Category","Week_End_Date"), "right")
+      //.join(npdChannelNotRetailBrandNotHP, Seq("L1_Category","Week_End_Date"), "right")
 
     val L2CompetitionNonHP = npdChannelNotRetailBrandNotHP
       .groupBy("L2_Category","Week_End_Date")
       .agg(sum("DOLLARS")/sum("MSRP__").as("dolMSRPRatio"))
       .withColumn("L2_competition", lit(1)-col("dolMSRPRatio")).drop("dolMSRPRatio")
-      .join(npdChannelNotRetailBrandNotHP, Seq("L2_Category","Week_End_Date"), "right")
+      //.join(npdChannelNotRetailBrandNotHP, Seq("L2_Category","Week_End_Date"), "right")
 
     commercialWithCompetitionDF = commercialWithCompetitionDF.join(L1CompetitionNonHP, Seq("L1_Category","Week_End_Date"), "left")
         .join(L2CompetitionNonHP, Seq("L2_Category","Week_End_Date"), "left")
@@ -247,13 +275,13 @@ object CommercialFeatEnggProcessor {
       .groupBy("L1_Category","Week_End_Date")
       .agg(sum("DOLLARS")/sum("MSRP__").as("dolMSRPRatio"))
       .withColumn("L1_competition_ss", lit(1)-col("dolMSRPRatio")).drop("dolMSRPRatio")
-      .join(npdChannelNotRetailBrandNotSamsung, Seq("L1_Category","Week_End_Date"), "right")
+      //.join(npdChannelNotRetailBrandNotSamsung, Seq("L1_Category","Week_End_Date"), "right")
 
     val L2CompetitionSS = npdChannelNotRetailBrandNotSamsung
       .groupBy("L2_Category","Week_End_Date")
       .agg(sum("DOLLARS")/sum("MSRP__").as("dolMSRPRatio"))
       .withColumn("L2_competition_ss", lit(1)-col("dolMSRPRatio")).drop("dolMSRPRatio")
-      .join(npdChannelNotRetailBrandNotSamsung, Seq("L2_Category","Week_End_Date"), "right")
+      //.join(npdChannelNotRetailBrandNotSamsung, Seq("L2_Category","Week_End_Date"), "right")
 
     commercialWithCompetitionDF = commercialWithCompetitionDF.join(L1CompetitionSS, Seq("L1_Category","Week_End_Date", "left"))
         .join(L2CompetitionSS, Seq("L2_Category","Week_End_Date"), "left")
@@ -276,7 +304,7 @@ object CommercialFeatEnggProcessor {
       .withColumn("sum2", when(col("sum2")<0, 0).otherwise(col("sum2")))
       .withColumn("L1_competition_HP_ssmodel", col("sum1")/col("sum2"))
       .drop("sum1","sum2")
-      .join(commercialBrandinHP, Seq("Week_End_Date","L1_Category"), "right")
+      //.join(commercialBrandinHP, Seq("Week_End_Date","L1_Category"), "right")
 
     val HPComp2 = commercialBrandinHP
       .groupBy("Week_End_Date","L2_Category")
@@ -285,7 +313,7 @@ object CommercialFeatEnggProcessor {
       .withColumn("sum2", when(col("sum2")<0, 0).otherwise(col("sum2")))
       .withColumn("L2_competition_HP_ssmodel", col("sum1")/col("sum2"))
       .drop("sum1","sum2")
-      .join(commercialBrandinHP, Seq("Week_End_Date","L2_Category"), "right")
+      //.join(commercialBrandinHP, Seq("Week_End_Date","L2_Category"), "right")
 
     commercialWithCompetitionDF = commercialWithCompetitionDF.join(HPComp1, Seq("Week_End_Date","L1_Category"), "left")
         .join(HPComp2, Seq("Week_End_Date","L2_Category", "left"))
@@ -294,7 +322,7 @@ object CommercialFeatEnggProcessor {
       .na.fill(0, Seq("L1_competition_HP_ssmodel","L2_competition_HP_ssmodel"))
 
 
-    /* TODO
+    /*
     * ave2 <- function (x, y, ...) {
         if(missing(...))
           x[] <- sum(x, na.rm = T)
@@ -308,24 +336,40 @@ object CommercialFeatEnggProcessor {
       commercial$L1_cannibalization <- ave2(commercial$Promo.Pct,ifelse(commercial$Qty<0,0,commercial$Qty),commercial$Week.End.Date,commercial$L1.Category)
       commercial$L2_cannibalization <- ave2(commercial$Promo.Pct,ifelse(commercial$Qty<0,0,commercial$Qty),commercial$Week.End.Date,commercial$L2.Category)
     * */
+    commercialWithCompetitionDF = commercialWithCompetitionDF.withColumn("wed_cat", concat_ws(".",col("Week_End_Date"), col("L1_Category")))
+        .withColumn("Qty", when(col("Qty")<0, 0).otherwise(col("Qty")))
+        .groupBy("wed_cat")
+        .agg(sum(col("Promo_Pct")*col("Qty")).as("z"), sum(col("Qty")).as("w"))
+        .withColumn("L1_cannibalization", (col("z")-(col("Promo_Pct")*col("Qty")))/(col("w")-col("Qty")))
+        .drop("z","w","wed_cat")
+        .withColumn("wed_cat", concat_ws(".", col("Week_End_Date"), col("L2_Category")))
+        .groupBy("wed_cat")
+        .agg(sum(col("Promo_Pct")*col("Qty")).as("z"), sum(col("Qty")).as("w"))
+        .withColumn("L2_cannibalization", (col("z")-(col("Promo_Pct")*col("Qty")))/(col("w")-col("Qty")))
+        .drop("z","w","wed_cat")
+
+
     var commercialWithCompCannDF = commercialWithCompetitionDF
 
+    //DON'T remove join
     val commercialWithAdj = commercialWithCompCannDF.withColumn("Adj_Qty", when(col("Qty")<=0,0).otherwise(col("Qty")))
     val commercialGroupWEDSKU = commercialWithAdj.groupBy("Week_End_Date","SKU")
       .agg(sum(col("Promo_Pct")*col("Adj_Qty")).as("sumSKU1"), sum("Adj_Qty").as("sumSKU2"))
       .join(commercialWithAdj, Seq("Week_End_Date","SKU"), "right")
 
     val commercialGroupWEDL1 = commercialGroupWEDSKU
-      .groupBy("Week_End_Date", "L1_Category")
+      .groupBy("Week_End_Date","Brand", "L1_Category")
       .agg(sum(col("Promo_Pct")*col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
       .withColumn("L1_cannabalization", (col("sum1")-col("sumSKU1"))/(col("sum2")-col("sumSKU2")))
       .join(commercialGroupWEDSKU, Seq("Week_End_Date", "L1_Category"), "right")
+        .drop("sum1","sum2")
 
     commercialWithCompCannDF = commercialGroupWEDL1
-      .groupBy("Week_End_Date", "L2_Category")
+      .groupBy("Week_End_Date","Brand", "L2_Category")
       .agg(sum(col("Promo_Pct")*col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
       .withColumn("L2_cannabalization", (col("sum1")-col("sumSKU1"))/(col("sum2")-col("sumSKU2")))
-      .join(commercialGroupWEDL1, Seq("Week_End_Date", "L2_Category"), "right")     //TODO: .ungroup()
+      .join(commercialGroupWEDL1, Seq("Week_End_Date", "L2_Category"), "right")
+        .drop("sum1","sum2","sumSKU1","sumSKU2","Adj_Qty")
       .withColumn("L1_cannibalization", when(col("L1_cannibalization").isNull, 0).otherwise(col("L1_cannibalization")))
       .withColumn("L2_cannibalization", when(col("L2_cannibalization").isNull, 0).otherwise(col("L2_cannibalization")))
       .na.fill(0, Seq("L2_cannibalization","L1_cannibalization"))
@@ -372,9 +416,13 @@ object CommercialFeatEnggProcessor {
     commercialWithCompCannDF = weekpipeline.fit(commercialWithCompCannDF).transform(commercialWithCompCannDF)
         .drop("Week").withColumnRenamed("Week_fact","Week").drop("Week_fact")
 
-    val seasonalityNPDScanner = seasonalityNPD.where(col("L1_Category")==="Office - Personal")
+    var seasonalityNPDScanner = seasonalityNPD.where(col("L1_Category")==="Office - Personal")
       .withColumn("L1_Category", when(col("L1_Category")==="Office - Personal", "Scanners").otherwise(col("L1_Category")))
-    //TODO: levels(seasonality_npd_scanner$L1.Category) <- c(levels(seasonality_npd_scanner$L1.Category), "Scanners")
+    //levels(seasonality_npd_scanner$L1.Category) <- c(levels(seasonality_npd_scanner$L1.Category), "Scanners") --  no need to make changes.
+    val indexerForL1 = new StringIndexer().setInputCol("L1_Cateogry").setOutputCol("L1_Category_fact")
+    val pipelineForL1 = new Pipeline().setStages(Array(indexerForL1))
+    seasonalityNPDScanner = pipelineForL1.fit(seasonalityNPDScanner).transform(seasonalityNPDScanner)
+        .drop("L1_Category").withColumnRenamed("L1_Category_fact","L1_Category").drop("L1_Category_fact")
 
     seasonalityNPD = doUnion(seasonalityNPD, seasonalityNPDScanner).get
 
@@ -488,7 +536,7 @@ object CommercialFeatEnggProcessor {
       temp
     }
     * */
-
+    val windForSKUAndReseller = Window.partitionBy("SKU&Reseller").orderBy("SKU_Name","Reseller_Cluster","Week_End_Date")
     var EOLcriterion = commercialWithCompCannDF
       .groupBy("SKU_Name","Reseller_Cluster","Week_End_Date")
       .agg(sum("Qty").as("Qty"), sum("no_promo_med").as("no_promo_med"))
@@ -500,6 +548,10 @@ object CommercialFeatEnggProcessor {
       //Already created 2 columns. It would be -------> ave(Qty&no_promo_med, SKU&Reseller, EOL_criterion_commercial)
 
     EOLcriterion = EOLcriterion
+        .withColumn("rank", rank().over(windForSKUAndReseller))
+        .withColumn("EOL_criterion", when(col("rank")<=stability_weeks || col("Qty")<col("baseline"), 0).otherwise(1))
+
+    val EOLWithCriterion1 = EOLcriterion.groupBy("SKU&Reseller").agg(collect_list(when(col("rank")<)))
 
     val EOLCriterionLast = EOLcriterion.where(col("EOL_criterion")===1)
       .groupBy("SKU_Name","Reseller_Cluster")
@@ -536,7 +588,7 @@ object CommercialFeatEnggProcessor {
       .withColumn("ES_date", addDaystoDateStringUDF(col("ES_date").cast("timestamp").cast("string"), lit(7)-col("ES_date_wday")))
       .drop("GA_date_wday","ES_date_wday")
 
-    /*TODO
+    /*
     * BOL_criterion_v3 <- function (x) {
       temp <- NULL
       for (i in 1:length(x)){
@@ -549,14 +601,15 @@ object CommercialFeatEnggProcessor {
       temp
     }
     * */
-
+    val windForSKUnReseller = Window.partitionBy("SKU$Reseller")
     var BOLCriterion = commercialWithCompCannDF
       .groupBy("SKU","Reseller_Cluster","Week_End_Date")
       .agg(sum("Qty").as("Qty"))
       .sort("SKU","Reseller_Cluster","Week_End_Date")
-      /*TODO: .withColumn("BOL_criterion", )
-        BOL_criterion$BOL_criterion <- ave(BOL_criterion$Qty, paste0(BOL_criterion$SKU, BOL_criterion$Reseller.Cluster), FUN = BOL_criterion_v3)
-       */
+      .withColumn("SKU$Reseller", concat(col("SKU"),col("Reseller_Cluster")))
+      .withColumn("rank", rank().over(windForSKUnReseller))
+      .withColumn("BOL_criterion", when(col("rank")<intro_weeks, 0).otherwise(1)) /*BOL_criterion$BOL_criterion <- ave(BOL_criterion$Qty, paste0(BOL_criterion$SKU, BOL_criterion$Reseller.Cluster), FUN = BOL_criterion_v3)*/
+      .drop("rank")
       .drop("Qty")
 
     BOLCriterion = BOLCriterion.join(BOL.select("SKU","GA_date"), Seq("SKU"), "left")
@@ -589,23 +642,24 @@ object CommercialFeatEnggProcessor {
     BOLCriterion = BOLCriterion
         .where(!((col("min_date")===col("first_date")) && (col("first_date")===minMinDateBOL)))
         .withColumn("diff_weeks", ((col("first_date")-col("min_date"))/7)+1)
-    /*TODO: BOL_criterion <- BOL_criterion[rep(row.names(BOL_criterion), BOL_criterion$diff_weeks),]
-      Repeat 'row_names' that rows corresponding 'diff_weeks' times.
-     */
 
-    /*TODO
+    /*BOL_criterion <- BOL_criterion[rep(row.names(BOL_criterion), BOL_criterion$diff_weeks),]
     * BOL_criterion$add <- t(as.data.frame(strsplit(row.names(BOL_criterion), "\\.")))[,2]
       BOL_criterion$add <- ifelse(grepl("\\.",row.names(BOL_criterion))==FALSE,0,as.numeric(BOL_criterion$add))
       BOL_criterion$add <- BOL_criterion$add*7
       BOL_criterion$Week.End.Date <- BOL_criterion$min_date+BOL_criterion$add
     * */
+    BOLCriterion = BOLCriterion.withColumn("diff_weeks", when(col("diff_weeks").isNull || col("diff_weeks")<=0, 0).otherwise(col("diff_weeks")))
+        .withColumn("repList", createlist(col("diff_weeks"))).withColumn("add", explode(col("repList"))).drop("repList")
+        .withColumn("add", col("add")*lit(7))
+        .withColumn("Week_End_Date", addDaystoDateStringUDF(col("min_date"), col("add")))   //CHECK: check if min_date is in timestamp format!
 
     BOLCriterion = BOLCriterion.drop("min_date","fist_date","diff_weeks","add")
         .withColumn("BOL_criterion", lit(1))
 
     commercialWithCompCannDF = commercialWithCompCannDF.join(BOLCriterion, Seq("SKU","Reseller_Cluster","Week_End_Date"), "left")
         .withColumn("BOL_criterion", when(col("BOL_criterion").isNull, 0).otherwise(col("BOL_criterion")))
-        .withColumn("BOL", when(col("Week_End_Date")-col("GA_date")<(7*6),1).otherwise(col("BOL")))   //TODO: Check subtraction possible
+        .withColumn("BOL", when(datediff(col("Week_End_Date"),col("GA_date"))<(7*6),1).otherwise(col("BOL")))
         .withColumn("BOL", when(col("BOL").isNull, 0).otherwise(col("BOL")))
 
     val commercialEOLSpikeFilter = commercialWithCompCannDF.where((col("EOL")===0) && (col("spike")===0))
@@ -622,7 +676,7 @@ object CommercialFeatEnggProcessor {
         .withColumn("NP_Flag", col("Promo_Flag"))
         .withColumn("NP_IR", col("IR"))
         .withColumn("high_disc_Flag", when(col("Promo_Pct")<=0.55, 0).otherwise(1))
-    //TODO: CHECK - ave(commercial$Promo.Flag, commercial$Reseller.Cluster, commercial$SKU.Name, commercial$Season, FUN=mean
+    //CHECK - ave(commercial$Promo.Flag, commercial$Reseller.Cluster, commercial$SKU.Name, commercial$Season, FUN=mean
     val commercialPromoMean = commercialWithCompCannDF
       .groupBy("Reseller_Cluster","SKU_Name","Season")
       .agg(avg(mean(col("Promo_Flag"))).as("PromoFlagAvg"))
@@ -647,10 +701,16 @@ object CommercialFeatEnggProcessor {
         .withColumn("cann_receiver", when(col("SKU_Name").contains("6968") || col("SKU_Name").contains("6978"), "Muscatel").otherwise(col("cann_receiver")))
         .withColumn("cann_receiver", when(col("SKU_Name").contains("6255") || col("SKU_Name").contains("7155") || col("SKU_Name").contains("7855"), "Palermo").otherwise(col("cann_receiver")))
 
-        //TODO: Confirm where these columns originate from in R code
+        //Confirm where these columns originate from in R code
     commercialWithCompCannDF = commercialWithCompCannDF
-        .withColumn("Direct_Cann_201", lit(null)).withColumn("Direct_Cann_225", lit(null)).withColumn("Direct_Cann_252", lit(null)).withColumn("Direct_Cann_277", lit(null))
-        .withColumn("Direct_Cann_Weber", lit(null)).withColumn("Direct_Cann_Muscatel_Weber", lit(null)).withColumn("Direct_Cann_Muscatel_Palermo", lit(null)).withColumn("Direct_Cann_Palermo", lit(null))
+        .withColumn("Direct_Cann_201", lit(null))
+        .withColumn("Direct_Cann_225", lit(null))
+        .withColumn("Direct_Cann_252", lit(null))
+        .withColumn("Direct_Cann_277", lit(null))
+        .withColumn("Direct_Cann_Weber", lit(null))
+        .withColumn("Direct_Cann_Muscatel_Weber", lit(null))
+        .withColumn("Direct_Cann_Muscatel_Palermo", lit(null))
+        .withColumn("Direct_Cann_Palermo", lit(null))
         .withColumn("Direct_Cann_201", when(col("SKU_Name").contains("M201") || col("SKU_Name").contains("M203"), commercialWithCompCannDF.where(col("SKU_Name").contains("M40")).agg(mean("IR")).head().getFloat(0)).otherwise(0))
         .withColumn("Direct_Cann_225", when(col("SKU_Name").contains("M225") || col("SKU_Name").contains("M227"), commercialWithCompCannDF.where(col("SKU_Name").contains("M42")).agg(mean("IR")).head().getFloat(0)).otherwise(0))
         .withColumn("Direct_Cann_252", when(col("SKU_Name").contains("M252") || col("SKU_Name").contains("M254"), commercialWithCompCannDF.where(col("SKU_Name").contains("M45")).agg(mean("IR")).head().getFloat(0)).otherwise(0))
@@ -691,9 +751,8 @@ object CommercialFeatEnggProcessor {
         .withColumn("PriceChange_HPS_OPS", when(col("Changed_Street_Price")===0, 0).otherwise(col("HPS_OPS")))
 
 
-    /*TODO:
-    * if (length(unique(commercial$Week.End.Date[commercial$Season==unique(commercial$Season[order(commercial$Week.End.Date)])
-      [length(unique(commercial$Season))]]))<13){
+    /*
+    * if (length(unique(commercial$Week.End.Date[commercial$Season==unique(commercial$Season[order(commercial$Week.End.Date)])[length(unique(commercial$Season))]]))<13){
         commercial$Season_most_recent <- ifelse(commercial$Season==unique(commercial$Season
         [order(commercial$Week.End.Date)])[length(unique(commercial$Season))], as.character(unique(commercial$Season[order
         (commercial$Week.End.Date)])[length(unique(commercial$Season))-1]), as.character(commercial$Season))
@@ -701,16 +760,27 @@ object CommercialFeatEnggProcessor {
         commercial$Season_most_recent <- commercial$Season
       }
     * */
-    if (/*Above condition*/ true) {
+    val maxWED = commercialWithCompCannDF.agg(max("Week_End_Date")).head().getString(0)
+    val maxWEDSeason = commercialWithCompCannDF.where(col("Week_End_Date")===maxWED).sort(col("Week_End_Date").desc).select("Season").head().getString(0)
+    val latestSeasonCommercial = commercialWithCompCannDF.where(col("Season")===maxWEDSeason)
+
+    val windForSeason = Window.partitionBy("Season").orderBy("Season")
+    val uniqueSeason = commercialWithCompCannDF.orderBy(col("Week_End_Date").desc).select("Season").distinct()
+      .withColumn("rank", rank().over(windForSeason))
+      .where(col("rank")===2).select("Season").head().getString(0)
+
+
+    if (latestSeasonCommercial.select("Week_End_Date").distinct().count()<13) {
       commercialWithCompCannDF = commercialWithCompCannDF
-      //.withColumn("Season_most_recent", )
-      //TODO:ifelse(commercial$Season eq unique(commercial$Season(order(commercial$Week.End.Date)))(length(unique(commercial$Season))), as.character(unique(commercial$Season(order(commercial$Week.End.Date)))(length(unique(commercial$Season)) - 1)), as.character(commercial$Season))
+      .withColumn("Season_most_recent", when(col("Season")===maxWEDSeason,uniqueSeason).otherwise(col("Season")))
+      //ifelse(commercial$Season eq unique(commercial$Season(order(commercial$Week.End.Date)))(length(unique(commercial$Season))), as.character(unique(commercial$Season(order(commercial$Week.End.Date)))(length(unique(commercial$Season)) - 1)), as.character(commercial$Season))
     }else {
       commercialWithCompCannDF = commercialWithCompCannDF
           .withColumn("Season_most_recent", col("Season"))
     }
 
     List("cann_group","SKUWhoChange").foreach(x => {
+      commercialWithCompCannDF = commercialWithCompCannDF.withColumn(x+"_LEVELS", col(x))
       val indexer = new StringIndexer().setInputCol(x).setOutputCol(x+"_fact")
       val pipeline = new Pipeline().setStages(Array(indexer))
       commercialWithCompCannDF = pipeline.fit(commercialWithCompCannDF).transform(commercialWithCompCannDF)

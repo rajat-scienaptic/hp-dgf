@@ -71,6 +71,10 @@ object CommercialUtility {
     }
   })
 
+  val createlist = udf((times: String) => {
+    List.range(0,times.toInt,1)
+  })
+
   //Not being used
   /*val checkOutsidePromoDateUDF = udf((shipDate: String, endDate: String) => {
     //IF [Partner Ship Calendar Date] > DateTimeAdd([End Date],3,"days") THEN "Y" ELSE "N" ENDIF

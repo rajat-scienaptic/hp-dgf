@@ -13,4 +13,4 @@ libraryDependencies ++= Seq(
   "commons-cli" % "commons-cli" % "1.4",
   "org.apache.spark" %% "spark-sql" % "2.3.0"
 )
-libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.3.0" //% "runtime"
+libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.3.0"
