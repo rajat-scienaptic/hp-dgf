@@ -75,6 +75,25 @@ object CommercialUtility {
     List.range(0,times.toInt,1)
   })
 
+  val concatenateRank = udf((x: List[List[Any]]) => {
+    val sortedList = x.map(x=>x(0).toString+"."+x(1).toString).sorted
+    sortedList.map(x => x.split("\\.")(1).toInt)
+  })
+
+  val checkPrevQtsGTBaseline = udf((qts: List[Int], rank: Int, baseline: Int) => {
+    var totalGt = 0
+    for (i <- 1 until rank) {
+      if (qts(i) > baseline) {
+        totalGt += 1
+      }
+    }
+    if (totalGt >= 1)
+      1
+    else
+      0
+  })
+
+
   //Not being used
   /*val checkOutsidePromoDateUDF = udf((shipDate: String, endDate: String) => {
     //IF [Partner Ship Calendar Date] > DateTimeAdd([End Date],3,"days") THEN "Y" ELSE "N" ENDIF

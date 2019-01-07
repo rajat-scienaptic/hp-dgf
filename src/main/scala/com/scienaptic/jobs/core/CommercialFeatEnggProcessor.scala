@@ -10,7 +10,7 @@ import com.scienaptic.jobs.bean.UnionOperation.doUnion
 import java.util.UUID
 import org.apache.spark.sql.functions.rank
 
-import com.scienaptic.jobs.utility.CommercialUtility.{addDaystoDateStringUDF, extractWeekFromDateUDF, createlist}
+import com.scienaptic.jobs.utility.CommercialUtility.{addDaystoDateStringUDF, extractWeekFromDateUDF, createlist, concatenateRank, checkPrevQtsGTBaseline}
   import org.apache.spark.sql.expressions.Window
 
 object CommercialFeatEnggProcessor {
@@ -513,7 +513,7 @@ object CommercialFeatEnggProcessor {
         .withColumn("raw_bl_med", col("no_promo_med")*(col("seasonality_npd")+lit(1)))
 
 
-    /*TODO
+    /*
     * EOL_criterion_commercial <- function (x) {
        #Argument comes as A:B
       Qty <- as.numeric(do.call(rbind, strsplit(x, split=";"))[,1])   #Extracts A
@@ -544,14 +544,20 @@ object CommercialFeatEnggProcessor {
       .sort("SKU_Name","Reseller_Cluster","Week_End_Date")
       .withColumn("Qty&no_promo_med", concat_ws(";",col("Qty"), col("no_promo_med")))
       .withColumn("SKU&Reseller", concat(col("SKU_Name"), col("Reseller_Cluster")))
-      //TODO: EOL_criterion$EOL_criterion <- ave(Qty&no_promo_med, SKU&Reseller, EOL_criterion_commercial)
-      //Already created 2 columns. It would be -------> ave(Qty&no_promo_med, SKU&Reseller, EOL_criterion_commercial)
+      //EOL_criterion$EOL_criterion <- ave(Qty&no_promo_med, SKU&Reseller, EOL_criterion_commercial)
 
     EOLcriterion = EOLcriterion
         .withColumn("rank", rank().over(windForSKUAndReseller))
         .withColumn("EOL_criterion", when(col("rank")<=stability_weeks || col("Qty")<col("baseline"), 0).otherwise(1))
 
-    val EOLWithCriterion1 = EOLcriterion.groupBy("SKU&Reseller").agg(collect_list(when(col("rank")<)))
+    val EOLWithCriterion1 = EOLcriterion.orderBy("SKU_Name","Reseller_Cluster","Week_End_Date").groupBy("SKU&Reseller").agg(collect_list(struct(col("rank"),col("Qty"))).as("QtyArray"))
+      .withColumn("QtyArray", concatenateRank(col("QtyArray")))
+
+    EOLcriterion = EOLcriterion.join(EOLWithCriterion1, Seq("SKU&Reseller"), "left")
+        /*.where(col("EOL_criterion")===1)*/
+      .withColumn("EOL_criterion", checkPrevQtsGTBaseline(col("QtyArray"), col("rank"), col("no_promo_med")))
+        .drop("rank","QtyArray","SKU&Reseller","Qty&no_promo_med")
+
 
     val EOLCriterionLast = EOLcriterion.where(col("EOL_criterion")===1)
       .groupBy("SKU_Name","Reseller_Cluster")
