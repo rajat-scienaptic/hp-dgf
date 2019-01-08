@@ -101,9 +101,9 @@ object CommercialSimplifiedTransform {
     val WEDDF = Utils.loadCSV(executionContext, wedSource.filePath).get.cache()
     val SKUHierDF = Utils.loadCSV(executionContext, skuHierarchySource.filePath).get.cache()
     val commAccountDF = Utils.loadCSV(executionContext, commAccountsSource.filePath).get.cache()
-    val stONYXDF = Utils.loadCSV(executionContext, stOnyxSource.filePath).get.cache()
-    val sttONYXDF = Utils.loadCSV(executionContext, sttOnyxSource.filePath).get.cache()
     val tidyHistDF = Utils.loadCSV(executionContext, tidyHistSource.filePath).get.cache()
+    val sttONYXDF = Utils.loadCSV(executionContext, sttOnyxSource.filePath).get.cache()
+    val stONYXDF = Utils.loadCSV(executionContext, stOnyxSource.filePath).get.cache()
 
     /*
     * Initial Select operations
@@ -459,7 +459,7 @@ object CommercialSimplifiedTransform {
       .withColumn("Reseller Cluster",lit("Other"))
 
     val sttOnyxAndAccountJoinsUnionDF = doUnion(sttOnyxAndAccountsLeftJoinDF, sttOnyxAndAccountsInnerJoinDF).get
-    sttOnyxAndAccountJoinsUnionDF.write.option("header","true").csv("/home/avik/Scienaptic/Projects/HP/HPData/outputs/output_before_ST_Fail.csv")
+    //sttOnyxAndAccountJoinsUnionDF.write.option("header","true").csv("/home/avik/Scienaptic/Projects/HP/HPData/outputs/output_before_ST_Fail.csv")
     sttOnyxAndAccountJoinsUnionDF.show(100)
 
     /*
@@ -474,13 +474,13 @@ object CommercialSimplifiedTransform {
     * Merge WED using WED - 410
     * */
     val sttOnyxAndWEDJoin = sttOnyxSource.joinOperation(STT_ONYX_AND_WED_MERGE_WED)
-    val sttOnyxAndWEDInnerJoinDF = doJoinAndSelect(sttOnyxAndSkuHierInnerJoinDF, wedSelectDF, sttOnyxAndWEDJoin)(INNER)
+    val sttOnyxAndWEDInnerJoinDF = doJoinAndSelect(sttOnyxAndSkuHierInnerJoinDF, wedRenamedDF, sttOnyxAndWEDJoin)(INNER)
 
     /*
     * Group Reseller Cluster, SKU, Week_End_Date - 411 AND add 7 days to Week_End_Date - 414 - Week shift
     * */
-    val sttOnyxResellerSKUWEDGroup = sttOnyxSource.groupOperation(RESELLER_SKU_WED_SUM_AGG_INVENTORY_TOTAL)
-    val sttOnyxResellerSKUWEDGroupDF = doGroup(sttOnyxAndWEDInnerJoinDF, sttOnyxResellerSKUWEDGroup).get
+    val wedSelectDFsttOnyxResellerSKUWEDGroup = sttOnyxSource.groupOperation(RESELLER_SKU_WED_SUM_AGG_INVENTORY_TOTAL)
+    val sttOnyxResellerSKUWEDGroupDF = doGroup(sttOnyxAndWEDInnerJoinDF, wedSelectDFsttOnyxResellerSKUWEDGroup).get
       .withColumn("Week_End_Date",date_add(col("Week_End_Date").cast("timestamp"), 7))
 
     /* ---------------------------- ST ----------------------------- */
@@ -534,11 +534,12 @@ object CommercialSimplifiedTransform {
     * Group Week on St ONYX and SKU Join - 350
     * */
     val stOnyxWeekJoin = stOnyxSource.joinOperation(ST_ONYX_AND_WED)
-    val stOnyxWeekInnerJoinDF = doJoinAndSelect(stOnyxAndSKUHierInnerJoinDF, wedSelectDF, stOnyxWeekJoin)(INNER)
+    val stOnyxWeekInnerJoinDF = doJoinAndSelect(stOnyxAndSKUHierInnerJoinDF, wedRenamedDF, stOnyxWeekJoin)(INNER)
 
     /*
     * 351 - Group Deal ID 1, eTailers,
     * */
+    //TODO: Confirm if group is on SKU or SKU_Name
     val stOnyxGroup = stOnyxSource.groupOperation(DEAL_ETAILERS_ACCOUNT_SEASON_CAL_SKU_FISCAL_SUM_AGG_SELL_THRU_TO_QTY)
     val stOnyxGroupDF = doGroup(stOnyxWeekInnerJoinDF, stOnyxGroup).get
 
