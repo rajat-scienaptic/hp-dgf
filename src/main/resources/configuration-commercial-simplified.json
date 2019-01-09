@@ -364,7 +364,7 @@
           "selectCriteria": []
         },
         "DEAL_ETAILERS_ACCOUNT_SEASON_CAL_SKU_FISCAL_SUM_AGG_SELL_THRU_TO_QTY": {
-          "cols" : ["Deal ID 1","eTailers","Account Consol","Grouping","VPA","Reseller Cluster","Street Price","SKU","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1: Use Case","L2: Key functionality","PLC Status","GA date","ES date","Week_End_Date","season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year"],
+          "cols" : ["Deal ID 1","eTailers","Account Consol","Grouping","VPA","Reseller Cluster","Street Price","SKU","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1: Use Case","L2: Key functionality","PLC Status","GA date","ES date","Week_End_Date","season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","SKU_Name"],
           "aggregations": {"sum":{"Sell-Thru Qty":"STT Qty", "Sell-To Qty":"ST Qty"}},
           "selectCriteria": []
         },
