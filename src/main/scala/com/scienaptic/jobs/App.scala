@@ -17,14 +17,13 @@ class App(args: Array[String]) extends ConfigurationFactory[AppConfiguration](ar
 
   private def start(): Unit = {
     println("Spark-job Started.")
-    val sparkConf = new SparkConf().setAppName("Test")
+    val sparkConf = new SparkConf().setAppName("HP-Pricing-Data")
     sparkConf.set("spark.sql.crossJoin.enabled", "true")
     val spark = SparkSession.builder
       .master(configuration.sparkConfig.master)
       .appName(configuration.sparkConfig.appName)
       .config(sparkConf)
       .getOrCreate
-    spark.sparkContext.setLogLevel("WARN")
     val executionContext = ExecutionContext(spark, configuration)
     try {
       HPDataProcessor.execute(executionContext)

@@ -1,0 +1,7 @@
+{
+  "config": "preregression-commercial",
+  "sparkConfig": {
+    "master": "yarn",
+    "appName": "preregression-commercial"
+  }
+}

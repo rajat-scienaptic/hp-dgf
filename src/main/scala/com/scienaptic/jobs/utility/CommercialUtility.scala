@@ -1,6 +1,7 @@
 package com.scienaptic.jobs.utility
 
 import java.util.Date
+
 import org.apache.spark.sql.functions.udf
 import java.time._
 import java.util.concurrent.TimeUnit
@@ -8,14 +9,29 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.text.SimpleDateFormat
 import java.util.GregorianCalendar
+import scala.util.matching.Regex
+
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
+import org.apache.spark.sql.types.StructType
+
+import scala.collection.mutable
 
 
 object CommercialUtility {
 
-  val ddmmyyyyFormat = DateTimeFormatter.ofPattern("dd-MM-yyyy")
-  val yyyyMMddFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+  val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
+  val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
   val ddmmyyyySimpleFormat = new SimpleDateFormat("dd-MM-yyyy")
+  val sdfMMddyyyySlash = new SimpleDateFormat("MM/dd/yyyy hh:mm")
+  val sdfMMddyyyyHyphen = new SimpleDateFormat("MM-dd-yyyy hh:mm")
+  val dateFormatter = new SimpleDateFormat("yyyy-MM-dd")
 
+
+
+  def writeDF(df: DataFrame, path: String) = {
+    df.coalesce(1).write.option("dateFormat", "yyyy-MM-dd").option("header","true").mode(SaveMode.Overwrite).csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\outputs\\"+path+".csv")
+    //df.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/outputs/INTERMEDIATE/"+path+".csv")
+  }
 
   val createBaseSKUFromProductIDUDF = udf((productID: String) => {
     //println(s"ProductID recieved: $productID")
@@ -23,6 +39,19 @@ object CommercialUtility {
       productID.substring(0, productID.length()-4)
     else
       productID
+  })
+
+  val convertFaultyDateFormat = udf((dateStr: String) => {
+    try {
+      if (dateStr.contains("-")) {
+        dateFormatter.format(dateFormatterMMddyyyyWithHyphen.parse(dateStr))
+      }
+      else {
+        dateFormatter.format(dateFormatterMMddyyyyWithSlash.parse(dateStr))
+      }
+    } catch {
+      case _: Exception => dateStr
+    }
   })
 
   val extractWeekFromDateUDF = udf((dateStr: String,format: String) => {
@@ -34,9 +63,9 @@ object CommercialUtility {
       val calendar = new GregorianCalendar()
       val dt = new SimpleDateFormat(format).parse(dateStr)
       calendar.setTime(dt)
-      val dec = calendar.get(Calendar.DAY_OF_YEAR)/7
-      if (calendar.get(Calendar.DAY_OF_YEAR)%7!=0)
-        dec+1
+      val dec = calendar.get(Calendar.DAY_OF_YEAR) / 7
+      if (calendar.get(Calendar.DAY_OF_YEAR) % 7 != 0)
+        dec
       else
         dec
     /*}
@@ -49,16 +78,16 @@ object CommercialUtility {
   val addDaystoDateStringUDF = udf((dateString: String, days: Int) => {
     //DateTimeAdd([Partner Ship Calendar Date],6-[Temp Date Calc],"days")
     try {
-      val sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
-      val result = new Date(sdf.parse(dateString).getTime() + TimeUnit.DAYS.toMillis(6-days))
+      val sdf = new SimpleDateFormat("yyyy-MM-dd")
+      val result = new Date(sdf.parse(dateString).getTime() + TimeUnit.DAYS.toMillis(7-days))
       sdf.format(result)
     }
     catch {
       case nullPoint: NullPointerException => dateString
       case e: Exception => dateString
     }
-    val sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
-    val result = new Date(sdf.parse(dateString).getTime() + TimeUnit.DAYS.toMillis(6-days))
+    val sdf = new SimpleDateFormat("yyyy-MM-dd")
+    val result = new Date(sdf.parse(dateString).getTime() + TimeUnit.DAYS.toMillis(7-days))
     sdf.format(result)
   })
 
@@ -71,26 +100,46 @@ object CommercialUtility {
     }
   })
 
-  val createlist = udf((times: String) => {
+  val createlist = udf((times: Int) => {
     List.range(0,times.toInt,1)
   })
 
-  val concatenateRank = udf((x: List[List[Any]]) => {
-    val sortedList = x.map(x=>x(0).toString+"."+x(1).toString).sorted
-    sortedList.map(x => x.split("\\.")(1).toInt)
+  val concatenateRank = udf((x: mutable.WrappedArray[String]) => {
+  //val concatenateRank = udf((x: List[List[Any]]) => {
+    try {
+      //println("Camee as : "+x.toList)
+      val sortedList = x.toList.map(x => (x.split("_")(0).toInt,x.split("_")(1).toInt))
+      /*println("------------->   " + sortedList)
+      println("---------------> " + sortedList.sortBy(x => x._1))
+      println("------------------------> " + sortedList.sortBy(x => x._1).map(x => x._2.toInt))*/
+      sortedList.sortBy(x => x._1).map(x => x._2.toInt)
+      /*val sortedList = x.map(x=> x.getAs[Int](0).toString+"."+x.getAs[Int](1).toString).sorted
+      sortedList.map(x => x.split("\\.")(1).toInt)*/
+    } catch {
+      case _: Exception => null
+    }
   })
 
-  val checkPrevQtsGTBaseline = udf((qts: List[Int], rank: Int, baseline: Int) => {
+  val checkPrevQtsGTBaseline = udf((qts: mutable.WrappedArray[Int], rank: Int, baseline: Int, stab_weeks: Int) => {
     var totalGt = 0
-    for (i <- 1 until rank) {
-      if (qts(i) > baseline) {
-        totalGt += 1
-      }
-    }
-    if (totalGt >= 1)
-      1
-    else
+    if (rank <= stab_weeks)
       0
+    else {
+      /*println("Quantities came: ---> " + qts)
+      println("Rank is --------> "+ rank + " baseline ---------> " + baseline + " stab_weeks ----------> "+ stab_weeks)
+      println("Start is ----------> " + (rank-stab_weeks))*/
+      val start = rank-stab_weeks-1
+      for (i <- start until (rank-1)) {
+        /*println("Comparing Quantity : " + qts(i) +" and Baseline : " + baseline + " result is ::: " + (qts(i).toInt > baseline.toInt))*/
+        if (qts(i) > baseline) {
+          totalGt += 1
+        }
+      }
+      if (totalGt >= 1)
+        1
+      else
+        0
+    }
   })
 
 
@@ -143,7 +192,7 @@ object CommercialUtility {
 
 
   /* Private functions */
-  private def returnDiffBetweenDates(firstDateString: String, secDateString: String, intFormat: String): Int = {
+  /*private def returnDiffBetweenDates(firstDateString: String, secDateString: String, intFormat: String): Int = {
     //println(s":::::::::::::::::::::::::::::::::::: Got firstDateString: $firstDateString and second $secDateString")
     val firstDate = convertStringToLocalDate(firstDateString)
     val secondDate = convertStringToLocalDate(secDateString)
@@ -156,7 +205,7 @@ object CommercialUtility {
         per.getMonths()
       }
     }
-  }
+  }*/
 
   private def addIntervalToDate(dateStr: String, interval: Int, intFormat: String): String = {
     val dateVal = convertStringToSimpleDate(dateStr, "yyyy-MM-dd")
@@ -170,8 +219,8 @@ object CommercialUtility {
     simpleFormat.parse(dateStr)
   }
 
-  private def convertStringToLocalDate(dateStr: String): LocalDate = {
+  /*private def convertStringToLocalDate(dateStr: String): LocalDate = {
     LocalDate.parse(dateStr, ddmmyyyyFormat)
-  }
+  }*/
 
 }

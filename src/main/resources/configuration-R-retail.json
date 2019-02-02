@@ -1,0 +1,7 @@
+{
+  "config": "R-retail",
+  "sparkConfig": {
+    "master": "yarn",
+    "appName": "hp-R-retail"
+  }
+}

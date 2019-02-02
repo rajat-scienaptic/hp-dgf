@@ -12,6 +12,19 @@ import org.apache.spark.sql.types.IntegerType
 
 object Utils {
 
+  def renameColumns(scienapticDataframe: DataFrame) = {
+    var renameMap = scala.collection.mutable.Map[String, String]()
+    scienapticDataframe.columns.map(x => {
+      if (x contains ".") {
+        val orgCol = x
+        renameMap(orgCol) = x.replace(".", "_")
+      } else {
+        renameMap(x) = x
+      }
+    })
+    convertListToDFColumnWithRename(renameMap.toMap,scienapticDataframe)
+  }
+
   def convertListToDFColumn(columnList: List[String], dataFrame: DataFrame) = {
     columnList.map(name => dataFrame.col(name))
   }

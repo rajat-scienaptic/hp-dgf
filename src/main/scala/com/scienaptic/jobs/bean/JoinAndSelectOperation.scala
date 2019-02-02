@@ -61,7 +61,12 @@ object JoinAndSelectOperation {
     }
 
     joinTypes.foreach(joinType => {
-      joinMap(joinType) = dataFrame1.join(dataFrame2, joinExpr, joinType).select(selectAll: _*)
+      joinType match {
+        case "leftanti" => joinMap(joinType) = dataFrame1.join(dataFrame2, joinExpr, joinType).select(dataFrame1.col("*"))
+        case "rightanti" => joinMap(joinType) = dataFrame2.join(dataFrame1, joinExpr, "leftanti").select(dataFrame2.col("*"))
+        case _ => joinMap(joinType) = dataFrame1.join(dataFrame2, joinExpr, joinType).select(selectAll: _*)
+        //joinMap(joinType) = dataFrame1.join(dataFrame2, joinExpr, joinType).select(selectAll: _*)
+      }
     })
 
     joinMap

@@ -1,0 +1,7 @@
+{
+  "config": "R-commercial",
+  "sparkConfig": {
+    "master": "yarn",
+    "appName": "hp-R-commercial-simplified"
+  }
+}
