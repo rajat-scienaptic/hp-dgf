@@ -17,7 +17,7 @@ import com.scienaptic.jobs.utility.CommercialUtility.{addDaystoDateStringUDF, ch
 import org.apache.spark.sql.expressions.Window
 import com.scienaptic.jobs.utility.CommercialUtility._
 
-object CommercialFeatEnggProcessor {
+object CommercialFeatEnggProcessorCleaned {
   val Cat_switch=1
   val min_baseline = 2
   val stability_weeks = 4
@@ -383,7 +383,7 @@ object CommercialFeatEnggProcessor {
       .na.fill(0, Seq("L1_competition_HP_ssmodel","L2_competition_HP_ssmodel"))
     //writeDF(commercialWithCompetitionDF,"commercialWithCompetitionDF_L1_L2_Competition_SS_Feat")*/
 
-    commercialWithCompetitionDF = commercialWithCompetitionD
+    commercialWithCompetitionDF = commercialWithCompetitionDF
         .withColumn("wed_cat", concat_ws(".",col("Week_End_Date"), col("L1_Category")))
     
     val commercialWithCompetitionDFTemp1 = commercialWithCompetitionDF
@@ -401,7 +401,7 @@ object CommercialFeatEnggProcessor {
 
     commercialWithCompetitionDF = commercialWithCompetitionDF.join(commercialWithCompetitionDFTemp2, Seq("wed_cat"), "left")
         .withColumn("L2_cannibalization", (col("z")-(col("Promo_Pct")*col("Qty")))/(col("w")-col("Qty")))
-        .drop("z","w","wed_cat")*/
+        .drop("z","w","wed_cat")
 
 
     var commercialWithCompCannDF = commercialWithCompetitionDF

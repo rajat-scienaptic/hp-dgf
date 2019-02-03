@@ -29,7 +29,7 @@ object CommercialUtility {
 
 
   def writeDF(df: DataFrame, path: String) = {
-    df.coalesce(1).write.option("dateFormat", "yyyy-MM-dd").option("header","true").mode(SaveMode.Overwrite).csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\outputs\\"+path+".csv")
+    df.coalesce(1).write.option("dateFormat", "yyyy-MM-dd").option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Testing\\Commercial_Alteryx\\spark-intermediate\\"+path+".csv")
     //df.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/outputs/INTERMEDIATE/"+path+".csv")
   }
 
