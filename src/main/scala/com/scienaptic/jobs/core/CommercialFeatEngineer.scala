@@ -48,8 +48,8 @@ object CommercialFeatEnggProcessor {
     import spark.implicits._
 
     //val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\posqty_output_commercial.csv")
-    val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/Pricing/Output/POS_Commercial/posqty_output_commercial.csv")
-      .repartition(2000).persist(StorageLevel.MEMORY_AND_DISK)
+    val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_output_commercial.csv")
+      .repartition(500).persist(StorageLevel.MEMORY_AND_DISK)
     var commercial = renameColumns(commercialDF).cache()
     commercial.columns.toList.foreach(x => {
       commercial = commercial.withColumn(x, when(col(x).cast("string") === "NA" || col(x).cast("string") === "", null).otherwise(col(x)))
@@ -62,14 +62,14 @@ object CommercialFeatEnggProcessor {
       .withColumn("GA date",to_date(unix_timestamp(col("GA date"),"YYYY-MM-dd").cast("timestamp")))
 
     //val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\IFS2_most_recent.csv")
-    val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/ManagedSources/IFS2/IFS2_most_recent.csv")
+    val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/IFS2/IFS2_most_recent.csv")
     var ifs2 = renameColumns(ifs2DF)
     ifs2.columns.toList.foreach(x => {
       ifs2 = ifs2.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     ifs2 = ifs2
       .withColumn("Valid_Start_Date", to_date(unix_timestamp(col("Valid_Start_Date"),"MM/dd/yyyy").cast("timestamp")))
-      .withColumn("Valid_End_Date", to_date(unix_timestamp(col("Valid_End_Date"),"MM/dd/yyyy").cast("timestamp"))).repartition(1000)
+      .withColumn("Valid_End_Date", to_date(unix_timestamp(col("Valid_End_Date"),"MM/dd/yyyy").cast("timestamp"))).repartition(500)
         .persist(StorageLevel.MEMORY_AND_DISK)
     //writeDF(ifs2,"ifs2")
     //writeDF(commercial,"commercial")
@@ -144,8 +144,8 @@ object CommercialFeatEnggProcessor {
       .agg(sum("Qty").as("Qty"), sum("Inv_Qty").as("Inv_Qty"), max("IR").as("IR"), sum("Big_Deal_Qty").as("Big_Deal_Qty"), sum("Non_Big_Deal_Qty").as("Non_Big_Deal_Qty"))
     //writeDF(commercialSSDF,"commercialSSAfterGroup")*/
 
-    val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\AUX_sku_hierarchy.csv")
-    //val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/ManagedSources/AUX/AUX_sku_hierarchy.csv")
+    //val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\AUX_sku_hierarchy.csv")
+    val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/AUX/Aux_sku_hierarchy.csv")
     var auxTable = renameColumns(auxTableDF).cache()
     auxTable.columns.toList.foreach(x => {
       auxTable = auxTable.withColumn(x, when(col(x).cast("string") === "NA" || col(x).cast("string") === "", null).otherwise(col(x)))
@@ -235,8 +235,8 @@ object CommercialFeatEnggProcessor {
     commercialwithHolidaysDF.persist(StorageLevel.MEMORY_AND_DISK)
     //writeDF(commercialwithHolidaysDF,"Commercial_With_Holidays")*/
 
-    var npdDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\NPD_weekly.csv")
-    //var npdDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/ManagedSources/NPD/NPD_weekly.csv")
+    //var npdDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\NPD_weekly.csv")
+    var npdDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/NPD/NPD_weekly.csv")
     var npd = renameColumns(npdDF)
     npd.columns.toList.foreach(x => {
       npd = npd.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
@@ -308,7 +308,7 @@ object CommercialFeatEnggProcessor {
     //writeDF(commercialWithCompetitionDF,"commercialWithCompetitionDF_AFTER_L1_L2_JOIN")
     commercialWithCompetitionDF= commercialWithCompetitionDF.na.fill(0, Seq("L1_competition_Brother","L1_competition_Canon","L1_competition_Epson","L1_competition_Lexmark","L1_competition_Samsung"))
         .na.fill(0, Seq("L2_competition_Brother","L2_competition_Epson","L2_competition_Canon","L2_competition_Lexmark","L2_competition_Samsung"))
-      .repartition(2001).cache()
+      .repartition(500).cache()
     //writeDF(commercialWithCompetitionDF,"commercialWithCompetitionDF_WITH_L1_L2")
     /*====================================== Brand Not HP =================================*/
     val npdChannelNotRetailBrandNotHP = npd.where((col("Channel")=!="Retail") && (col("Brand")=!="HP"))
@@ -510,8 +510,8 @@ object CommercialFeatEnggProcessor {
       .withColumn("avg_discount_SKU_Account",col("Qty_IR")/col("QTY_SP"))
     //writeDF(avgDiscountSKUAccountDF,"avgDiscountSKUAccountDF")
 
-    commercialWithCompCannDF = commercialWithCompCannDF.withColumn("SKU_Name",col("SKU_Name")).withColumn("Reseller_Cluster",col("Reseller_Cluster"))
-      .join(avgDiscountSKUAccountDF.withColumn("SKU_Name",col("SKU_Name")).withColumn("Reseller_Cluster",col("Reseller_Cluster")), Seq("SKU_Name","Reseller_Cluster","Reseller_Cluster_LEVELS"), "left")
+    commercialWithCompCannDF = commercialWithCompCannDF.withColumn("SKU_Name",col("SKU_Name")).withColumn("Reseller_Cluster",col("Reseller_Cluster")).withColumn("Reseller_Cluster_LEVELS",col("Reseller_Cluster_LEVELS"))    //TODO: Newly added
+      .join(avgDiscountSKUAccountDF.withColumn("SKU_Name",col("SKU_Name")).withColumn("Reseller_Cluster",col("Reseller_Cluster")).withColumn("Reseller_Cluster_LEVELS",col("Reseller_Cluster_LEVELS")), Seq("SKU_Name","Reseller_Cluster","Reseller_Cluster_LEVELS"), "left")
         .withColumn("avg_discount_SKU_Account", when(col("avg_discount_SKU_Account").isNull, 0).otherwise(col("avg_discount_SKU_Account")))
         .na.fill(0, Seq("avg_discount_SKU_Account"))
         .withColumn("supplies_GM_scaling_factor", lit(-0.3))
@@ -535,7 +535,7 @@ object CommercialFeatEnggProcessor {
         .withColumn("Big_Deal", when(col("Big_Deal_Qty")>0, 1).otherwise(lit(0)))
         .withColumn("Big_Deal_Qty_log", log(when(col("Big_Deal_Qty")<1,1).otherwise(col("Big_Deal_Qty"))))
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_WITH_LOGS")*/
-    commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/comercialTemp/CommercialFeatEngg/commercialWithCompCannDF.csv")
+    commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialWithCompCannDF.csv")
 
     /*val wind = Window.partitionBy("SKU_Name","Reseller_Cluster").orderBy("Qty")
     commercialWithCompCannDF.createOrReplaceTempView("commercial")
@@ -592,7 +592,7 @@ object CommercialFeatEnggProcessor {
         .withColumn("raw_bl_med", col("no_promo_med")*(col("seasonality_npd")+lit(1)))
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_AFTER_NPBL")*/
 
-    val windForSKUAndReseller = Window.partitionBy("SKU&Reseller")
+    /*val windForSKUAndReseller = Window.partitionBy("SKU&Reseller")
       .orderBy(/*"SKU_Name","Reseller_Cluster","Reseller_Cluster_LEVELS",*/"Week_End_Date")
 
     var EOLcriterion = commercialWithCompCannDF
@@ -651,7 +651,7 @@ object CommercialFeatEnggProcessor {
       .withColumn("EOL", when((col("SKU")==="C5F94A") && (col("Season")=!="STS'17"), 0).otherwise(col("EOL")))
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_WITH_EOL")*/
     
-    var BOL = commercialWithCompCannDF.select("SKU","ES date_LEVELS","GA date_LEVELS")
+    /*var BOL = commercialWithCompCannDF.select("SKU","ES date_LEVELS","GA date_LEVELS")
       .withColumnRenamed("ES date_LEVELS","ES date").withColumnRenamed("GA date_LEVELS","GA date").dropDuplicates()
     //writeDF(BOL,"BOL_WITH_DROP_DUPLICATES")
     
@@ -712,7 +712,7 @@ object CommercialFeatEnggProcessor {
       .join(BOLCriterionMin.withColumn("SKU",col("SKU")).withColumn("Reseller_Cluster",col("Reseller_Cluster")), Seq("SKU","Reseller_Cluster","Reseller_Cluster_LEVELS"), "left")
     //writeDF(BOLCriterion,"BOLCriterion_AFTER_FIRST_MIN_MAX_JOIN")*/
     
-    BOLCriterion = BOLCriterion.withColumn("first_date", when(col("first_date").isNull, col("max_date")).otherwise(col("first_date")))
+    /*BOLCriterion = BOLCriterion.withColumn("first_date", when(col("first_date").isNull, col("max_date")).otherwise(col("first_date")))
       .drop("max_date")
     //writeDF(BOLCriterion,"BOLCriterion_WITH_FIRST_DATE")
     val minMinDateBOL = BOLCriterion.agg(min("min_date")).head().getDate(0)
@@ -724,7 +724,7 @@ object CommercialFeatEnggProcessor {
     BOLCriterion = BOLCriterion.withColumn("diff_weeks", col("diff_weeks").cast("int"))
     //writeDF(BOLCriterion,"BOLCriterion_WITH_DIFF_WEEKS")*/
     
-    BOLCriterion = BOLCriterion
+    /*BOLCriterion = BOLCriterion
       .withColumn("repList", createlist(col("diff_weeks").cast("int")))
       .withColumn("add", explode(col("repList"))).drop("repList")
       .withColumn("add", col("add")/*+lit(1)*/)
@@ -743,7 +743,7 @@ object CommercialFeatEnggProcessor {
       .join(BOLCriterion.withColumn("SKU",col("SKU")).withColumn("Reseller_Cluster",col("Reseller_Cluster")).withColumn("Week_End_Date",col("Week_End_Date")), Seq("SKU","Reseller_Cluster","Reseller_Cluster_LEVELS","Week_End_Date"), "left")
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_WITH_BOL_JOINED_BEFORE_NULL_IMPUTATION")*/
     
-    commercialWithCompCannDF = commercialWithCompCannDF
+    /*commercialWithCompCannDF = commercialWithCompCannDF
       .withColumn("BOL", when(col("EOL")===1,0).otherwise(col("BOL_criterion")))
       .withColumn("BOL", when(datediff(col("Week_End_Date"),col("GA date_LEVELS"))<(7*6),1).otherwise(col("BOL")))
       .withColumn("BOL", when(col("GA date_LEVELS").isNull, 0).otherwise(col("BOL")))
@@ -785,7 +785,7 @@ object CommercialFeatEnggProcessor {
       .agg(mean(col("Promo_Flag")).as("PromoFlagAvg"))
     //writeDF(commercialPromoMean,"commercialPromoMean_WITH_PROMO_FLAG_Avg")*/
     
-    commercialWithCompCannDF = commercialWithCompCannDF.join(commercialPromoMean, Seq("Reseller_Cluster","Reseller_Cluster_LEVELS","SKU_Name","Season"), "left")
+    /*commercialWithCompCannDF = commercialWithCompCannDF.join(commercialPromoMean, Seq("Reseller_Cluster","Reseller_Cluster_LEVELS","SKU_Name","Season"), "left")
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_JOINED_PROMO_MEAN")
     commercialWithCompCannDF = commercialWithCompCannDF
       .withColumn("always_promo_Flag", when(col("PromoFlagAvg")===1, 1).otherwise(0)).drop("PromoFlagAvg")
@@ -847,7 +847,7 @@ object CommercialFeatEnggProcessor {
       .withColumn("Supplies_GM", when(col("L1_Category")==="Scanners",0).otherwise(col("Supplies_GM")))
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_DIRECT_CANN_20")*/
 
-    commercialWithCompCannDF = commercialWithCompCannDF
+    /*commercialWithCompCannDF = commercialWithCompCannDF
       .withColumn("exclude", when(!col("PL_LEVELS").isin("3Y"),when(col("Reseller_Cluster_LEVELS").isin("Other - Option C", "eTailerOther - Option C", "Stockpiler & Deal Chaser", "eTailerStockpiler & Deal Chaser") || col("low_volume")===1 || col("low_baseline")===1 || col("spike")===1 || col("opposite")===1 || col("EOL")===1 || col("BOL")===1 || col("no_promo_sales")===1,1).otherwise(0)).otherwise(0))
       .withColumn("exclude", when(col("PL_LEVELS").isin("3Y"),when(col("Reseller_Cluster_LEVELS").isin("Other - Option C", "eTailerOther - Option C", "Stockpiler & Deal Chaser", "eTailerStockpiler & Deal Chaser") || col("low_volume")===1 || /*col("low_baseline")===1 ||*/ col("spike")===1 || col("opposite")===1 || col("EOL")===1 || col("BOL")===1 || col("no_promo_sales")===1,1).otherwise(0)).otherwise(col("exclude")))
       .withColumn("exclude", when(col("SKU_Name").contains("Sprocket"), 1).otherwise(col("exclude")))

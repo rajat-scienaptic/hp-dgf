@@ -46,6 +46,8 @@ object CommercialFeatEnggProcessorPart2 {
 
     import spark.implicits._
 
+    //val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+
     var commercialWithCompCannDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialWithCompCannDF.csv")
       .persist(StorageLevel.MEMORY_AND_DISK)
 
@@ -347,9 +349,9 @@ object CommercialFeatEnggProcessorPart2 {
       .join(commWeek3, Seq("is252", "Week_End_Date"), "left")
       .join(commWeek4, Seq("is277", "Week_End_Date"), "left")
       .withColumn("Direct_Cann_201", when(col("Direct_Cann_201").isNull,0).otherwise(col("Direct_Cann_201")))
-      .withColumn("Direct_Cann_225", when(col("Direct_Cann_201").isNull,0).otherwise(col("Direct_Cann_225")))
-      .withColumn("Direct_Cann_252", when(col("Direct_Cann_201").isNull,0).otherwise(col("Direct_Cann_252")))
-      .withColumn("Direct_Cann_277", when(col("Direct_Cann_201").isNull,0).otherwise(col("Direct_Cann_277")))
+      .withColumn("Direct_Cann_225", when(col("Direct_Cann_225").isNull,0).otherwise(col("Direct_Cann_225")))
+      .withColumn("Direct_Cann_252", when(col("Direct_Cann_252").isNull,0).otherwise(col("Direct_Cann_252")))
+      .withColumn("Direct_Cann_277", when(col("Direct_Cann_277").isNull,0).otherwise(col("Direct_Cann_277")))
     //writeDF(commercialWithCompCannDF, "commercialWithCompCannDF_WITH_DIRECT_CANN")
 
     commercialWithCompCannDF = commercialWithCompCannDF.drop("is225","is201","is252","is277","isM40","isM42","isM45","isM47")
@@ -403,11 +405,8 @@ object CommercialFeatEnggProcessorPart2 {
       .withColumnRenamed("Consol SKU","Consol_SKU")
       .withColumnRenamed("Full Name","Full_Name")
 
-    val format = new SimpleDateFormat("d-M-y_h-m-s")
-    import java.util.Calendar
-    //commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Output/Preregression_Commercial/regression_data_commercial_Jan27.csv")
-    /*+format.format(Calendar.getInstance().getTime().toString)+*/
-    commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Output/Preregression_Commercial/regression_data_commercial.csv")
+    commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/Preregression_Commercial/regression_data_commercial_Feb5.csv")
+//    commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/Preregression_Commercial/regression_data_commercial_"+currentTS+".csv")
 
   }
 }
