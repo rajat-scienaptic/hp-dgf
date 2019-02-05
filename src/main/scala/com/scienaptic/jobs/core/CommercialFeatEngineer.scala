@@ -10,6 +10,7 @@ import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.StringIndexer
 import com.scienaptic.jobs.bean.UnionOperation.doUnion
 import java.util.UUID
+import org.apache.spark.storage.StorageLevel
 
 import org.apache.spark.sql.functions.rank
 import com.scienaptic.jobs.utility.Utils.renameColumns
@@ -17,7 +18,7 @@ import com.scienaptic.jobs.utility.CommercialUtility.{addDaystoDateStringUDF, ch
 import org.apache.spark.sql.expressions.Window
 import com.scienaptic.jobs.utility.CommercialUtility._
 
-object CommercialFeatEnggProcessorCleaned {
+object CommercialFeatEnggProcessor {
   val Cat_switch=1
   val min_baseline = 2
   val stability_weeks = 4
@@ -48,7 +49,7 @@ object CommercialFeatEnggProcessorCleaned {
 
     //val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\posqty_output_commercial.csv")
     val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/Pricing/Output/POS_Commercial/posqty_output_commercial.csv")
-
+      .repartition(2000).persist(StorageLevel.MEMORY_AND_DISK)
     var commercial = renameColumns(commercialDF).cache()
     commercial.columns.toList.foreach(x => {
       commercial = commercial.withColumn(x, when(col(x).cast("string") === "NA" || col(x).cast("string") === "", null).otherwise(col(x)))
@@ -68,7 +69,8 @@ object CommercialFeatEnggProcessorCleaned {
     })
     ifs2 = ifs2
       .withColumn("Valid_Start_Date", to_date(unix_timestamp(col("Valid_Start_Date"),"MM/dd/yyyy").cast("timestamp")))
-      .withColumn("Valid_End_Date", to_date(unix_timestamp(col("Valid_End_Date"),"MM/dd/yyyy").cast("timestamp"))).cache()
+      .withColumn("Valid_End_Date", to_date(unix_timestamp(col("Valid_End_Date"),"MM/dd/yyyy").cast("timestamp"))).repartition(1000)
+        .persist(StorageLevel.MEMORY_AND_DISK)
     //writeDF(ifs2,"ifs2")
     //writeDF(commercial,"commercial")
 
@@ -121,13 +123,13 @@ object CommercialFeatEnggProcessorCleaned {
     val commercialResellerClusterFactDF = pipelineForResellerCluster.fit(commercialMatResellerStockPilerDF).transform(commercialMatResellerStockPilerDF)
       .drop("Reseller_Cluster").withColumnRenamed("Reseller_Cluster_fact","Reseller_Cluster").drop("Reseller_Cluster_fact")
       .withColumn("Reseller_Cluster", (col("Reseller_Cluster")+lit(1)).cast("int"))   //String indexer starts from 0
-      .drop("eTailer")
+      .drop("eTailer").cache()
     //writeDF(commercialResellerClusterFactDF,"commercialResellerClusterFactDF_BEFORE_HP_AND_SS")
 
     val commercialResFacNotPL = commercialResellerClusterFactDF.where(!col("PL").isin("E4","E0","ED"))
       .withColumn("Brand",lit("HP"))
         .withColumn("GA date",to_date(col("GA date")))
-        .withColumn("ES date",to_date(col("ES date")))
+        .withColumn("ES date",to_date(col("ES date"))).cache()
     ////writeDF(commercialResFacNotPL,"commercialHPBeforeGroup")
     var commercialHPDF = commercialResFacNotPL
       .groupBy("SKU","SKU_Name","Reseller_Cluster","Reseller_Cluster_LEVELS","Week_End_Date","Season","Street_Price","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Category Custom","Line","PL","L1_Category","L2_Category","PLC Status","GA date","ES date","Inv_Qty","Special_Programs")
@@ -148,7 +150,7 @@ object CommercialFeatEnggProcessorCleaned {
     auxTable.columns.toList.foreach(x => {
       auxTable = auxTable.withColumn(x, when(col(x).cast("string") === "NA" || col(x).cast("string") === "", null).otherwise(col(x)))
     })
-
+    auxTable.persist(StorageLevel.MEMORY_AND_DISK)
     val commercialSSJoinSKUDF = commercialSSDF.join(auxTable, Seq("SKU"), "left")
       .withColumnRenamed("HPS/OPS","HPS_OPS")
       .withColumn("L1_Category",col("L1: Use Case"))
@@ -169,10 +171,11 @@ object CommercialFeatEnggProcessorCleaned {
     List("IPSLES","HPS_OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Category Custom","L1_Category","L2_Category","PLC Status","GA date","ES date").foreach(column => {
       val indexer = new StringIndexer().setInputCol(column).setOutputCol(column+"_fact").setHandleInvalid("keep")
       val pipeline = new Pipeline().setStages(Array(indexer))
-      commercialHPDF = commercialHPDF.withColumn(column+"_LEVELS", col(column))   //TODO: Change this to col(column)
+      commercialHPDF = commercialHPDF.withColumn(column+"_LEVELS", col(column))
       commercialHPDF = pipeline.fit(commercialHPDF).transform(commercialHPDF)
         .drop(column).withColumnRenamed(column+"_fact",column).drop(column+"_fact")
     })
+    commercialHPDF.cache()
     //writeDF(commercialHPDF,"commercialHPDF_BEFORE_UNION")
     //writeDF(commercialSSFactorsDF,"commercialSSFactorsDF_BEFORE_UNION")*/
 
@@ -229,6 +232,7 @@ object CommercialFeatEnggProcessorCleaned {
       .foreach(x=> {
            commercialwithHolidaysDF = commercialwithHolidaysDF.withColumn(x, when(col(x).isNull, 0).otherwise(col(x)))
       })
+    commercialwithHolidaysDF.persist(StorageLevel.MEMORY_AND_DISK)
     //writeDF(commercialwithHolidaysDF,"Commercial_With_Holidays")*/
 
     var npdDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\NPD_weekly.csv")
@@ -242,7 +246,7 @@ object CommercialFeatEnggProcessorCleaned {
 
     /*================= Brand not Main Brands =======================*/
     val npdChannelBrandFilterNotRetail = npd.where((col("Channel") =!= "Retail") && (col("Brand").isin("Canon","Epson","Brother","Lexmark","Samsung")))
-      .where((col("DOLLARS")>0) && (col("MSRP__")>0))
+      .where((col("DOLLARS")>0) && (col("MSRP__")>0)).cache()
     //writeDF(npdChannelBrandFilterNotRetail,"npdChannel_Brand_FilterNotRetail")
     val L1Competition =  npdChannelBrandFilterNotRetail
       .groupBy("L1_Category","Week_End_Date","Brand")
@@ -304,10 +308,11 @@ object CommercialFeatEnggProcessorCleaned {
     //writeDF(commercialWithCompetitionDF,"commercialWithCompetitionDF_AFTER_L1_L2_JOIN")
     commercialWithCompetitionDF= commercialWithCompetitionDF.na.fill(0, Seq("L1_competition_Brother","L1_competition_Canon","L1_competition_Epson","L1_competition_Lexmark","L1_competition_Samsung"))
         .na.fill(0, Seq("L2_competition_Brother","L2_competition_Epson","L2_competition_Canon","L2_competition_Lexmark","L2_competition_Samsung"))
+      .repartition(2001).cache()
     //writeDF(commercialWithCompetitionDF,"commercialWithCompetitionDF_WITH_L1_L2")
     /*====================================== Brand Not HP =================================*/
     val npdChannelNotRetailBrandNotHP = npd.where((col("Channel")=!="Retail") && (col("Brand")=!="HP"))
-      .where((col("DOLLARS")>0) && (col("MSRP__")>0))
+      .where((col("DOLLARS")>0) && (col("MSRP__")>0)).cache()
     //writeDF(npdChannelNotRetailBrandNotHP,"npdChannelNotRetailBrandNotHP")
     var L1CompetitionNonHP = npdChannelNotRetailBrandNotHP
       .groupBy("L1_Category","Week_End_Date")
@@ -330,7 +335,7 @@ object CommercialFeatEnggProcessorCleaned {
     
     /*=================================== Brand Not Samsung ===================================*/
     val npdChannelNotRetailBrandNotSamsung = npd.where((col("Channel")=!="Retail") && (col("Brand")=!="Samsung"))
-      .where((col("DOLLARS")>0) && (col("MSRP__")>0))
+      .where((col("DOLLARS")>0) && (col("MSRP__")>0)).cache()
     //writeDF(npdChannelNotRetailBrandNotSamsung,"npdChannelNotRetailBrandNotSamsung")
     val L1CompetitionSS = npdChannelNotRetailBrandNotSamsung
       .groupBy("L1_Category","Week_End_Date")
@@ -356,9 +361,8 @@ object CommercialFeatEnggProcessorCleaned {
     //writeDF(commercialWithCompetitionDF,"commercialWithCompetitionDF_Samsung")*/
     
     /* ========================================================================================== */
-    //Jan 30 - 10:38 PM -- Matching till here
     val commercialBrandinHP = commercialWithCompetitionDF.where(col("Brand").isin("HP"))
-        .withColumn("Qty_pmax",greatest(col("Qty"),lit(0)))
+        .withColumn("Qty_pmax",greatest(col("Qty"),lit(0))).cache()
     //writeDF(commercialBrandinHP,"commercialBrandinHP_WITH_QTY_PMAX")
     val HPComp1 = commercialBrandinHP
       .groupBy("Week_End_Date","L1_Category")
@@ -380,7 +384,7 @@ object CommercialFeatEnggProcessorCleaned {
         .join(HPComp2, Seq("Week_End_Date","L2_Category"), "left")
       .withColumn("L1_competition_HP_ssmodel", when((col("L1_competition_HP_ssmodel").isNull) || (col("L1_competition_HP_ssmodel")<0), 0).otherwise(col("L1_competition_HP_ssmodel")))
       .withColumn("L2_competition_HP_ssmodel", when((col("L2_competition_HP_ssmodel").isNull) || (col("L2_competition_HP_ssmodel")<0), 0).otherwise(col("L2_competition_HP_ssmodel")))
-      .na.fill(0, Seq("L1_competition_HP_ssmodel","L2_competition_HP_ssmodel"))
+      .na.fill(0, Seq("L1_competition_HP_ssmodel","L2_competition_HP_ssmodel")).cache()
     //writeDF(commercialWithCompetitionDF,"commercialWithCompetitionDF_L1_L2_Competition_SS_Feat")*/
 
     commercialWithCompetitionDF = commercialWithCompetitionDF
@@ -432,7 +436,7 @@ object CommercialFeatEnggProcessorCleaned {
       .withColumn("L1_cannibalization", when(col("L1_cannibalization").isNull, 0).otherwise(col("L1_cannibalization")))
       .withColumn("L2_cannibalization", when(col("L2_cannibalization").isNull, 0).otherwise(col("L2_cannibalization")))
       .na.fill(0, Seq("L2_cannibalization","L1_cannibalization"))
-      .withColumn("Sale_Price", col("Street Price")-col("IR"))
+      .withColumn("Sale_Price", col("Street Price")-col("IR")).persist(StorageLevel.MEMORY_AND_DISK)
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_CANNABILIZATION")
 
     val AverageWeeklySales = commercialWithCompCannDF
@@ -443,7 +447,7 @@ object CommercialFeatEnggProcessorCleaned {
       .withColumn("Year", year(col("Week_End_Date")).cast("string")).withColumn("Year_LEVELS", col("year"))
     npdChannelNotRetail = npdChannelNotRetail
       .withColumn("Week", when(col("Week_End_Date").isNull, null).otherwise(extractWeekFromDateUDF(col("Week_End_Date").cast("string"), lit("yyyy-MM-dd"))))
-
+        .cache()
     val npdFilteredL1CategoryDF = npdChannelNotRetail.where(col("L1_Category").isNotNull)
     var seasonalityNPD = npdFilteredL1CategoryDF
       .groupBy("Week","L1_Category")
@@ -465,7 +469,7 @@ object CommercialFeatEnggProcessorCleaned {
       .withColumn("Week", extractWeekFromDateUDF(col("Week_End_Date").cast("string"), lit("yyyy-MM-dd"))).withColumn("Week_LEVELS",col("Week"))
     ////writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_With_WEEK")
 
-    var seasonalityNPDScanner = seasonalityNPD.where(col("L1_Category")==="Office - Personal")
+    val seasonalityNPDScanner = seasonalityNPD.where(col("L1_Category")==="Office - Personal")
       .withColumn("L1_Category", when(col("L1_Category")==="Office - Personal", "Scanners").otherwise(col("L1_Category")))
     //writeDF(seasonalityNPDScanner,"seasonalityNPDScanner")
     seasonalityNPD = doUnion(seasonalityNPD, seasonalityNPDScanner).get
@@ -480,7 +484,7 @@ object CommercialFeatEnggProcessorCleaned {
         .withColumn("Changed_Street_Price", when(col("Changed_Street_Price").isNull, 0).otherwise(col("Changed_Street_Price")))
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_Seasonality")
 
-    val ifs2FilteredAccount = ifs2.where(col("Account").isin("Best Buy","Office Depot-Max","Staples"))
+    val ifs2FilteredAccount = ifs2.where(col("Account").isin("Best Buy","Office Depot-Max","Staples")).cache()
     val ifs2RetailAvg = ifs2FilteredAccount
       .groupBy("SKU")
       .agg(mean("Hardware_GM").as("Hardware_GM_retail_avg"), mean("Hardware_Rev").as("Hardware_Rev_retail_avg"), mean("Supplies_GM").as("Supplies_GM_retail_avg"), mean("Supplies_Rev").as("Supplies_Rev_retail_avg")).cache()
@@ -497,6 +501,7 @@ object CommercialFeatEnggProcessorCleaned {
       .withColumn("Hardware_Rev", when(col("Hardware_Rev").isNull, col("Hardware_Rev_retail_avg")).otherwise(col("Hardware_Rev")))
       .withColumn("Supplies_GM", when(col("Supplies_GM").isNull, col("Supplies_GM_retail_avg")).otherwise(col("Supplies_GM")))
       .withColumn("Supplies_Rev", when(col("Supplies_Rev").isNull, col("Supplies_Rev_retail_avg")).otherwise(col("Supplies_Rev")))
+        .cache()
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_WITH_HARDWARE_SUPPLIES_FEAT")*/
 
     val avgDiscountSKUAccountDF = commercialWithCompCannDF
@@ -530,8 +535,9 @@ object CommercialFeatEnggProcessorCleaned {
         .withColumn("Big_Deal", when(col("Big_Deal_Qty")>0, 1).otherwise(lit(0)))
         .withColumn("Big_Deal_Qty_log", log(when(col("Big_Deal_Qty")<1,1).otherwise(col("Big_Deal_Qty"))))
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_WITH_LOGS")*/
+    commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/comercialTemp/CommercialFeatEngg/commercialWithCompCannDF.csv")
 
-    val wind = Window.partitionBy("SKU_Name","Reseller_Cluster").orderBy("Qty")
+    /*val wind = Window.partitionBy("SKU_Name","Reseller_Cluster").orderBy("Qty")
     commercialWithCompCannDF.createOrReplaceTempView("commercial")
 
     val percentil75DF = spark.sql("select SKU_Name, Reseller_Cluster, Reseller_Cluster_LEVELS, PERCENTILE(Qty, 0.75) OVER (PARTITION BY SKU_Name, Reseller_Cluster, Reseller_Cluster_LEVELS) as percentile_0_75 from commercial")
@@ -556,7 +562,7 @@ object CommercialFeatEnggProcessorCleaned {
         .withColumn("Qty", col("Qty").cast("int"))
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_Spike")*/
 
-    commercialWithCompCannDF = commercialWithCompCannDF.withColumn("Qty",col("Qty").cast("int"))
+    /*commercialWithCompCannDF = commercialWithCompCannDF.withColumn("Qty",col("Qty").cast("int"))
     val commercialWithHolidayAndQtyFilter = commercialWithCompCannDF.withColumn("Qty",col("Qty").cast("int"))
       .where((col("Promo_Flag")===0) && (col("USThanksgivingDay")===0) && (col("USCyberMonday")===0) && (col("spike")===0))
       .where(col("Qty")>0)
@@ -870,7 +876,7 @@ object CommercialFeatEnggProcessorCleaned {
 
     val format = new SimpleDateFormat("d-M-y_h-m-s")
     import java.util.Calendar;
-    commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Output/Preregression_Commercial/regression_data_commercial_Jan27.csv")
-    //commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Output/Preregression_Commercial/regression_data_commercial"+format.format(Calendar.getInstance().getTime().toString.replace(" ","%20"))+".csv")
+    commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Output/Preregression_Commercial/regression_data_commercial_Jan27.csv")*/
+    //commercialWithCompCannDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Output/Preregression_Commercial/regression_data_commercial"+format.format(Calendar.getInstance().getTime().toString.replace(" ","%20"))+".csv")*/
   }
 }

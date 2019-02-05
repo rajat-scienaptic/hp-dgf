@@ -17,7 +17,7 @@ import com.scienaptic.jobs.utility.CommercialUtility.{addDaystoDateStringUDF, ch
 import org.apache.spark.sql.expressions.Window
 import com.scienaptic.jobs.utility.CommercialUtility._
 
-object CommercialFeatEnggProcessor {
+object CommercialFeatEnggProcessorTest {
   val Cat_switch=1
   val min_baseline = 2
   val stability_weeks = 4

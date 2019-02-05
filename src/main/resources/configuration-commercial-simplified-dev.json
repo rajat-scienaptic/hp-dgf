@@ -131,7 +131,7 @@
         },
         "SKU_PROMO_CODE_AVG_CLAIM_QUANTITY": {
           "cols" : ["Base SKU","C2B Promo Code"],
-          "aggregations": {"sum":{"Sum_Sum_Claim Quantity":"Avg_Sum_Sum_Claim Quantity"}},
+          "aggregations": {"avg":{"Sum_Sum_Claim Quantity":"Avg_Sum_Sum_Claim Quantity"}},
           "selectCriteria": []
         },
         "WED_SKU_CLAIM_REBATE_PROMO_CODE_SUM_CLAIM_QUANTITY": {
@@ -154,12 +154,12 @@
         "FILTER_PROGRAM_EQ_BID_DEAL": {
           "multiWordMap": {},
           "conditionTypes": ["and"],
-          "conditions": ["Program = Big_Deal"]
+          "conditions": ["Program = Big.Deal"]
         },
         "FILTER_PROGRAM_EQ_PROMO_OPTION_C": {
           "multiWordMap": {},
           "conditionTypes": ["and"],
-          "conditions": ["Program = Promo_Option_C"]
+          "conditions": ["Program = Promo.Option.C"]
         },
         "FILTER_OUTSIDE_PROMO_DATE_EQ_N": {
           "multiWordMap": {"out_prom_date": "Outside Promo Date"},
@@ -179,7 +179,7 @@
         "OPTION_TYPE_NOT_EQUALS_OPTION_C": {
           "multiWordMap": {"opt_type": "Option Type", "opt_c": "Option C"},
           "conditionTypes": ["and"],
-          "conditions": ["opt_type = opt_c"]
+          "conditions": ["opt_type != opt_c"]
         }
       },
       "sort": {
@@ -286,7 +286,7 @@
         },
         "ST_ONYX_AND_WED": {
           "isUnknown": "y",
-          "typeOfJoin": ["leftanti","inner"],
+          "typeOfJoin": ["inner"],
           "joinCriteria": {
             "left": ["Week"],
             "right": ["fy_week"]
