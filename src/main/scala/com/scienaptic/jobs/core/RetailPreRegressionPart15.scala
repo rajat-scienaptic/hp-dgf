@@ -254,7 +254,8 @@ object RetailPreRegressionPart15 {
     //retail_acc.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1884.csv")
 
     retailWithCompCann3DF = retailWithCompCann3DF.drop("Street_Price")
-      .join(retail_acc, Seq("SKU", "Week_End_Date"), "left")
+        .withColumn("Week_End_Date", col("Week_End_Date"))
+      .join(retail_acc.withColumn("Week_End_Date", col("Week_End_Date")), Seq("SKU", "Week_End_Date"), "left")
 
     // retailWithCompCann3DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1887.csv")
 
