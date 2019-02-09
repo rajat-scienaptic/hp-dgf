@@ -185,8 +185,8 @@ object RetailPreRegressionPart12 {
       .groupBy("Week_End_Date", "Online", "PriceBand", "Brand")
       .agg(sum(col("Promo_Pct_Min") * col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
 
-    val retailGroupWEDSKUPriceBrand1 = retailGroupWEDSKUOnline2
-      .join(retailGroupWEDSKUPriceBrandTemp1, Seq("Week_End_Date", "Online", "PriceBand", "Brand"), "left")
+    val retailGroupWEDSKUPriceBrand1 = retailGroupWEDSKUOnline2.withColumn("PriceBand", col("PriceBand"))
+      .join(retailGroupWEDSKUPriceBrandTemp1.withColumn("PriceBand", col("PriceBand")), Seq("Week_End_Date", "Online", "PriceBand", "Brand"), "left")
       .withColumn("PriceBand_cannibalization_OnOffline_Min", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2")))
       .drop("sum1", "sum2", "sumSKU1", "sumSKU2")
     // TODO : check -> PriceBand Inner Cann  //    group_by(Account, add=TRUE)
