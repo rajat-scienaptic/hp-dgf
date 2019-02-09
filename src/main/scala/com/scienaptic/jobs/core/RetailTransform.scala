@@ -643,12 +643,12 @@ object RetailTransform {
     val format = new SimpleDateFormat("d-M-y h-m-s")
     import java.util.Calendar;
 
+    val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+
     bbyBundleInfoSort01DF.dropDuplicates(List("Account", "Online", "SKU", "Week_End_Date", "Max_Week_End_Date"))
-      .write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Output/POS_Retail/posqty_retail_output.csv")
-    bbyBundleInfoSort01DF.dropDuplicates(List("Account", "Online", "SKU", "Week_End_Date", "Max_Week_End_Date"))
-      .write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Output/POS_Retail"+format.format(Calendar.getInstance().getTime()).toString+".csv")
+      .write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Output/POS_Retail/posqty_retail_output_"+currentTS+".csv")
     // formula
-    val bbyBundleInfoFormula08DF = bbyBundleInfoSort01DF.withColumn("Workflow Run Date", current_date())
+    //val bbyBundleInfoFormula08DF = bbyBundleInfoSort01DF.withColumn("Workflow Run Date", current_date())
 
     // browse
   }

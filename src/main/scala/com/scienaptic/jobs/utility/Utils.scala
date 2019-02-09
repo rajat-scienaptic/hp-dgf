@@ -38,9 +38,10 @@ object Utils {
   def loadCSV(context: ExecutionContext, file: String): Try[DataFrame] = {
     Try {
       val scienapticDataframe = context.spark.read
-        .format("org.apache.spark.csv")
+        //.format("org.apache.spark.csv")
         .option("header", true)
         .option("inferSchema", true)
+        .option("ignoreLeadingWhiteSpace","false").option("ignoreTrailingWhiteSpace","false")
         .csv(file)
 
       var renameMap = scala.collection.mutable.Map[String, String]()

@@ -32,7 +32,7 @@
         "RENAME_INITIAL_SELECT": {
           "Deal ID": "Big Deal ID",
           "Claim Partner Name": "Partner Desc",
-          "Manufacturing Product Identified": "Product ID",
+          "Manufacturing Product Identifier": "Product ID",
           "Claim Partner Unit Rebate USD": "Claim Partner Unit Rebate"
         }
       },

@@ -91,15 +91,15 @@ object CommercialSimplifiedTransform {
 
     val sparkConf = new SparkConf().setAppName("Test")
     val spark = SparkSession.builder
-      .master("local[*]")
-      //.master("yarn-client")
+      //.master("local[*]")
+      .master("yarn-client")
       .appName("Commercial")
       .config(sparkConf)
       .getOrCreate
 
     val sourceMap = executionContext.configuration.sources
 
-    //val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
     val iecSource = sourceMap(IEC_SOURCE)
     val xsClaimsSource = sourceMap(XS_CLAIMS_SOURCE)
@@ -270,7 +270,7 @@ object CommercialSimplifiedTransform {
     /*
     * OUTPUT - claims_consolidated.csv
     * */
-    claimsAndSKUJoinsUnionDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/claims_consolidated_Feb5.csv")
+    claimsAndSKUJoinsUnionDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/claims_consolidated_"+currentTS+".csv")
 
     /*Group - 385*/
     val claimsResellerWEDSKUProgramGroup = xsClaimsSource.groupOperation(RESELLER_WED_SKU_PROGRAM_AGG_CLAIM_REBATE_QUANTITY)
@@ -760,8 +760,10 @@ object CommercialSimplifiedTransform {
     val posqtyOutputCommercialDF = doSelect(stOnyxWithPromoSpendETailerResellerAndNullImputeDF, stOnyxFinalFeaturesSelect.cols, stOnyxFinalFeaturesSelect.isUnknown).get
     .withColumn("L1_Category",col("L1: Use Case")).withColumn("L2_Category",col("L2: Key functionality"))
     .drop("L1: Use Case").drop("L2: Key functionality")
+        .withColumn("Spend",col("Promo Spend"))
+        .select("Reseller Cluster","VPA","Street Price","SKU","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1_Category","L2_Category","PLC Status","GA date","ES date","Week_End_Date","Season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","SKU_Name","Big_Deal_Qty","Non_Big_Deal_Qty","Qty","IR","Promo Flag","Inv_Qty","eTailer","Promo Spend","Spend")
     //writeDF(posqtyOutputCommercialDF,"POSQTY_OUTPUT_COMMERCIAL")
-    posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_Feb5.csv")
+    posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
 
   }
 }

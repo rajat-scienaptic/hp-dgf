@@ -16,7 +16,7 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % "2.3.0"
 )
 libraryDependencies += "org.apache.spark" %% "spark-mllib" % "2.3.0"
-
+libraryDependencies += "com.crealytics" %% "spark-excel" % "0.11.0"
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case x => MergeStrategy.first
