@@ -171,7 +171,8 @@ object RetailPreRegressionPart03 {
     // comment till here as not needed
 
     //    retailJoinSpreadPrice.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-Feb07-364.csv")
-    var amz = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/etherData/Pricing/Outputs/POS_Amazon/amazon_sales_price.csv")).cache()
+    val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    var amz = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/etherData/Pricing/Outputs/POS_Amazon/amazon_sales_price_"+currentTS+".csv")).cache()
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
     amz.columns.toList.foreach(x => {
       amz = amz.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
