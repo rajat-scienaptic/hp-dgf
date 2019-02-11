@@ -90,10 +90,11 @@ object RetailPreRegressionPart10 {
         0
     }
   })
+
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCannDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Seasonality-Hardware-PART09.csv")
+    var retailWithCompCannDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Seasonality-Hardware-PART09.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -166,24 +167,13 @@ object RetailPreRegressionPart10 {
       .groupBy("SKU_Name", "Account")
       .agg((sum(col("POS_Qty") * col("Total_IR")) / sum(col("POS_Qty") * col("Street_Price"))).as("avg_discount_SKU_Account"))
 
-    //write
-    //    avgDiscountSKUAccountDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1334.csv")
-
-    retailWithCompCannDF = retailWithCompCannDF.join(avgDiscountSKUAccountDF, Seq("SKU_Name", "Account"), "left")
-
-    //write
-    //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1338.csv")
-
     retailWithCompCannDF = retailWithCompCannDF
+      .join(avgDiscountSKUAccountDF, Seq("SKU_Name", "Account"), "left")
       .withColumn("avg_discount_SKU_Account", when(col("avg_discount_SKU_Account").isNull, 0).otherwise(col("avg_discount_SKU_Account")))
       .na.fill(0, Seq("avg_discount_SKU_Account"))
 
     retailWithCompCannDF = retailWithCompCannDF
       .join(supplies_GM_scaling_factor, Seq("L1_Category", "Account"), "left")
-    //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1345.csv")
-
-
-    retailWithCompCannDF = retailWithCompCannDF
       .withColumn("supplies_GM_scaling_factor", when(col("supplies_GM_scaling_factor").isNull, 0).otherwise(col("supplies_GM_scaling_factor")))
       .withColumn("supplies_GM_scaling_factor", lit(-0.3))
       .withColumn("supplies_GM_scaling_factor", when(col("Account") === "Best Buy" && col("SKU") === "M9L66A", lit(-0.8))
@@ -211,7 +201,7 @@ object RetailPreRegressionPart10 {
       .withColumn("L2_competition_log", when(col("L2_competition_log").isNull, 0).otherwise(col("L2_competition_log")))
       .drop("SKU_category")
 
-        retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-SuppliesGM-PART10.csv")
+    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-SuppliesGM-PART10.csv")
 
 
   }

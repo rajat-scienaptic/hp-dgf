@@ -110,19 +110,8 @@ object RetailPreRegressionPart11 {
 
     retailWithCompCannDF = retailWithCompCannDF
       .join(SKUCategeory, Seq("SKU", "Account"), "left")
-
-    //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-Feb06-r-1409-sku-category.csv")
-
-    retailWithCompCannDF = retailWithCompCannDF
       .withColumn("SKU_category", when(col("SKU_category").isNull, lit("Low Volume SKU") + col("L1_category")).otherwise(col("SKU_Name")))
-    /*.withColumn("SKU_category_LEVELS", col("SKU_category"))
-        val indexerSKU = new StringIndexer().setInputCol("SKU_category").setOutputCol("SKU_category_fact")
-    val pipelineSKU = new Pipeline().setStages(Array(indexerSKU))
 
-    retailWithCompCannDF = pipelineSKU.fit(retailWithCompCannDF).transform(retailWithCompCannDF)
-      .drop("SKU_category").withColumnRenamed("SKU_category_fact", "SKU_category").drop("SKU_category_fact")
-      .withColumn("POS_Qty", lit(min_baseline))
-    */
     val retailWithHolidayAndQtyFilter = retailWithCompCannDF.where((col("Promo_Flag") === 0) && (col("EOL_criterion") === 0) && (col("BOL_criterion") === 0) && (col("USThanksgivingDay") === 0) && (col("USCyberMonday") === 0) && (col("POS_Qty") > 0))
     var npbl = retailWithHolidayAndQtyFilter
       .groupBy("Account", "SKU_Name")
@@ -134,8 +123,6 @@ object RetailPreRegressionPart11 {
 
     npbl = npbl.withColumn("SKU_Name", col("SKU_Name")).withColumn("Account", col("Account"))
       .join(npblTemp.withColumn("SKU_Name", col("SKU_Name")).withColumn("Account", col("Account")), Seq("Account", "SKU_Name"), "inner")
-
-    npbl = npbl
       .withColumn("no_promo_med", when(col("SKU_Name") === "Envy 5535" && col("Account") === "Office Depot-Max", 21).otherwise(col("no_promo_med")))
       .withColumn("no_promo_med", when(col("SKU_Name") === "OJ Pro 8610" && col("Account") === "Office Depot-Max", 4057).otherwise(col("no_promo_med")))
       .withColumn("no_promo_med", when(col("SKU_Name") === "OJ Pro 8610" && col("Account") === "Staples", 232).otherwise(col("no_promo_med")))
@@ -150,12 +137,6 @@ object RetailPreRegressionPart11 {
       .withColumn("raw_bl_med", col("no_promo_med") * (col("seasonality_npd2") + lit(1)))
       .withColumn("low_baseline", when(col("Online") === 1, 0).otherwise(col("low_baseline")))
 
-    //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1592.csv")
-    //    var retailWithCompCannDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("D:\\files\\temp\\retail-r-1592.csv")
-    //    .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-    //          .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
-    //          .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
-    //          .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
     val retailLowConfidence = retailWithCompCannDF
       .filter(col("Promo_Flag") === 0 && col("low_volume") === 0 && col("EOL_criterion") === 0 && col("BOL_criterion") === 0 &&
         col("USThanksgivingDay") === 0 && col("USCyberMonday") === 0)
@@ -165,19 +146,8 @@ object RetailPreRegressionPart11 {
       .drop("n")
       .withColumn("low_confidence", lit(1))
 
-    //    retailLowConfidence.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1472.csv")
-
     retailWithCompCannDF = retailWithCompCannDF
       .join(retailLowConfidence, Seq("Account", "SKU_Name"), "left")
-
-    //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1483.csv")
-    //    var retailWithCompCannDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("D:\\files\\temp\\retail-r-1483.csv")
-    //      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
-
-    retailWithCompCannDF = retailWithCompCannDF
       .withColumn("low_confidence", when(col("low_confidence").isNull, lit(0)).otherwise(col("low_confidence")))
       .withColumn("NP_Flag", when((col("Account") === "Costco" || col("Account") === "Sam's Club") && col("Promo_Flag") === 1, lit(1)).otherwise(col("NP_Flag")))
       .withColumn("high_disc_Flag", when(col("Promo_Pct") <= 0.55, 0).otherwise(lit(1)))
@@ -191,79 +161,9 @@ object RetailPreRegressionPart11 {
     retailWithCompCannDF = retailWithCompCannDF.join(retailPromoMean, Seq("Account", "SKU_Name", "Season"), "left")
       .withColumn("always_promo_Flag", when(col("PromoFlagAvg") === 1, 1).otherwise(0)).drop("PromoFlagAvg")
 
-    /*#Season most recent
-    if (length(unique(retail$Week.End.Date[retail$Season==unique(retail$Season[order(retail$Week.End.Date)])[length(unique(retail$Season))]]))<13){
-      retail$Season_most_recent <- ifelse(retail$Season==unique(retail$Season[order(retail$Week.End.Date)])[length(unique(retail$Season))], as.character(unique(retail$Season[order(retail$Week.End.Date)])[length(unique(retail$Season))-1]), as.character(retail$Season))
-    } else {
-      retail$Season_most_recent <- retail$Season
-    }*/
-
-    val maxWED = retailWithCompCannDF.agg(max("Week_End_Date")).head().getDate(0)
-    val maxWEDSeason = retailWithCompCannDF.where(col("Week_End_Date") === maxWED).sort(col("Week_End_Date").desc).select("Season").head().getString(0)
-    val latestSeasonRetail = retailWithCompCannDF.where(col("Season") === maxWEDSeason)
-
-    val windForSeason = Window.orderBy(col("Week_End_Date").desc)
-    val uniqueSeason = retailWithCompCannDF
-      .withColumn("rank", row_number().over(windForSeason))
-      .where(col("rank") === 2).select("Season").head().getString(0)
-
-    val latestSeason = latestSeasonRetail.select("Week_End_Date").distinct().count()
-    if (latestSeason < 13) {
-      retailWithCompCannDF = retailWithCompCannDF
-        .withColumn("Season_most_recent", when(col("Season") === maxWEDSeason, uniqueSeason).otherwise(col("Season")))
-      //ifelse(commercial$Season eq unique(commercial$Season(order(commercial$Week.End.Date)))(length(unique(commercial$Season))), as.character(unique(commercial$Season(order(commercial$Week.End.Date)))(length(unique(commercial$Season)) - 1)), as.character(commercial$Season))
-    } else {
-      retailWithCompCannDF = retailWithCompCannDF
-        .withColumn("Season_most_recent", col("Season"))
-    }
-
-    retailWithCompCannDF = retailWithCompCannDF
-      .withColumn("trend", lit(1))
+    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-NoPromo-SkuCategory-PART11.csv")
 
 
-    //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1500.csv")
-
-    val retailWithCompCannForTrendDF = retailWithCompCannDF
-      .groupBy("Week_End_Date")
-      .agg(min("Week_End_Date").as("minWED"))
-      .withColumn("WEDDiff", (datediff(col("Week_End_Date"), col("minWED")) / 7)).drop("minWED")
-    retailWithCompCannDF = retailWithCompCannDF.withColumn("Week_End_Date", col("Week_End_Date"))
-      .join(retailWithCompCannForTrendDF.withColumn("Week_End_Date", col("Week_End_Date")), Seq("Week_End_Date"), "left")
-      .withColumn("trend", col("trend") + col("WEDDiff")).drop("WEDDiff")
-
-    retailWithCompCannDF = retailWithCompCannDF
-      //.withColumn("trend", col("trend") + (expr("datediff(Week_End_Date,minWED)") / 7))
-      //.join(retailWithCompCannDF, Seq("Week_End_Date"), "right")
-      .withColumn("Promo_Pct_Ave", lit(lit(1) - col("ImpAve") / col("Street_Price")))
-      .withColumn("Promo_Pct_Min", lit(lit(1) - col("ImpMin") / col("Street_Price")))
-
-    // ungroup starts
-    ////
-
-    retailWithCompCannDF = retailWithCompCannDF
-      .withColumn("wed_cat", concat_ws(".", col("Week_End_Date"), col("L1_Category")))
-    //      .withColumn("POS_Qty", when(col("POS_Qty") < 0, 0).otherwise(col("POS_Qty")))
-
-    var retailWithCompCannDFtmep1 = retailWithCompCannDF
-      .groupBy("wed_cat")
-      .agg(sum(col("Promo_Pct") * col("POS_Qty")).as("z"), sum(col("POS_Qty")).as("w"))
-
-    retailWithCompCannDF = retailWithCompCannDF.join(retailWithCompCannDFtmep1, Seq("wed_cat"), "left")
-      .withColumn("L1_cannibalization_OnOffline_Min", (col("z") - (col("Promo_Pct") * col("POS_Qty"))) / (col("w") - col("POS_Qty")))
-      .drop("z", "w", "wed_cat")
-      .withColumn("wed_cat", concat_ws(".", col("Week_End_Date"), col("L2_Category")))
-
-
-    var retailWithCompetitionDFtmep2 = retailWithCompCannDF
-      .groupBy("wed_cat")
-      .agg(sum(col("Promo_Pct") * col("POS_Qty")).as("z"), sum(col("POS_Qty")).as("w"))
-
-    retailWithCompCannDF = retailWithCompCannDF.join(retailWithCompetitionDFtmep2, Seq("wed_cat"), "left")
-      .withColumn("L2_cannibalization_OnOffline_Min", (col("z") - (col("Promo_Pct") * col("POS_Qty"))) / (col("w") - col("POS_Qty")))
-      .drop("z", "w", "wed_cat")
-
-
-    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2CannOfflineOnline-PART11.csv")
 
 
   }

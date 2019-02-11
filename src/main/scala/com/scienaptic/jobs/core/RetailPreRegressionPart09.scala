@@ -93,10 +93,11 @@ object RetailPreRegressionPart09 {
         0
     }
   })
+
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCannDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART08.csv")
+    var retailWithCompCannDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART08.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -107,10 +108,10 @@ object RetailPreRegressionPart09 {
       npd = npd.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     npd = npd.cache()
-    .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", lit(null)).otherwise(
-      when(col("Week_End_Date").contains("-"), to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
-        .otherwise(to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
-    ))
+      .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", lit(null)).otherwise(
+        when(col("Week_End_Date").contains("-"), to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
+          .otherwise(to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
+      ))
 
     var IFS2 = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/etherData/managedSources/IFS2/IFS2_most_recent.csv"))
     IFS2.columns.toList.foreach(x => {
@@ -124,15 +125,6 @@ object RetailPreRegressionPart09 {
     var npdChanneRetail = npd.where(col("Channel") === "Retail")
       .withColumn("Year", when(col("Week_End_Date").isNull, null).otherwise(year(col("Week_End_Date")).cast("string")))
       .withColumn("Week", when(col("Week_End_Date").isNull, null).otherwise(extractWeekFromDateUDF(col("Week_End_Date").cast("string"), lit("yyyy-MM-dd")).cast(StringType)))
-
-    // factor creation
-    /*List("Year", "Week").foreach(x => {
-      val indexer = new StringIndexer().setInputCol(x).setOutputCol(x + "_fact").setHandleInvalid("keep")
-      val pipeline = new Pipeline().setStages(Array(indexer))
-      npdChanneRetail = pipeline.fit(npdChanneRetail).transform(npdChanneRetail)
-        .drop(x).withColumnRenamed(x + "_fact", x).drop(x + "_fact")
-    })*/
-
     val npdFilteredL1CategoryDF = npdChanneRetail.where(col("L1_Category").isNotNull)
     var seasonalityNPD = npdFilteredL1CategoryDF
       .groupBy("Week", "L1_Category")
@@ -149,50 +141,21 @@ object RetailPreRegressionPart09 {
       .withColumn("seasonality_npd", (col("UNITS_average") / col("average")) - lit(1))
       .drop("UNITS", "UNITS_average", "average", "Years")
 
-    //    val weekindexer = new StringIndexer().setInputCol("Week").setOutputCol("Week_fact").setHandleInvalid("keep")
-    //    val weekpipeline = new Pipeline().setStages(Array(weekindexer))
-
-    // factor creation
-    //    retailWithCompCannDF = retailWithCompCannDF.withColumn("Week", when(col("Week_End_Date").isNull, null).otherwise(extractWeekFromDateUDF(col("Week_End_Date").cast("string"), lit("yyyy-MM-dd")).cast(StringType)))
-    //      .withColumn("Week_LEVELS", col("Week"))
-    //    retailWithCompCannDF = weekpipeline.fit(retailWithCompCannDF).transform(retailWithCompCannDF)
-    //      .drop("Week").withColumnRenamed("Week_fact", "Week").drop("Week_fact")
 
     retailWithCompCannDF = retailWithCompCannDF
       .withColumn("Week", when(col("Week_End_Date").isNull, null).otherwise(extractWeekFromDateUDF(col("Week_End_Date").cast("string"), lit("yyyy-MM-dd")).cast(StringType)))
       .join(seasonalityNPD, Seq("L1_Category", "Week"), "left").drop("Week")
-
-    // write
-    //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-Feb06-r-1386")
-
-    retailWithCompCannDF = retailWithCompCannDF
       .withColumn("seasonality_npd2", when((col("USCyberMonday") === lit(1)) || (col("USThanksgivingDay") === lit(1)), 0).otherwise(col("seasonality_npd").cast(IntegerType)))
       .withColumn("seasonality_npd2", when(col("PL") === "4X", lit(1)).otherwise(col("seasonality_npd2")))
-    //      .withColumn("Account", when(col("Account") === "Amazon", "Amazon-Proper")
-    //        .when(col("Account").isin("hpshopping.com"), "HP Shopping")
-    //        .when(col("Account").isin("Amazon.Com"), "Amazon-Proper").otherwise(col("Account"))
-    //      )
+
 
     retailWithCompCannDF = retailWithCompCannDF
       .join(IFS2.filter(col("Account").isin("Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples", "Costco", "Sam's Club", "HP Shopping", "Walmart"))
         .select("SKU", "Account", "Street_Price", "Hardware_GM", "Supplies_GM", "Hardware_Rev", "Supplies_Rev", "Valid_Start_Date", "Valid_End_Date"), Seq("SKU", "Account", "Street_Price"), "left")
-
-    //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-Feb06-r-1277")
-
-    //    var retailWithCompCannDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("D:\\files\\temp\\retail-r-1277").cache()
-    //      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
-
-    retailWithCompCannDF = retailWithCompCannDF
       .withColumn("Valid_Start_Date", when(col("Valid_Start_Date").isNull, dat2000_01_01).otherwise(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))
       //      .withColumn("Street_Price", when(col("Street_Price").isNull, col("Street_Price_Org")).otherwise(col("Street_Price")))
       .where((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") < col("Valid_End_Date")))
-    //      .drop("Street_Price_Org", "Valid_Start_Date", "Valid_End_Date")
-
-    //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1409.csv")
 
     val aveGM = retailWithCompCannDF.dropDuplicates("SKU", "Account")
       .groupBy("SKU")
@@ -206,11 +169,11 @@ object RetailPreRegressionPart09 {
       .withColumn("Hardware_GM", when(col("Hardware_GM").isNull, col("aveHWGM")).otherwise(col("Hardware_GM")))
       .withColumn("Hardware_GM", when(col("aveHWGM").isNull, lit(null).cast(StringType)).otherwise(col("Hardware_GM")))
       .withColumn("Supplies_GM", when(col("Supplies_GM").isNull, col("aveSuppliesGM")).otherwise(col("Supplies_GM")))
-      .withColumn("Supplies_GM", when(col("aveSuppliesGM").isNull,  lit(null).cast(StringType)).otherwise(col("Supplies_GM")))
+      .withColumn("Supplies_GM", when(col("aveSuppliesGM").isNull, lit(null).cast(StringType)).otherwise(col("Supplies_GM")))
       .withColumn("Supplies_GM", when(col("PL") === "4X", 0).otherwise(col("Supplies_GM")))
 
     // write
-        retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Seasonality-Hardware-PART09.csv")
+    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Seasonality-Hardware-PART09.csv")
 
   }
 }

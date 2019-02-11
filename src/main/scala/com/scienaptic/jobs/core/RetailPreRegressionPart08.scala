@@ -93,11 +93,12 @@ object RetailPreRegressionPart08 {
         0
     }
   })
+
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
 
-    var retailWithCompetitionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-HP-PART07.csv")
+    var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-HP-PART07.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -113,16 +114,7 @@ object RetailPreRegressionPart08 {
     retailWithCompetitionDF = retailWithCompetitionDF
       .join(inkPromo, Seq("Category", "Account", "Week_End_Date"), "left")
       .withColumn("BOGO_dummy", when(col("BOGO_dummy").isNull, "No.BOGO").otherwise(col("BOGO_dummy")))
-      /* .withColumn("BOGO_dummy_LEVELS", col("BOGO_dummy"))
-       .withColumn("BOGO_dummy", when(col("BOGO_dummy") === "No_BOGO", "AAANo_BOGO").otherwise(col("BOGO_dummy"))) // relevel first then apply string indexer
-     val indexerBOGO = new StringIndexer().setInputCol("BOGO_dummy").setOutputCol("BOGO_dummy_fact")
-     val pipelineBOGO = new Pipeline().setStages(Array(indexerBOGO))
-     retailWithCompetitionDF = pipelineBOGO.fit(retailWithCompetitionDF).transform(retailWithCompetitionDF)
-       .drop("BOGO_dummy").withColumnRenamed("BOGO_dummy_fact", "BOGO_dummy").drop("BOGO_dummy_fact")
-       */
       .withColumn("BOGO", when(col("BOGO_dummy") === "No.BOGO", 0).otherwise(1))
-
-    retailWithCompetitionDF = retailWithCompetitionDF
       .withColumn("wed_cat", concat_ws(".", col("Week_End_Date"), col("L1_Category")))
     //      .withColumn("POS_Qty", when(col("POS_Qty") < 0, 0).otherwise(col("POS_Qty")))
 
@@ -188,13 +180,10 @@ object RetailPreRegressionPart08 {
       .withColumn("L1_cannibalization", when(col("L1_cannibalization").isNull || col("L1_cannibalization") === "", 0).otherwise(col("L1_cannibalization")))
       .withColumn("L2_cannibalization", when(col("L2_cannibalization").isNull || col("L2_cannibalization") === "", 0).otherwise(col("L2_cannibalization")))
       .na.fill(0, Seq("L2_cannibalization", "L1_cannibalization"))
-
-
-    retailWithCompCannDF = retailWithCompCannDF
       .withColumn("Sale_Price", col("Street_Price") - col("Total_IR"))
       .withColumn("Price_Range_20_Perc_high", lit(1.2) * col("Sale_Price"))
 
-        retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART08.csv")
+    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART08.csv")
 
   }
 }
