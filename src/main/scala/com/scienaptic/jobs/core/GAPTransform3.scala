@@ -56,7 +56,7 @@ object GAPTransform3 {
     import spark.implicits._
     val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
     var promo3=renameColumns(spark.read.option("header","true").option("inferSchema","true")
-      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo"+currentTS+".csv"))
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_"+currentTS+".csv"))
       .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"yyyy-MM-dd").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"yyyy-MM-dd").cast("timestamp")))
     promo3.columns.toList.foreach(x => {
