@@ -71,6 +71,7 @@ object AmazonTransform {
       .withColumn("Online",lit(1))
       .withColumn("Account",lit("Amazon-Proper"))
       .select("SKU","Account","Week_End_Date","Online","AMZ Sales Price","LBB")
+        .withColumnRenamed("AMZ Sales Price","AMZ_Sales_Price")
     rawfile.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
       .csv("/etherData/Pricing/Outputs/POS_Amazon/amazon_sales_price_"+currentTS+".csv")
 
