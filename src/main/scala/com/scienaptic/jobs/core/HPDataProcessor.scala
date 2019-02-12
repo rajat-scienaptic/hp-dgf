@@ -36,6 +36,7 @@ object HPDataProcessor {
       case "gap" => GAPTransform1.execute(executionContext)
       case "gap-2" => GAPTransform2.execute(executionContext)
       case "gap-3" => GAPTransform3.execute(executionContext)
+      case "gap-4" => GAPTransform4.execute(executionContext)
       case "amz" => AmazonTransform.execute(executionContext)
       //case "preregression-retail" => RetailFeatEnggProcessor.execute(executionContext)
     }
