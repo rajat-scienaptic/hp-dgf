@@ -49,7 +49,7 @@ object CommercialFeatEnggProcessor {
 
     val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
     //val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\posqty_output_commercial.csv")
-    var commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_output_commercial_"+currentTS+".csv")
+    var commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
 //      .repartition(500).persist(StorageLevel.MEMORY_AND_DISK)
     var commercial = renameColumns(commercialDF)
     commercial.columns.toList.foreach(x => {

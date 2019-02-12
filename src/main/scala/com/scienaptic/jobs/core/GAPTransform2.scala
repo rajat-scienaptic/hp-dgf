@@ -134,7 +134,7 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
     ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
     ad3.write.option("header","true").mode(SaveMode.Overwrite)
-      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad.csv")
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad_"+currentTS+".csv")
 
   }
 }

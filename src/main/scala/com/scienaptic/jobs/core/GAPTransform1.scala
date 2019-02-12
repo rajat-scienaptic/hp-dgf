@@ -117,7 +117,7 @@ object GAPTransform1 {
       .select("Brand","Product","Part Number","Merchant SKU","Product Type"
         ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","Conditions / Notes","On Ad","FileName")
     promo3.write.option("header","true").mode(SaveMode.Overwrite)
-      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo.csv")
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_"+currentTS+".csv")
 
 
   }
