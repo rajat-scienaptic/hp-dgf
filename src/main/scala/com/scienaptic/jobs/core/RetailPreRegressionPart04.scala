@@ -207,6 +207,6 @@ object RetailPreRegressionPart04 {
       .withColumn("Other_IR_Flag", when(col("Other_IR") > 0, 1).otherwise(lit(0)))
 
     // comment this 2 line
-        retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-BOL-PART04.csv")
+        retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-BOL-PART04.csv")
   }
 }

@@ -335,7 +335,7 @@ object RetailPreRegressionPart01 {
         .otherwise(col("Ad_Location").cast("string")))
       .dropDuplicates()
 
-    retailJoincompAdTotalDFDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoincompAdTotalDFDF-PART01.csv")
+    retailJoincompAdTotalDFDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoincompAdTotalDFDF-PART01.csv")
     // Part 1 Ends here
 
   }

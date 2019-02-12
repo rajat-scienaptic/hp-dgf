@@ -345,6 +345,6 @@ object RetailPreRegressionPart03 {
 
      retailEOL = EOLCriterion2
 
-     retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-EOL-PART03.csv")
+     retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-EOL-PART03.csv")
   }
 }

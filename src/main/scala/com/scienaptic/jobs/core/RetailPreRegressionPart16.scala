@@ -182,7 +182,7 @@ object RetailPreRegressionPart16 {
       .withColumn("LBB", when(col("LBB").isNull, 0).otherwise(col("LBB")))
       .withColumn("LBB", when(col("Account") === "Amazon-Proper", col("LBB")).otherwise(lit(0)))
 
-    retailWithCompCann3DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART16.csv")
+    retailWithCompCann3DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART16.csv")
 
   }
 }

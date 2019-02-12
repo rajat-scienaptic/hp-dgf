@@ -161,7 +161,7 @@ object RetailPreRegressionPart11 {
     retailWithCompCannDF = retailWithCompCannDF.join(retailPromoMean, Seq("Account", "SKU_Name", "Season"), "left")
       .withColumn("always_promo_Flag", when(col("PromoFlagAvg") === 1, 1).otherwise(0)).drop("PromoFlagAvg")
 
-    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-NoPromo-SkuCategory-PART11.csv")
+    retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-NoPromo-SkuCategory-PART11.csv")
 
 
 

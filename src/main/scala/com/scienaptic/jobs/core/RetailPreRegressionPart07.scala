@@ -169,7 +169,7 @@ object RetailPreRegressionPart07 {
 
 
     // write
-    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-HP-PART07.csv")
+    retailWithCompetitionDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-HP-PART07.csv")
 
   }
 }
