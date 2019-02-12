@@ -56,10 +56,12 @@ object GAPTransform {
     import spark.implicits._
     val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
-    var businessPrintersPromoRawExcelDF=spark.read.excel(useHeader = true,treatEmptyValuesAsNulls = true,
-      inferSchema = true,addColorColumns = false,"Promotions!A5",timestampFormat = "MM/dd/yyyy"
-      , excerptSize = 100)
-      .load("/etherData/managedSources/GAP/BusinessPrinters_WEEKLY.xlsx")
+//    var businessPrintersPromoRawExcelDF=spark.read.excel(useHeader = true,treatEmptyValuesAsNulls = true,
+//      inferSchema = true,addColorColumns = false,"Promotions!A5",timestampFormat = "MM/dd/yyyy"
+//      , excerptSize = 100)
+//      .load("/etherData/managedSources/GAP/BusinessPrinters_WEEKLY.xlsx")
+    var businessPrintersPromoRawExcelDF=renameColumns(spark.read.option("header","true").option("inferSchema","true")
+      .csv("/etherData/managedSources/GAP/BusinessPrinters_WEEKLY_Promotions.csv"))
     businessPrintersPromoRawExcelDF.columns.toList.foreach(x => {
       businessPrintersPromoRawExcelDF = businessPrintersPromoRawExcelDF.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -71,16 +73,16 @@ object GAPTransform {
       "Promotion Type","Bundle Type","Merchant","Value","Conditions / Notes","On Ad","FileName")
       .withColumnRenamed("Merchant","Valid Resellers")
 
-    var personalPrintersPromoRawExcelDF=spark.read.excel(useHeader = true,treatEmptyValuesAsNulls = true,
-      inferSchema = true,addColorColumns = false,"Promotions!A5",timestampFormat = "MM/dd/yyyy"
-      , excerptSize = 100
-    ).load("/etherData/managedSources/GAP/PersonalSOHOPrinters_WEEKLY.xlsx")
-//    var personalPrintersPromoRawExcelDF=renameColumns(spark.read.option("header","true").option("inferSchema","true")
-//      .csv("C:\\Users\\HP\\Desktop\\files\\PersonalSOHOPrinters.csv"))
-//      .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"MM/dd/yyyy").cast("timestamp")))
-//      .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
-//      .withColumn("Value",regexp_replace(col("Value"),"\\$",""))
-//      .withColumn("Value",regexp_replace(col("Value"),",","").cast("double"))
+//    var personalPrintersPromoRawExcelDF=spark.read.excel(useHeader = true,treatEmptyValuesAsNulls = true,
+//      inferSchema = true,addColorColumns = false,"Promotions!A5",timestampFormat = "MM/dd/yyyy"
+//      , excerptSize = 100
+//    ).load("/etherData/managedSources/GAP/PersonalSOHOPrinters_WEEKLY.xlsx")
+    var personalPrintersPromoRawExcelDF=renameColumns(spark.read.option("header","true").option("inferSchema","true")
+      .csv("/etherData/managedSources/GAP/PersonalSOHOPrinters_WEEKLY_Promotions.csv"))
+      .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"MM/dd/yyyy").cast("timestamp")))
+      .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
+      .withColumn("Value",regexp_replace(col("Value"),"\\$",""))
+      .withColumn("Value",regexp_replace(col("Value"),",","").cast("double"))
     personalPrintersPromoRawExcelDF.columns.toList.foreach(x => {
       personalPrintersPromoRawExcelDF = personalPrintersPromoRawExcelDF.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -123,13 +125,15 @@ object GAPTransform {
       .select("Brand","Product","Part Number","Merchant SKU","Product Type"
         ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","Conditions / Notes","On Ad","FileName")
     promo3.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
-      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_"+currentTS+".csv")
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo.csv")
 
 
-    var businessPrintersAdRawExcelDF=renameColumns(spark.read.excel(useHeader = true,treatEmptyValuesAsNulls = true,
-      inferSchema = true,addColorColumns = false,"'Retail Advertising'!A5",timestampFormat = "MM/dd/yyyy"
-      , excerptSize = 100
-    ).load("/etherData/managedSources/GAP/BusinessPrinters_WEEKLY.xlsx"))
+//    var businessPrintersAdRawExcelDF=renameColumns(spark.read.excel(useHeader = true,treatEmptyValuesAsNulls = true,
+//      inferSchema = true,addColorColumns = false,"'Retail Advertising'!A5",timestampFormat = "MM/dd/yyyy"
+//      , excerptSize = 100
+//    ).load("/etherData/managedSources/GAP/BusinessPrinters_WEEKLY.xlsx"))
+    var businessPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true").option("inferSchema","true")
+      .csv("/etherData/managedSources/GAP/BusinessPrinters_WEEKLY_Retail_Advertising.csv"))
     businessPrintersAdRawExcelDF.columns.toList.foreach(x => {
       businessPrintersAdRawExcelDF = businessPrintersAdRawExcelDF.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -143,32 +147,32 @@ object GAPTransform {
         ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
         ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
-    var personalPrintersAdRawExcelDF=renameColumns(spark.read.excel(useHeader = true,treatEmptyValuesAsNulls = true,
-      inferSchema = true,addColorColumns = false,"'Retail Advertising'!A5",timestampFormat = "MM/dd/yyyy"
-      , excerptSize = 100
-    ).load("/etherData/managedSources/GAP/PersonalSOHOPrinters_WEEKLY.xlsx"))
-//var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true").option("inferSchema","true")
-//  .csv("/etherData/managedSources/GAP/PersonalSOHOPrinters2.csv"))
-//  .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
-//  .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
-//  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),"\\$",""))
-//  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),",","").cast("double"))
-//  .withColumn("Advertised Price",regexp_replace(col("Advertised Price"),"\\$",""))
-//  .withColumn("Advertised Price",regexp_replace(col("Advertised Price"),",","").cast("double"))
-//  .withColumn("Instant Savings",regexp_replace(col("Instant Savings"),"\\$",""))
-//  .withColumn("Instant Savings",regexp_replace(col("Instant Savings"),",","").cast("double"))
-//  .withColumn("Free Gift",regexp_replace(col("Free Gift"),"\\$",""))
-//  .withColumn("Free Gift",regexp_replace(col("Free Gift"),",","").cast("double"))
-//  .withColumn("Merchant Gift Card",regexp_replace(col("Merchant Gift Card"),"\\$",""))
-//  .withColumn("Merchant Gift Card",regexp_replace(col("Merchant Gift Card"),",","").cast("double"))
-//  .withColumn("Merchant Rewards",regexp_replace(col("Merchant Rewards"),"\\$",""))
-//  .withColumn("Merchant Rewards",regexp_replace(col("Merchant Rewards"),",","").cast("double"))
-//  .withColumn("Recycling",regexp_replace(col("Recycling"),"\\$",""))
-//  .withColumn("Recycling",regexp_replace(col("Recycling"),",","").cast("double"))
-//  .withColumn("Misc_",regexp_replace(col("Misc_"),"\\$",""))
-//  .withColumn("Misc_",regexp_replace(col("Misc_"),",","").cast("double"))
-//  .withColumn("Total Value",regexp_replace(col("Total Value"),"\\$",""))
-//  .withColumn("Total Value",regexp_replace(col("Total Value"),",","").cast("double"))
+//    var personalPrintersAdRawExcelDF=renameColumns(spark.read.excel(useHeader = true,treatEmptyValuesAsNulls = true,
+//      inferSchema = true,addColorColumns = false,"'Retail Advertising'!A5",timestampFormat = "MM/dd/yyyy"
+//      , excerptSize = 100
+//    ).load("/etherData/managedSources/GAP/PersonalSOHOPrinters_WEEKLY.xlsx"))
+var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true").option("inferSchema","true")
+  .csv("/etherData/managedSources/GAP/PersonalSOHOPrinters_WEEKLY_Retail_Advertising.csv"))
+  .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
+  .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
+  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),"\\$",""))
+  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),",","").cast("double"))
+  .withColumn("Advertised Price",regexp_replace(col("Advertised Price"),"\\$",""))
+  .withColumn("Advertised Price",regexp_replace(col("Advertised Price"),",","").cast("double"))
+  .withColumn("Instant Savings",regexp_replace(col("Instant Savings"),"\\$",""))
+  .withColumn("Instant Savings",regexp_replace(col("Instant Savings"),",","").cast("double"))
+  .withColumn("Free Gift",regexp_replace(col("Free Gift"),"\\$",""))
+  .withColumn("Free Gift",regexp_replace(col("Free Gift"),",","").cast("double"))
+  .withColumn("Merchant Gift Card",regexp_replace(col("Merchant Gift Card"),"\\$",""))
+  .withColumn("Merchant Gift Card",regexp_replace(col("Merchant Gift Card"),",","").cast("double"))
+  .withColumn("Merchant Rewards",regexp_replace(col("Merchant Rewards"),"\\$",""))
+  .withColumn("Merchant Rewards",regexp_replace(col("Merchant Rewards"),",","").cast("double"))
+  .withColumn("Recycling",regexp_replace(col("Recycling"),"\\$",""))
+  .withColumn("Recycling",regexp_replace(col("Recycling"),",","").cast("double"))
+  .withColumn("Misc_",regexp_replace(col("Misc_"),"\\$",""))
+  .withColumn("Misc_",regexp_replace(col("Misc_"),",","").cast("double"))
+  .withColumn("Total Value",regexp_replace(col("Total Value"),"\\$",""))
+  .withColumn("Total Value",regexp_replace(col("Total Value"),",","").cast("double"))
     personalPrintersAdRawExcelDF.columns.toList.foreach(x => {
       personalPrintersAdRawExcelDF = personalPrintersAdRawExcelDF.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -210,9 +214,7 @@ object GAPTransform {
     ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
     ad3.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
-      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad_"+currentTS+".csv")
-
-
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad.csv")
 
 //    var promo3 = renameColumns(spark.read.option("header","true").option("inferSchema","true")
 //      .csv("C:\\Users\\HP\\Desktop\\files\\gap_input_promo.csv"))
@@ -405,10 +407,8 @@ object GAPTransform {
       .drop(col("Market_Category")).drop("Right_SKU")
     val GAPHP=GAP.where(col("Brand") isin("HP"))
 
-    val sku_hierarchy=renameColumns(spark.read.excel(useHeader = true,treatEmptyValuesAsNulls = true,
-      inferSchema = true,addColorColumns = false,"sku_hierarchy!A1",timestampFormat = "dd-MM-yyyy"
-      , excerptSize = 100
-    ).load("/etherData/managedSources/AUX/Aux Tables.xlsx"))
+    val sku_hierarchy=renameColumns(spark.read.option("header","true").option("inferSchema","true")
+      .csv("/etherData/managedSources/AUX/Aux_sku_hierarchy.csv"))
       .withColumn("L1_Category",col("`L1: Use Case`"))
       .withColumn("L2_Category",col("`L2: Key functionality`"))
       .select("SKU","Category_1","Category_2","L1_Category","L2_Category")

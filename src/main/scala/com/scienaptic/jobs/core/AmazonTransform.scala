@@ -49,10 +49,8 @@ object AmazonTransform {
 
     import spark.implicits._
     val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
-    var rawfile=renameColumns(spark.read.excel(useHeader = true,treatEmptyValuesAsNulls = false,
-      inferSchema = true,addColorColumns = false,"'Template'!A7",timestampFormat = "MM-dd-yyyy"
-      , excerptSize = 100)
-      .load("/etherData/managedSources/Amazon/ASIN/Amazon LBB ODBC Database.xlsx"))
+    var rawfile=renameColumns(spark.read.option("header","true").option("inferSchema","true")
+      .csv("/etherData/managedSources/Amazon/ASIN/Amazon_LBB_ODBC_Database.csv"))
       .withColumn("nDate", to_date(unix_timestamp(col("nDate"),"MM-dd-yyyy").cast("timestamp")))
     rawfile.columns.toList.foreach(x => {
       rawfile = rawfile.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
@@ -75,7 +73,6 @@ object AmazonTransform {
       .select("SKU","Account","Week_End_Date","Online","AMZ Sales Price","LBB")
     rawfile.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
       .csv("/etherData/Pricing/Outputs/POS_Amazon/amazon_sales_price_"+currentTS+".csv")
-
 
   }
 }
