@@ -316,6 +316,6 @@ object RetailPreRegressionPart17 {
       "Price_Amazon_com","Price_Best_Buy","Price_Best_Buy_com","Price_Office_Depot_Max","Price_Office_Depot_Max_com",
       "Price_Staples","Price_Staples_com","Price_Min_Online","Price_Min_Offline","Delta_Price_Online","Delta_Price_Offline",
       "Price_Gap_Online","Price_Gap_Offline","Street_Price")
-      .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_retail_output_"+currentTS+".csv")
+      .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_"+currentTS+".csv")
   }
 }
