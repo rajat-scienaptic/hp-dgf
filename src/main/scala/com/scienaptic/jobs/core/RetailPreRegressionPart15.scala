@@ -145,7 +145,7 @@ object RetailPreRegressionPart15 {
       .withColumn("Special_Programs", when(col("BOPIS") === 1 && col("Account").isin("Staples", "BOPIS"), 1).otherwise(col("Special_Programs")))
       .distinct()
 
-    retailWithCompCann3DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-CateCannOfflineOnline-PART15.csv")
+    retailWithCompCann3DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-CateCannOfflineOnline-PART15.csv")
 
   }
 }

@@ -200,6 +200,6 @@ object RetailPreRegressionPart05 {
       .withColumn("Amazon_Prime_Day", when(col("Week_End_Date") === "2018-07-21", 1).otherwise(0))
 
     // write
-    retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-Holidays-PART05.csv")
+    retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-Holidays-PART05.csv")
   }
 }

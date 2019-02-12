@@ -201,7 +201,7 @@ object RetailPreRegressionPart10 {
       .withColumn("L2_competition_log", when(col("L2_competition_log").isNull, 0).otherwise(col("L2_competition_log")))
       .drop("SKU_category")
 
-    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-SuppliesGM-PART10.csv")
+    retailWithCompCannDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-SuppliesGM-PART10.csv")
 
 
   }

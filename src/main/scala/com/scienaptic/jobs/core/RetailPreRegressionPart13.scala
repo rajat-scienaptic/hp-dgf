@@ -168,7 +168,7 @@ object RetailPreRegressionPart13 {
     )
       .withColumn("PriceBand", when(col("PriceBand").isNull, "NA").otherwise(col("PriceBand")))
 
-    retailGroupWEDL1InnerCompCann3.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2InnerCann-PART13.csv")
+    retailGroupWEDL1InnerCompCann3.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2InnerCann-PART13.csv")
 
 
   }

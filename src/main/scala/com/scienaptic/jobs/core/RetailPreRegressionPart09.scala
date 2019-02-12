@@ -173,7 +173,7 @@ object RetailPreRegressionPart09 {
       .withColumn("Supplies_GM", when(col("PL") === "4X", 0).otherwise(col("Supplies_GM")))
 
     // write
-    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Seasonality-Hardware-PART09.csv")
+    retailWithCompCannDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Seasonality-Hardware-PART09.csv")
 
   }
 }

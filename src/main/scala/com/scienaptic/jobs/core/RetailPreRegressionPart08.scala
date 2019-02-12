@@ -183,7 +183,7 @@ object RetailPreRegressionPart08 {
       .withColumn("Sale_Price", col("Street_Price") - col("Total_IR"))
       .withColumn("Price_Range_20_Perc_high", lit(1.2) * col("Sale_Price"))
 
-    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART08.csv")
+    retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART08.csv")
 
   }
 }

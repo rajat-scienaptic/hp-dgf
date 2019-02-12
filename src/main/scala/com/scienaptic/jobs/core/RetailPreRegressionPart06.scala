@@ -230,6 +230,6 @@ object RetailPreRegressionPart06 {
       .drop("L2_competition_ss", "L1_competition_ss")
     /* ========================================================================================== */
 
-    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-PART06.csv")
+    retailWithCompetitionDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-PART06.csv")
   }
 }

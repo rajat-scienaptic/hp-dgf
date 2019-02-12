@@ -199,8 +199,8 @@ object RetailPreRegressionPart02 {
       .filter(col("Account").isin(focusedAccounts: _*))
 
     // remove write
-      retailJoinAggUpstreamWithNATreatmentDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamWithNATreatmentDF-PART02.csv")
-      retailJoinAggUpstreamDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamDF-PART02.csv")
+      retailJoinAggUpstreamWithNATreatmentDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamWithNATreatmentDF-PART02.csv")
+      retailJoinAggUpstreamDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamDF-PART02.csv")
 
   }
 }
