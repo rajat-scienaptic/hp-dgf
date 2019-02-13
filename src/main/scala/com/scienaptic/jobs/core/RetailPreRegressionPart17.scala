@@ -283,7 +283,7 @@ object RetailPreRegressionPart17 {
     retailWithCompCann3DF.select("SKU","Week_End_Date","Account","mnth","Online","trend","SKU_Name","L1_Category",
       "Category","L2_Category","SKU_number","Ave","Min","Max","InStock","DelayDel","OutofStock","OnlyInStore","Special_Programs",
       "IPSLES","Season","Category_Subgroup","Line","PL","GA_date","ES_date","Distribution_Inv","Category_1","Category_2","Category_3",
-      "HPS/OPS","Series","Category_Custom","Brand","Max_Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year",
+      "HPS/OPS","Series","Category Custom","Brand","Max_Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year",
       "Changed_Street_Price","POS_Qty","Ad_Location","GAP_IR","Ad","Days_on_Promo","Ad_Best Buy","Ad_Office Depot-Max","Ad_Staples",
       "Ad_ratio_Brother","Ad_ratio_Canon","Ad_ratio_Epson","Ad_ratio_HP","Ad_ratio_Lexmark","Ad_ratio_Samsung","Ad_total_Brother",
       "Ad_total_Canon","Ad_total_Epson","Ad_total_HP","Ad_total_Lexmark","Ad_total_Samsung","Ad_share_Brother","Ad_share_Canon",
