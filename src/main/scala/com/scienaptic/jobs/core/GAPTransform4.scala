@@ -132,7 +132,7 @@ object GAPTransform4 {
         ,"Total_IR","Days_on_Promo","Promotion_Type","Ad_Location","L2_Category","L1_Category"
           ,"Category_2","Category_1")
     finalmerge.write.option("header","true").mode(SaveMode.Overwrite)
-      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_data_full"+currentTS+".csv")
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_data_full_"+currentTS+".csv")
 
 
   }
