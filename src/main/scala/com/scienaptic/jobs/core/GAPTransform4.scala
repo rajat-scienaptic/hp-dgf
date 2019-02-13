@@ -30,20 +30,7 @@ object GAPTransform4 {
   val dat2000_01_01 = to_date(unix_timestamp(lit("2000-01-01"),"yyyy-MM-dd").cast("timestamp"))
   val dat9999_12_31 = to_date(unix_timestamp(lit("9999-12-31"),"yyyy-MM-dd").cast("timestamp"))
 
-  val indexerForSpecialPrograms = new StringIndexer().setInputCol("Special_Programs").setOutputCol("Special_Programs_fact")
-  val pipelineForSpecialPrograms = new Pipeline().setStages(Array(indexerForSpecialPrograms))
-
-  val indexerForResellerCluster = new StringIndexer().setInputCol("Reseller_Cluster").setOutputCol("Reseller_Cluster_fact")
-  val pipelineForResellerCluster= new Pipeline().setStages(Array(indexerForResellerCluster))
-
   def execute(executionContext: ExecutionContext): Unit = {
-
-    //Only group with mutate will have join back to original dataframe but group with summarize wont have join. summarize gives only 1 row per group.
-//    val spark = executionContext.spark
-//    val spark = SparkSession.builder
-//      .config("spark.executor.heartbeatInterval", "10000s")
-//      .getOrCreate()
-
     val sparkConf = new SparkConf().setAppName("gap")
     val spark = SparkSession.builder
       .master("yarn-client")
@@ -54,7 +41,7 @@ object GAPTransform4 {
       .getOrCreate
 
     import spark.implicits._
-    val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    //val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
     var Promo_Ad=renameColumns(spark.read.option("header","true").option("inferSchema","true")
       .csv("/etherData/Pricing/Outputs/POS_GAP/promo_ad_intermediate.csv"))
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"yyyy-MM-dd").cast("timestamp")))
@@ -90,50 +77,7 @@ object GAPTransform4 {
       .withColumn("Account",when(col("Account")===lit("SamsClub.com"),"Sams Club").otherwise(col("Account")))
       .withColumn("Account",when(col("Account")===lit("BJs.com"),"BJs Wholesale Club").otherwise(col("Account")))
       .withColumn("Account",when(col("Account")===lit("Walmart.com"),"Walmart").otherwise(col("Account")))
-    Promo_Ad=Promo_Ad
-      .withColumn("Account",when(col("Account")===lit("WalMart.com"),"WalMart").otherwise(col("Account")))
-      .withColumn("Account",when(col("Account")===lit("WalMart"),"Walmart").otherwise(col("Account")))
-      .withColumn("Account",when(col("Account")===lit("BJS Wholesale Club"),"BJs Wholesale Club").otherwise(col("Account")))
-      .withColumn("Account",when(col("Account")===lit("BestBuy.com"),"Best Buy").otherwise(col("Account")))
-      .withColumn("Account",when(col("Account")===lit("Sams Club"),"Sam's Club").otherwise(col("Account")))
-      .withColumn("Account",when(col("Account")===lit("Office Depot"),"Office Depot-Max").otherwise(col("Account")))
-      .withColumn("Account",when(col("Account")===lit("OfficeMax"),"Office Depot-Max").otherwise(col("Account")))
-      .select("SKU","Brand","Account","Online","Week_End_Date"
-        ,"Total_IR","Ad","Promotion_Type","Ad Location","Product","Days_on_Promo")
-
-    val GAP=Promo_Ad.orderBy("Week_End_Date","SKU","Brand","Account","Online","Total_IR")
-      .groupBy("SKU","Brand","Account","Online","Week_End_Date")
-    .agg(max("Ad").alias("Ad"),max("Total_IR").alias("Total_IR")
-      ,max("Days_on_Promo").alias("Days_on_Promo")
-      ,last("Promotion_Type").alias("Promotion_Type")
-      ,first("Ad Location").alias("Ad Location"),first("Product").alias("Product"))
-
-    val GAPCOMP=GAP.where(col("Brand") isin("Brother","Canon","Xerox","Samsung","Lexmark","Epson"))
-      .withColumn("Product",lower(col("Product")))
-    val GAPNPD_matching = renameColumns(spark.read.option("header","true").option("inferSchema","true")
-      .csv("/etherData/managedSources/GAP/GAP NPD comp matching.csv"))
-      .withColumn("Product",lower(col("Product")))
-      .withColumnRenamed("SKU","Right_SKU")
-
-    val GAPNPD=GAPCOMP.join(GAPNPD_matching,Seq("Brand","Product"),"inner")
-      .drop(col("Market_Category")).drop("Right_SKU")
-    val GAPHP=GAP.where(col("Brand") isin("HP"))
-
-    val sku_hierarchy=renameColumns(spark.read.option("header","true").option("inferSchema","true")
-      .csv("/etherData/managedSources/AUX/Aux_sku_hierarchy.csv"))
-      .withColumn("L1_Category",col("`L1: Use Case`"))
-      .withColumn("L2_Category",col("`L2: Key functionality`"))
-      .select("SKU","Category_1","Category_2","L1_Category","L2_Category")
-
-    val HPSKU=GAPHP.join(sku_hierarchy,Seq("SKU"),"inner")
-    val finalmerge=doUnion(GAPNPD,HPSKU).get
-      .withColumnRenamed("Ad Location","Ad_Location")
-        .select("Brand","Product","SKU","Account","Online","Week_End_Date","Ad"
-        ,"Total_IR","Days_on_Promo","Promotion_Type","Ad_Location","L2_Category","L1_Category"
-          ,"Category_2","Category_1")
-    finalmerge.write.option("header","true").mode(SaveMode.Overwrite)
-      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_data_full_"+currentTS+".csv")
-
+    Promo_Ad.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/GAPTemp/Promo_Ad.csv")
 
   }
 }
