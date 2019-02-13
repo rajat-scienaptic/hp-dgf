@@ -162,7 +162,7 @@ object GAPTransform3 {
       .otherwise(lit(0)))
       .withColumn("Ad_Promo",lit(""))
 
-    promo3.write.option("header","true").mode(SaveMode.Overwrite)
+    Promo_Ad.write.option("header","true").mode(SaveMode.Overwrite)
       .csv("/etherData/Pricing/Outputs/POS_GAP/promo_ad_intermediate.csv")
 
 
