@@ -15,7 +15,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType}
 
 import scala.collection.mutable
 
-object RetailPreRegressionPart16 {
+object RetailPreRegressionPart19 {
 
   val Cat_switch = 1
   val dat2000_01_01 = to_date(unix_timestamp(lit("2000-01-01"), "yyyy-MM-dd").cast("timestamp"))
@@ -94,44 +94,58 @@ object RetailPreRegressionPart16 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-
-    var retailWithCompCannDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Season-L1L2CannOfflineOnline-PART15.csv")
+    var retailGroupWEDL1InnerCompCann3  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-PriceBandCannOfflineOnline-PART18.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    var retailWithInnerCompCannDF = retailWithCompCannDF
+    var retailWithCompCann2DF = retailGroupWEDL1InnerCompCann3
+      .withColumn("PriceBand_Copy", col("PriceBand"))
+      .withColumn("L1_Category_Copy", col("L1_Category"))
+      .withColumn("Cate", concat_ws(".", col("L1_Category_Copy"), col("PriceBand_Copy")))
+      .withColumn("Cate", when(col("Cate").isin("Home and Home Office.200-300", "Home and Home Office.300-500"), "Home and Home Office.200-500")
+        .when(col("Cate").isin("Office - Personal.<100", "Office - Personal.100-150"), "Office - Personal.<150")
+        .when(col("Cate").isin("Scanners.200-300", "Scanners.300-500"), "Scanners.200-500").otherwise(col("Cate")))
 
-    ////
-    // Modify Cannibalization ####
-    val retailWithAdj2 = retailWithInnerCompCannDF.withColumn("Adj_Qty", when(col("POS_Qty") <= 0, 0).otherwise(col("POS_Qty")))
-    val retailGroupWEDSKUOnline = retailWithAdj2.groupBy("Week_End_Date", "SKU", "Online")
+    //    retailWithCompCann2DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1613.csv")
+
+    //Modify Cannibalization 4 ####
+    val retailWithAdj4 = retailWithCompCann2DF.withColumn("Adj_Qty", when(col("POS_Qty") <= 0, 0).otherwise(col("POS_Qty")))
+    val retailGroupWEDSKUOnline3 = retailWithAdj4.groupBy("Week_End_Date", "SKU", "Online")
       .agg(sum(col("Promo_Pct_Min") * col("Adj_Qty")).as("sumSKU1"), sum("Adj_Qty").as("sumSKU2"))
-      .join(retailWithAdj2, Seq("Week_End_Date", "SKU", "Online"), "right")
+      .join(retailWithAdj4, Seq("Week_End_Date", "SKU", "Online"), "right")
+      .withColumn("Cate", col("Cate"))
 
-    //    retailGroupWEDSKUOnline.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1538.csv")
-    var retailGroupWEDCompCannTemp1 = retailGroupWEDSKUOnline
-      .groupBy("Week_End_Date", "Online", "Brand", "L1_Category")
+    val retailGroupWEDPriceBrandWithOnlineCateTemp1 = retailGroupWEDSKUOnline3
+      .groupBy("Week_End_Date", "Online", "Cate", "Brand")
       .agg(sum(col("Promo_Pct_Min") * col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
 
-    var retailGroupWEDL1CompCann1 = retailGroupWEDSKUOnline
-      .join(retailGroupWEDCompCannTemp1, Seq("Week_End_Date", "Brand", "L1_Category", "Online"), "left")
-      .withColumn("L1_cannibalization_OnOffline_Min", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2")))
-      .drop("sum1", "sum2")
+    val retailGroupWEDPriceBrandWithOnlineCate1 = retailGroupWEDSKUOnline3
+      .join(retailGroupWEDPriceBrandWithOnlineCateTemp1, Seq("Week_End_Date", "Online", "Cate", "Brand"), "left")
+      .withColumn("Cate_cannibalization_OnOffline_Min", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2")))
+      .drop("sum1", "sum2", "sumSKU1", "sumSKU2")
 
-    //    retailGroupWEDL1CompCann1.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-15343.csv")
-    val retailGroupWEDSKU2InnerOnline = retailGroupWEDL1CompCann1
-      .groupBy("Week_End_Date", "Online", "Brand", "Account", "L1_Category")
+    val retailGroupWEDPriceBrandWithOnlineCateTemp2 = retailGroupWEDPriceBrandWithOnlineCate1
+      .groupBy("Week_End_Date", "Online", "Cate", "Brand", "Account")
       .agg(sum(col("Promo_Pct_Min") * col("Adj_Qty")).as("sumInner1"), sum("Adj_Qty").as("sumInner2"))
-    //      .join(retailWithAdj2, Seq("Week_End_Date", "SKU", "Online"), "right")
 
-    var retailGroupWEDL1InnerCompCann2 = retailGroupWEDL1CompCann1
-      .join(retailGroupWEDSKU2InnerOnline, Seq("Week_End_Date", "Online", "Brand", "L1_Category", "Account"), "left")
-      .withColumn("L1_Innercannibalization_OnOffline_Min", (col("sumInner1") - (col("Promo_Pct_Min") * col("Adj_Qty"))) / (col("sumInner2") - col("Adj_Qty")))
-      .drop("sum1", "sum2")
+    retailWithCompCann2DF = retailGroupWEDPriceBrandWithOnlineCate1
+      .join(retailGroupWEDPriceBrandWithOnlineCateTemp2, Seq("Week_End_Date", "Online", "Cate", "Brand", "Account"), "left")
+      .withColumn("Cate_Innercannibalization_OnOffline_Min", (col("sumInner1") - (col("Promo_Pct_Min") * col("Adj_Qty"))) / (col("sumInner2") - col("Adj_Qty")))
+      .drop("sumInner1", "sumInner2")
+      .withColumn("Cate_cannibalization_OnOffline_Min", when(col("Cate_cannibalization_OnOffline_Min").isNull, 0).otherwise(col("Cate_cannibalization_OnOffline_Min")))
+      .withColumn("Cate_Innercannibalization_OnOffline_Min", when(col("Cate_Innercannibalization_OnOffline_Min").isNull, 0).otherwise(col("Cate_Innercannibalization_OnOffline_Min")))
+      .na.fill(0, Seq("Cate_cannibalization_OnOffline_Min", "Cate_Innercannibalization_OnOffline_Min"))
 
-    retailGroupWEDL1InnerCompCann2.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2InnerCann-half-PART16.csv")
+    var retailWithCompCann3DF = retailWithCompCann2DF
+      .withColumn("BOPIS", when(col("BOPIS").isNull, 0).otherwise(col("BOPIS")))
+      .withColumn("BOPISbtbhol", when(col("BOPIS") === 1 && col("Season").isin("BTB'16", "BTB'17", "HOL'16"), 1).otherwise(lit(0)))
+      .withColumn("BOPISbts", when(col("BOPIS") === 1 && col("Season").isin("BTS'16", "BTS'17"), lit(1)).otherwise(lit(0)))
+      .withColumn("Special_Programs", when(col("BOPIS") === 1 && col("Account").isin("Staples", "BOPIS"), 1).otherwise(col("Special_Programs")))
+      .distinct()
+
+    retailWithCompCann3DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-CateCannOfflineOnline-PART19.csv")
 
   }
 }

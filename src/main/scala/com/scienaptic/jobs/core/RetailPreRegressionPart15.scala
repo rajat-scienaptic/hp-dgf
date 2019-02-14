@@ -1,58 +1,16 @@
 package com.scienaptic.jobs.core
 
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Date, Locale}
+import java.util.{Calendar, Date}
 
 import com.scienaptic.jobs.ExecutionContext
-import com.scienaptic.jobs.core.RetailPreRegressionPart01.Cat_switch
-import com.scienaptic.jobs.utility.CommercialUtility.extractWeekFromDateUDF
-import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.feature.StringIndexer
-import org.apache.spark.sql._
+import com.scienaptic.jobs.core.RetailPreRegressionPart14.monthDateFormat
+import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{IntegerType, StringType}
 
 import scala.collection.mutable
 
 object RetailPreRegressionPart15 {
-
-  val Cat_switch = 1
-  val dat2000_01_01 = to_date(unix_timestamp(lit("2000-01-01"), "yyyy-MM-dd").cast("timestamp"))
-  val dat9999_12_31 = to_date(unix_timestamp(lit("9999-12-31"), "yyyy-MM-dd").cast("timestamp"))
-  val dateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
-  val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
-  val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
-  val maximumRegressionDate = "2018-12-29"
-  val minimumRegressionDate = "2014-01-01"
-  val monthDateFormat = new SimpleDateFormat("MMM", Locale.ENGLISH)
-
-  val stability_weeks = 4
-  val stability_range = 0.7
-  val intro_weeks = 8
-  val min_baseline = 5
-  val baselineThreshold = if (min_baseline / 2 > 0) min_baseline / 2 else 0
-
-  val indexerForAdLocation = new StringIndexer().setInputCol("Ad_Location").setOutputCol("Ad_Location_fact")
-  val pipelineForForAdLocation = new Pipeline().setStages(Array(indexerForAdLocation))
-
-  val convertFaultyDateFormat = udf((dateStr: String) => {
-    try {
-      if (dateStr.contains("-")) {
-        dateFormatter.format(dateFormatterMMddyyyyWithHyphen.parse(dateStr))
-      }
-      else {
-        dateFormatter.format(dateFormatterMMddyyyyWithSlash.parse(dateStr))
-      }
-    } catch {
-      case _: Exception => dateStr
-    }
-  })
-
-  val pmax = udf((col1: Double, col2: Double, col3: Double) => math.max(col1, math.max(col2, col3)))
-  val pmax2 = udf((col1: Double, col2: Double) => math.max(col1, col2))
-  val pmin = udf((col1: Double, col2: Double, col3: Double) => math.min(col1, math.min(col2, col3)))
-  val pmin2 = udf((col1: Double, col2: Double) => math.min(col1, col2))
 
   val getMonthNumberFromString = udf((month: String) => {
     val date: Date = monthDateFormat.parse(month)
@@ -61,6 +19,10 @@ object RetailPreRegressionPart15 {
     cal.get(Calendar.MONTH)
   })
 
+  val stability_weeks = 4
+  val stability_range = 0.7
+  val intro_weeks = 8
+  val min_baseline = 5
   val concatenateRankWithDist = udf((x: mutable.WrappedArray[String]) => {
     //val concatenateRank = udf((x: List[List[Any]]) => {
     try {
@@ -94,58 +56,67 @@ object RetailPreRegressionPart15 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailGroupWEDL1InnerCompCann3  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-PriceBandCannOfflineOnline-PART14.csv")
+    var retailWithCompCannDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-NoPromo-SkuCategory-PART14.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
+    val maxWED = retailWithCompCannDF.agg(max("Week_End_Date")).head().getDate(0)
+    val maxWEDSeason = retailWithCompCannDF.where(col("Week_End_Date") === maxWED).sort(col("Week_End_Date").desc).select("Season").head().getString(0)
+    val latestSeasonRetail = retailWithCompCannDF.where(col("Season") === maxWEDSeason)
 
-    var retailWithCompCann2DF = retailGroupWEDL1InnerCompCann3
-      .withColumn("PriceBand_Copy", col("PriceBand"))
-      .withColumn("L1_Category_Copy", col("L1_Category"))
-      .withColumn("Cate", concat_ws(".", col("L1_Category_Copy"), col("PriceBand_Copy")))
-      .withColumn("Cate", when(col("Cate").isin("Home and Home Office.200-300", "Home and Home Office.300-500"), "Home and Home Office.200-500")
-        .when(col("Cate").isin("Office - Personal.<100", "Office - Personal.100-150"), "Office - Personal.<150")
-        .when(col("Cate").isin("Scanners.200-300", "Scanners.300-500"), "Scanners.200-500").otherwise(col("Cate")))
+    val windForSeason = Window.orderBy(col("Week_End_Date").desc)
+    val uniqueSeason = retailWithCompCannDF
+      .withColumn("rank", row_number().over(windForSeason))
+      .where(col("rank") === 2).select("Season").head().getString(0)
 
-    //    retailWithCompCann2DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1613.csv")
+    val latestSeason = latestSeasonRetail.select("Week_End_Date").distinct().count()
+    if (latestSeason < 13) {
+      retailWithCompCannDF = retailWithCompCannDF
+        .withColumn("Season_most_recent", when(col("Season") === maxWEDSeason, uniqueSeason).otherwise(col("Season")))
+      //ifelse(commercial$Season eq unique(commercial$Season(order(commercial$Week.End.Date)))(length(unique(commercial$Season))), as.character(unique(commercial$Season(order(commercial$Week.End.Date)))(length(unique(commercial$Season)) - 1)), as.character(commercial$Season))
+    } else {
+      retailWithCompCannDF = retailWithCompCannDF
+        .withColumn("Season_most_recent", col("Season"))
+    }
 
-    //Modify Cannibalization 4 ####
-    val retailWithAdj4 = retailWithCompCann2DF.withColumn("Adj_Qty", when(col("POS_Qty") <= 0, 0).otherwise(col("POS_Qty")))
-    val retailGroupWEDSKUOnline3 = retailWithAdj4.groupBy("Week_End_Date", "SKU", "Online")
-      .agg(sum(col("Promo_Pct_Min") * col("Adj_Qty")).as("sumSKU1"), sum("Adj_Qty").as("sumSKU2"))
-      .join(retailWithAdj4, Seq("Week_End_Date", "SKU", "Online"), "right")
-      .withColumn("Cate", col("Cate"))
+    retailWithCompCannDF = retailWithCompCannDF
+      .withColumn("trend", lit(1))
 
-    val retailGroupWEDPriceBrandWithOnlineCateTemp1 = retailGroupWEDSKUOnline3
-      .groupBy("Week_End_Date", "Online", "Cate", "Brand")
-      .agg(sum(col("Promo_Pct_Min") * col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
 
-    val retailGroupWEDPriceBrandWithOnlineCate1 = retailGroupWEDSKUOnline3
-      .join(retailGroupWEDPriceBrandWithOnlineCateTemp1, Seq("Week_End_Date", "Online", "Cate", "Brand"), "left")
-      .withColumn("Cate_cannibalization_OnOffline_Min", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2")))
-      .drop("sum1", "sum2", "sumSKU1", "sumSKU2")
+    //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1500.csv")
 
-    val retailGroupWEDPriceBrandWithOnlineCateTemp2 = retailGroupWEDPriceBrandWithOnlineCate1
-      .groupBy("Week_End_Date", "Online", "Cate", "Brand", "Account")
-      .agg(sum(col("Promo_Pct_Min") * col("Adj_Qty")).as("sumInner1"), sum("Adj_Qty").as("sumInner2"))
+    val retailWithCompCannForTrendDF = retailWithCompCannDF
+      .groupBy("Week_End_Date")
+      .agg(min("Week_End_Date").as("minWED"))
+      .withColumn("WEDDiff", (datediff(col("Week_End_Date"), col("minWED")) / 7)).drop("minWED")
 
-    retailWithCompCann2DF = retailGroupWEDPriceBrandWithOnlineCate1
-      .join(retailGroupWEDPriceBrandWithOnlineCateTemp2, Seq("Week_End_Date", "Online", "Cate", "Brand", "Account"), "left")
-      .withColumn("Cate_Innercannibalization_OnOffline_Min", (col("sumInner1") - (col("Promo_Pct_Min") * col("Adj_Qty"))) / (col("sumInner2") - col("Adj_Qty")))
-      .drop("sumInner1", "sumInner2")
-      .withColumn("Cate_cannibalization_OnOffline_Min", when(col("Cate_cannibalization_OnOffline_Min").isNull, 0).otherwise(col("Cate_cannibalization_OnOffline_Min")))
-      .withColumn("Cate_Innercannibalization_OnOffline_Min", when(col("Cate_Innercannibalization_OnOffline_Min").isNull, 0).otherwise(col("Cate_Innercannibalization_OnOffline_Min")))
-      .na.fill(0, Seq("Cate_cannibalization_OnOffline_Min", "Cate_Innercannibalization_OnOffline_Min"))
+    retailWithCompCannDF = retailWithCompCannDF.withColumn("Week_End_Date", col("Week_End_Date"))
+      .join(retailWithCompCannForTrendDF.withColumn("Week_End_Date", col("Week_End_Date")), Seq("Week_End_Date"), "left")
+      .withColumn("trend", col("trend") + col("WEDDiff")).drop("WEDDiff")
+      .withColumn("Promo_Pct_Ave", lit(lit(1) - col("ImpAve") / col("Street_Price")))
+      .withColumn("Promo_Pct_Min", lit(lit(1) - col("ImpMin") / col("Street_Price")))
+      .withColumn("wed_cat", concat_ws(".", col("Week_End_Date"), col("L1_Category")))
 
-    var retailWithCompCann3DF = retailWithCompCann2DF
-      .withColumn("BOPIS", when(col("BOPIS").isNull, 0).otherwise(col("BOPIS")))
-      .withColumn("BOPISbtbhol", when(col("BOPIS") === 1 && col("Season").isin("BTB'16", "BTB'17", "HOL'16"), 1).otherwise(lit(0)))
-      .withColumn("BOPISbts", when(col("BOPIS") === 1 && col("Season").isin("BTS'16", "BTS'17"), lit(1)).otherwise(lit(0)))
-      .withColumn("Special_Programs", when(col("BOPIS") === 1 && col("Account").isin("Staples", "BOPIS"), 1).otherwise(col("Special_Programs")))
-      .distinct()
+    var retailWithCompCannDFtmep1 = retailWithCompCannDF
+      .groupBy("wed_cat")
+      .agg(sum(col("Promo_Pct") * col("POS_Qty")).as("z"), sum(col("POS_Qty")).as("w"))
 
-    retailWithCompCann3DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-CateCannOfflineOnline-PART15.csv")
+    retailWithCompCannDF = retailWithCompCannDF.join(retailWithCompCannDFtmep1, Seq("wed_cat"), "left")
+      .withColumn("L1_cannibalization_OnOffline_Min", (col("z") - (col("Promo_Pct") * col("POS_Qty"))) / (col("w") - col("POS_Qty")))
+      .drop("z", "w", "wed_cat")
+      .withColumn("wed_cat", concat_ws(".", col("Week_End_Date"), col("L2_Category")))
 
+
+    var retailWithCompetitionDFtmep2 = retailWithCompCannDF
+      .groupBy("wed_cat")
+      .agg(sum(col("Promo_Pct") * col("POS_Qty")).as("z"), sum(col("POS_Qty")).as("w"))
+
+    retailWithCompCannDF = retailWithCompCannDF.join(retailWithCompetitionDFtmep2, Seq("wed_cat"), "left")
+      .withColumn("L2_cannibalization_OnOffline_Min", (col("z") - (col("Promo_Pct") * col("POS_Qty"))) / (col("w") - col("POS_Qty")))
+      .drop("z", "w", "wed_cat")
+
+
+    retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-Season-L1L2CannOfflineOnline-PART15.csv")
   }
 }

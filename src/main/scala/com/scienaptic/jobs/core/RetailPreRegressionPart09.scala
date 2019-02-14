@@ -5,15 +5,15 @@ import java.util.{Calendar, Date, Locale}
 
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.bean.{RetailHoliday, RetailHolidayTranspose, UnionOperation}
-import com.scienaptic.jobs.core.RetailPreRegressionPart01._
-import com.scienaptic.jobs.utility.CommercialUtility.{createlist, extractWeekFromDateUDF}
+import com.scienaptic.jobs.core.RetailPreRegressionPart01.{checkPrevDistInvGTBaseline, concatenateRankWithDist, stability_range}
+import com.scienaptic.jobs.utility.CommercialUtility.createlist
 import com.scienaptic.jobs.utility.Utils.renameColumns
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.sql._
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{IntegerType, StringType}
+import org.apache.spark.sql.types.IntegerType
 
 import scala.collection.mutable
 
@@ -93,87 +93,83 @@ object RetailPreRegressionPart09 {
         0
     }
   })
-
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCannDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART08.csv")
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
-      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
-      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
+  var retailWithCompetitionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-PART08.csv")
+    .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+    .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
+    .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
+    .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv")).cache()
-    npd.columns.toList.foreach(x => {
-      npd = npd.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
-    })
-    npd = npd.cache()
-      .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", lit(null)).otherwise(
-        when(col("Week_End_Date").contains("-"), to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
-          .otherwise(to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
-      ))
+    val retailBrandinHP = retailWithCompetitionDF.where(col("Brand").isin("HP"))
+      .withColumn("POSQty_pmax", greatest(col("POS_Qty"), lit(0)))
 
-    var IFS2 = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/etherData/managedSources/IFS2/IFS2_most_recent.csv"))
-    IFS2.columns.toList.foreach(x => {
-      IFS2 = IFS2.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
-    })
-    IFS2 = IFS2
-      .withColumn("Valid_Start_Date", to_date(unix_timestamp(col("Valid_Start_Date"), "MM/dd/yyyy").cast("timestamp")))
-      .withColumn("Valid_End_Date", to_date(unix_timestamp(col("Valid_End_Date"), "MM/dd/yyyy").cast("timestamp"))).cache()
+    val HPComp1 = retailBrandinHP
+      .groupBy("Week_End_Date", "L1_Category", "Account")
+      .agg(sum("POSQty_pmax").as("sum2"), (sum(col("Promo_Pct") * col("POSQty_pmax"))).as("sum1"))
+      .withColumn("sum1", when(col("sum1") < 0, 0).otherwise(col("sum1")))
+      .withColumn("sum2", when(col("sum2") < 0, 0).otherwise(col("sum2")))
+      .withColumn("L1_competition_HP_ssmodel", col("sum1") / col("sum2"))
+      .drop("sum1", "sum2", "temp_sum1", "temp_sum2")
+    //.join(commercialBrandinHP, Seq("Week_End_Date","L1_Category"), "right")
 
+    val HPComp2 = retailBrandinHP
+      .groupBy("Week_End_Date", "L2_Category", "Account")
+      .agg(sum("POSQty_pmax").as("sum2"), (sum(col("Promo_Pct") * col("POSQty_pmax"))).as("sum1"))
+      .withColumn("sum1", when(col("sum1") < 0, 0).otherwise(col("sum1")))
+      .withColumn("sum2", when(col("sum2") < 0, 0).otherwise(col("sum2")))
+      .withColumn("L2_competition_HP_ssmodel", col("sum1") / col("sum2"))
+      .drop("sum1", "sum2", "temp_sum1", "temp_sum2")
 
-    var npdChanneRetail = npd.where(col("Channel") === "Retail")
-      .withColumn("Year", when(col("Week_End_Date").isNull, null).otherwise(year(col("Week_End_Date")).cast("string")))
-      .withColumn("Week", when(col("Week_End_Date").isNull, null).otherwise(extractWeekFromDateUDF(col("Week_End_Date").cast("string"), lit("yyyy-MM-dd")).cast(StringType)))
-    val npdFilteredL1CategoryDF = npdChanneRetail.where(col("L1_Category").isNotNull)
-    var seasonalityNPD = npdFilteredL1CategoryDF
-      .groupBy("Week", "L1_Category")
-      .agg(sum("UNITS").as("UNITS"), countDistinct("Year").as("Years"))
-      .withColumn("UNITS_average", col("UNITS") / col("Years"))
-
-    val seasonalityNPDSum = seasonalityNPD
-      .groupBy("L1_Category")
-      .agg(count("UNITS_average").as("number_weeks"), sum("UNITS_average").as("UNITS_average"))
-      .withColumn("average", col("UNITS_average") / col("number_weeks"))
-      .drop("UNITS_average", "number_weeks")
-
-    seasonalityNPD = seasonalityNPD.join(seasonalityNPDSum, Seq("L1_Category"), "left")
-      .withColumn("seasonality_npd", (col("UNITS_average") / col("average")) - lit(1))
-      .drop("UNITS", "UNITS_average", "average", "Years")
-
-
-    retailWithCompCannDF = retailWithCompCannDF
-      .withColumn("Week", when(col("Week_End_Date").isNull, null).otherwise(extractWeekFromDateUDF(col("Week_End_Date").cast("string"), lit("yyyy-MM-dd")).cast(StringType)))
-      .join(seasonalityNPD, Seq("L1_Category", "Week"), "left").drop("Week")
-      .withColumn("seasonality_npd2", when((col("USCyberMonday") === lit(1)) || (col("USThanksgivingDay") === lit(1)), 0).otherwise(col("seasonality_npd").cast(IntegerType)))
-      .withColumn("seasonality_npd2", when(col("PL") === "4X", lit(1)).otherwise(col("seasonality_npd2")))
-
-
-    retailWithCompCannDF = retailWithCompCannDF
-      .join(IFS2.filter(col("Account").isin("Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples", "Costco", "Sam's Club", "HP Shopping", "Walmart"))
-        .select("SKU", "Account", "Street_Price", "Hardware_GM", "Supplies_GM", "Hardware_Rev", "Supplies_Rev", "Valid_Start_Date", "Valid_End_Date"), Seq("SKU", "Account", "Street_Price"), "left")
-      .withColumn("Valid_Start_Date", when(col("Valid_Start_Date").isNull, dat2000_01_01).otherwise(col("Valid_Start_Date")))
-      .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))
-      //      .withColumn("Street_Price", when(col("Street_Price").isNull, col("Street_Price_Org")).otherwise(col("Street_Price")))
-      .where((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") < col("Valid_End_Date")))
-
-    val aveGM = retailWithCompCannDF.dropDuplicates("SKU", "Account")
-      .groupBy("SKU")
-      .agg(mean(col("Hardware_GM")).as("aveHWGM"),
-        mean(col("Supplies_GM")).as("aveSuppliesGM"))
-
-    //    aveGM.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1419.csv")
-
-    retailWithCompCannDF = retailWithCompCannDF
-      .join(aveGM, Seq("SKU"), "left")
-      .withColumn("Hardware_GM", when(col("Hardware_GM").isNull, col("aveHWGM")).otherwise(col("Hardware_GM")))
-      .withColumn("Hardware_GM", when(col("aveHWGM").isNull, lit(null).cast(StringType)).otherwise(col("Hardware_GM")))
-      .withColumn("Supplies_GM", when(col("Supplies_GM").isNull, col("aveSuppliesGM")).otherwise(col("Supplies_GM")))
-      .withColumn("Supplies_GM", when(col("aveSuppliesGM").isNull, lit(null).cast(StringType)).otherwise(col("Supplies_GM")))
-      .withColumn("Supplies_GM", when(col("PL") === "4X", 0).otherwise(col("Supplies_GM")))
+    retailWithCompetitionDF = retailWithCompetitionDF.withColumn("L1_Category", col("L1_Category"))
+      .join(HPComp1, Seq("Week_End_Date", "L1_Category", "Account"), "left")
 
     // write
-    retailWithCompCannDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Seasonality-Hardware-PART09.csv")
+    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1168.csv")
+
+    retailWithCompetitionDF = retailWithCompetitionDF
+      .join(HPComp2, Seq("Week_End_Date", "L2_Category", "Account"), "left")
+
+    // write
+    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1171.csv")
+
+    retailWithCompetitionDF = retailWithCompetitionDF
+      .withColumn("L1_competition_HP_ssmodel", when((col("L1_competition_HP_ssmodel").isNull) || (col("L1_competition_HP_ssmodel") < 0), 0).otherwise(col("L1_competition_HP_ssmodel")))
+      .withColumn("L2_competition_HP_ssmodel", when((col("L2_competition_HP_ssmodel").isNull) || (col("L2_competition_HP_ssmodel") < 0), 0).otherwise(col("L2_competition_HP_ssmodel")))
+      .na.fill(0, Seq("L1_competition_HP_ssmodel", "L2_competition_HP_ssmodel"))
+
+    // write
+    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1184.csv")
+
+    val ODOMHPmodel1 = retailWithCompetitionDF
+      .filter(col("Brand").isin("Samsung") && col("Account").isin("Office Depot-Max", "Amazon-Proper"))
+      .withColumn("temp_sum2", greatest(col("POS_Qty"), lit(0)))
+      .withColumn("temp_sum1", col("Promo_Pct") * greatest(col("POS_Qty"), lit(0)))
+      .groupBy("Week_End_Date", "L1_Category", "Account")
+      .agg(sum("temp_sum2").as("sum2"), (sum("temp_sum1").as("sum1")))
+      .withColumn("L1_competition_ssdata_HPmodel", col("sum1") / col("sum2"))
+      .drop("sum1", "sum2", "temp_sum1", "temp_sum2")
+
+    val ODOMHPmodel2 = retailWithCompetitionDF
+      .filter(col("Brand").isin("Samsung") && col("Account").isin("Office Depot-Max", "Amazon-Proper"))
+      .withColumn("temp_sum2", greatest(col("POS_Qty"), lit(0)))
+      .withColumn("temp_sum1", col("Promo_Pct") * greatest(col("POS_Qty"), lit(0)))
+      .groupBy("Week_End_Date", "L2_Category", "Account")
+      .agg(sum("temp_sum2").as("sum2"), (sum("temp_sum1").as("sum1")))
+      .withColumn("L2_competition_ssdata_HPmodel", col("sum1") / col("sum2"))
+      .drop("sum1", "sum2", "temp_sum1", "temp_sum2")
+
+    retailWithCompetitionDF = retailWithCompetitionDF
+      .join(ODOMHPmodel1, Seq("Week_End_Date", "L1_Category", "Account"), "left")
+      .join(ODOMHPmodel2, Seq("Week_End_Date", "L2_Category", "Account"), "left")
+      .withColumn("L1_competition_ssdata_HPmodel", when((col("L1_competition_ssdata_HPmodel").isNull) || (col("L1_competition_ssdata_HPmodel") < 0), 0).otherwise(col("L1_competition_ssdata_HPmodel")))
+      .withColumn("L2_competition_ssdata_HPmodel", when((col("L2_competition_ssdata_HPmodel").isNull) || (col("L2_competition_ssdata_HPmodel") < 0), 0).otherwise(col("L2_competition_ssdata_HPmodel")))
+      .na.fill(0, Seq("L1_competition_ssdata_HPmodel", "L2_competition_ssdata_HPmodel"))
+
+
+    // write
+    retailWithCompetitionDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-HP-PART09.csv")
 
   }
 }

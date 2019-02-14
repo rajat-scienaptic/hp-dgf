@@ -5,6 +5,7 @@ object HPDataProcessor {
   def execute(executionContext: ExecutionContext): Unit = {
     executionContext.configuration.config match {
       case "retail" => RetailTransform.execute(executionContext)
+      case "retail-2" => RetailTransform2.execute(executionContext)
       case "commercial" => CommercialSimplifiedTransform.execute(executionContext)
       case "preregression-commercial" => CommercialFeatEnggProcessor.execute(executionContext)
       case "preregression-commercial-2" => CommercialFeatEnggProcessor2.execute(executionContext)
@@ -33,6 +34,10 @@ object HPDataProcessor {
       case "preregression-retail-15" => RetailPreRegressionPart15.execute(executionContext)
       case "preregression-retail-16" => RetailPreRegressionPart16.execute(executionContext)
       case "preregression-retail-17" => RetailPreRegressionPart17.execute(executionContext)
+      case "preregression-retail-18" => RetailPreRegressionPart18.execute(executionContext)
+      case "preregression-retail-19" => RetailPreRegressionPart19.execute(executionContext)
+      case "preregression-retail-20" => RetailPreRegressionPart20.execute(executionContext)
+      case "preregression-retail-21" => RetailPreRegressionPart21.execute(executionContext)
       case "gap" => GAPTransform1.execute(executionContext)
       case "gap-2" => GAPTransform2.execute(executionContext)
       case "gap-3" => GAPTransform3.execute(executionContext)

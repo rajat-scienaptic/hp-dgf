@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, Date, Locale}
 
 import com.scienaptic.jobs.ExecutionContext
-import com.scienaptic.jobs.bean.{RetailHoliday, RetailHolidayTranspose, UnionOperation}
+import com.scienaptic.jobs.bean.UnionOperation
 import com.scienaptic.jobs.core.RetailPreRegressionPart01.{checkPrevDistInvGTBaseline, concatenateRankWithDist, stability_range}
 import com.scienaptic.jobs.utility.CommercialUtility.createlist
 import com.scienaptic.jobs.utility.Utils.renameColumns
@@ -13,7 +13,6 @@ import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.sql._
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.IntegerType
 
 import scala.collection.mutable
 
@@ -95,141 +94,119 @@ object RetailPreRegressionPart06 {
   })
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
-    val allBrands = List("Brother", "Canon", "Epson", "Lexmark", "Samsung", "HP")
 
-    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Holidays-PART05.csv")
+
+    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-EOL-half-PART05.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv")).cache()
-    npd.columns.toList.foreach(x => {
-      npd = npd.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
-    })
-    npd = npd.cache()
-      .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", lit(null)).otherwise(
-        when(col("Week_End_Date").contains("-"), to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
-          .otherwise(to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
-      ))
-
-
-    /*================= Brand not Main Brands =======================*/
-
-    val npdChannelBrandFilterRetail = npd.where((col("Channel") === "Retail") && (col("Brand").isin("Canon", "Epson", "Brother", "Lexmark", "Samsung")))
-      .where((col("DOLLARS") > 0) && (col("MSRP__") > 0))
-
-    val L1Competition = npdChannelBrandFilterRetail
-      .groupBy("L1_Category", "Week_End_Date", "Brand")
-      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
-      .withColumn("L1_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannelBrandFilterNotRetail, Seq("L1_Category","Week_End_Date","Brand"), "right")
-
-    var L1Comp = L1Competition
-      /*.withColumn("uuid", generateUUID())*/
-      .groupBy("L1_Category", "Week_End_Date" /*, "uuid"*/).pivot("Brand").agg(first("L1_competition")).drop("uuid")
-    val L1CompColumns = L1Comp.columns
-    allBrands.foreach(x => {
-      if (!L1CompColumns.contains(x))
-        L1Comp = L1Comp.withColumn(x, lit(null))
-    })
-    allBrands.foreach(x => {
-      L1Comp = L1Comp.withColumn(x, when(col(x).isNull, 0).otherwise(col(x)))
-        .withColumnRenamed(x, "L1_competition_" + x)
-    })
-
-
-    val L2Competition = npdChannelBrandFilterRetail
-      .groupBy("L2_Category", "Week_End_Date", "Brand")
-      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
-      .withColumn("L2_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannel6FilterNotRetail, Seq("L2_Category","Week_End_Date","Brand"), "right")
-
-    var L2Comp = L2Competition /*.withColumn("uuid", generateUUID())*/
-      .groupBy("L2_Category", "Week_End_Date" /*, "uuid"*/)
-      .pivot("Brand")
-      .agg(first("L2_competition")).drop("uuid")
-
-    val L2CompColumns = L2Comp.columns
-    allBrands.foreach(x => {
-      if (!L2CompColumns.contains(x))
-        L2Comp = L2Comp.withColumn(x, lit(null))
-    })
-    allBrands.foreach(x => {
-      L2Comp = L2Comp.withColumn(x, when(col(x).isNull, 0).otherwise(col(x)))
-        .withColumnRenamed(x, "L2_competition_" + x)
-    })
-
-    var retailWithCompetitionDF = retailEOL.join(L1Comp, Seq("L1_Category", "Week_End_Date"), "left")
-      .join(L2Comp, Seq("L2_Category", "Week_End_Date"), "left")
-
-    allBrands.foreach(x => {
-      val l1Name = "L1_competition_" + x
-      val l2Name = "L2_competition_" + x
-      retailWithCompetitionDF = retailWithCompetitionDF.withColumn(l1Name, when((col(l1Name).isNull) || (col(l1Name) < 0), 0).otherwise(col(l1Name)))
-        .withColumn(l2Name, when(col(l2Name).isNull || col(l2Name) < 0, 0).otherwise(col(l2Name)))
-    })
-    retailWithCompetitionDF = retailWithCompetitionDF.na.fill(0, Seq("L1_competition_Brother", "L1_competition_Canon", "L1_competition_Epson", "L1_competition_Lexmark", "L1_competition_Samsung"))
-      .na.fill(0, Seq("L2_competition_Brother", "L2_competition_Epson", "L2_competition_Canon", "L2_competition_Lexmark", "L2_competition_Samsung"))
-
-    /*====================================== Brand Not HP ================================= */
-
-    val npdChannelNotRetailBrandNotHP = npd.where((col("Channel") === "Retail") && (col("Brand") =!= "HP"))
-      .where((col("DOLLARS") > 0) && (col("MSRP__") > 0))
-
-    val L1CompetitionNonHP = npdChannelNotRetailBrandNotHP
-      .groupBy("L1_Category", "Week_End_Date")
-      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
-      .withColumn("L1_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannelNotRetailBrandNotHP, Seq("L1_Category","Week_End_Date"), "right")
-
-    val L2CompetitionNonHP = npdChannelNotRetailBrandNotHP
-      .groupBy("L2_Category", "Week_End_Date")
-      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
-      .withColumn("L2_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannelNotRetailBrandNotHP, Seq("L2_Category","Week_End_Date"), "right")
-
-    retailWithCompetitionDF = retailWithCompetitionDF.join(L1CompetitionNonHP, Seq("L1_Category", "Week_End_Date"), "left")
-      .join(L2CompetitionNonHP, Seq("L2_Category", "Week_End_Date"), "left")
-      .withColumn("L1_competition", when((col("L1_competition").isNull) || (col("L1_competition") < 0), 0).otherwise(col("L1_competition")))
-      .withColumn("L2_competition", when((col("L2_competition").isNull) || (col("L2_competition") < 0), 0).otherwise(col("L2_competition")))
-      .na.fill(0, Seq("L1_competition", "L2_competition"))
+    var BOL = retailEOL.select("SKU", "ES_date", "GA_date")
+      .dropDuplicates()
+      .where((col("ES_date").isNotNull) || (col("GA_date").isNotNull))
+      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("ES_date_wday", lit(7) - dayofweek(col("ES_date")).cast("int")) //As dayofweek returns in range 1-7 we want 0-6
+      .withColumn("GA_date_wday", lit(7) - dayofweek(col("GA_date")).cast("int"))
+      .withColumn("GA_date", to_date(expr("date_add(GA_date, GA_date_wday)")))
+      .withColumn("ES_date", to_date(expr("date_add(ES_date, ES_date_wday)")))
+      .drop("GA_date_wday", "ES_date_wday")
 
     // write
+    //    BOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-694.csv")
 
-    /*=================================== Brand Not Samsung ===================================*/
+    val windForSKUnAccount = Window.partitionBy("SKU&Account").orderBy(/*"SKU", "Account", */ "Week_End_Date")
+    var BOLCriterion = retailEOL
+      .groupBy("SKU", "Account", "Week_End_Date")
+      .agg(max("Distribution_Inv").as("Distribution_Inv")) //TODO: Changed from sum to max
+      .sort("SKU", "Account", "Week_End_Date")
+      .withColumn("SKU&Account", concat(col("SKU"), col("Account")))
+      //      .withColumn("uuid", lit(generateUUID()))
+      .withColumn("rank", row_number().over(windForSKUnAccount))
+      .withColumn("BOL_criterion", when(col("rank") < intro_weeks, 0).otherwise(1)) //BOL_criterion$BOL_criterion <- ave(BOL_criterion$Qty, paste0(BOL_criterion$SKU, BOL_criterion$Reseller.Cluster), FUN = BOL_criterion_v3)
+      .drop("rank", "Distribution_Inv", "uuid")
 
-    val npdChannelNotRetailBrandNotSamsung = npd.where((col("Channel") === "Retail") && (col("Brand") =!= "Samsung"))
-      .where((col("DOLLARS") > 0) && (col("MSRP__") > 0))
-    val L1CompetitionSS = npdChannelNotRetailBrandNotSamsung
-      .groupBy("L1_Category", "Week_End_Date")
-      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
-      .withColumn("L1_competition_ss", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannelNotRetailBrandNotSamsung, Seq("L1_Category","Week_End_Date"), "right")
+    BOLCriterion = BOLCriterion.join(BOL.select("SKU", "GA_date"), Seq("SKU"), "left")
+    val minWEDDate = to_date(lit(BOLCriterion.agg(min("Week_End_Date")).head().getDate(0)))
 
-    val L2CompetitionSS = npdChannelNotRetailBrandNotSamsung
-      .groupBy("L2_Category", "Week_End_Date")
-      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
-      .withColumn("L2_competition_ss", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannelNotRetailBrandNotSamsung, Seq("L2_Category","Week_End_Date"), "right")
+    BOLCriterion = BOLCriterion.withColumn("GA_date", when(col("GA_date").isNull, minWEDDate).otherwise(col("GA_date")))
+      .where(col("Week_End_Date") >= col("GA_date") && col("GA_date").isNotNull)
 
-    retailWithCompetitionDF = retailWithCompetitionDF.join(L1CompetitionSS, Seq("L1_Category", "Week_End_Date"), "left")
-      .join(L2CompetitionSS, Seq("L2_Category", "Week_End_Date"), "left")
+    ////////////
+    // write
+    //    BOLCriterion.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-762.csv")
 
+    val BOLCriterionFirst = BOLCriterion.where(col("BOL_criterion") === 1)
+      .groupBy("SKU", "Account")
+      .agg(min("Week_End_Date").as("first_date"))
+    //      .join(BOLCriterion.where(col("BOL_criterion") === 1), Seq("SKU", "Account"), "right")
     //write
-    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1110.csv")
+    //    BOLCriterionFirst.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-770.csv")
 
-    retailWithCompetitionDF = retailWithCompetitionDF
-      .withColumn("L1_competition_ss", when((col("L1_competition_ss").isNull) || (col("L1_competition_ss") < 0), 0).otherwise(col("L1_competition_ss")))
-      .withColumn("L2_competition_ss", when((col("L2_competition_ss").isNull) || (col("L2_competition_ss") < 0), 0).otherwise(col("L2_competition_ss")))
-      .na.fill(0, Seq("L1_competition_ss", "L2_competition_ss"))
+    val BOLCriterionMax = retailEOL
+      .groupBy("SKU", "Account")
+      .agg(max("Week_End_Date").as("max_date"))
+    //      .join(retailEOL, Seq("SKU", "Account"), "right")
+    // max
+    //    BOLCriterionMax.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-777.csv")
 
-    retailWithCompetitionDF = retailWithCompetitionDF
-      .withColumn("L1_competition", when(col("Brand").isin("Samsung"), col("L1_competition_ss")).otherwise(col("L1_competition")))
-      .withColumn("L2_competition", when(col("Brand").isin("Samsung"), col("L2_competition_ss")).otherwise(col("L2_competition")))
-      .drop("L2_competition_ss", "L1_competition_ss")
-    /* ========================================================================================== */
+    val BOLCriterionMin = retailEOL
+      .groupBy("SKU", "Account")
+      .agg(min("Week_End_Date").as("min_date"))
+    //      .join(retailEOL, Seq("SKU", "Account"), "right")
+    // write
+    //    BOLCriterionMin.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-783.csv")
 
-    retailWithCompetitionDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-PART06.csv")
+    BOLCriterion = BOLCriterionMax.withColumn("Account", col("Account")) // with column is on purpose as join cannot find Account from max dataframe
+      .join(BOLCriterionFirst, Seq("SKU", "Account"), "left")
+      .join(BOLCriterionMin, Seq("SKU", "Account"), "left")
+
+    BOLCriterion = BOLCriterion.withColumn("first_date", when(col("first_date").isNull, col("max_date")).otherwise(col("first_date")))
+      .drop("max_date")
+    val minMinDateBOL = BOLCriterion.agg(min("min_date")).head().getDate(0)
+    BOLCriterion = BOLCriterion
+      .where(!((col("min_date") === col("first_date")) && (col("first_date") === minMinDateBOL)))
+      .withColumn("diff_weeks", ((datediff(to_date(col("first_date")), to_date(col("min_date")))) / 7) + 1)
+
+    /*
+     do not un comment
+    BOL_criterion <- BOL_criterion[rep(row.names(BOL_criterion), BOL_criterion$diff_weeks),]
+    * BOL_criterion$add <- t(as.data.frame(strsplit(row.names(BOL_criterion), "\\.")))[,2]
+    BOL_criterion$add <- ifelse(grepl("\\.",row.names(BOL_criterion))==FALSE,0,as.numeric(BOL_criterion$add))
+    BOL_criterion$add <- BOL_criterion$add*7
+    BOL_criterion$Week.End.Date <- BOL_criterion$min_date+BOL_criterion$add
+    */
+    BOLCriterion = BOLCriterion.withColumn("diff_weeks", when(col("diff_weeks").isNull || col("diff_weeks") <= 0, 0).otherwise(col("diff_weeks")))
+      .withColumn("diff_weeks", col("diff_weeks").cast("int"))
+      .withColumn("repList", createlist(col("diff_weeks"))).withColumn("add", explode(col("repList"))).drop("repList")
+      .withColumn("add", col("add") * lit(7))
+      .withColumn("Week_End_Date", expr("date_add(min_date, add)")) //CHECK: check if min_date is in timestamp format!
+
+    BOLCriterion = BOLCriterion.drop("min_date", "fist_date", "diff_weeks", "add")
+      .withColumn("BOL_criterion", lit(1))
+
+    // write
+    //    BOLCriterion.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-818.csv")
+
+    // write
+    //     BOLCriterion.write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\BOLCriterion.csv")
+
+    retailEOL = retailEOL.join(BOLCriterion, Seq("SKU", "Account", "Week_End_Date"), "left")
+      .withColumn("BOL_criterion", when(col("BOL_criterion").isNull, 0).otherwise(col("BOL_criterion")))
+      .withColumn("BOL_criterion", when(col("EOL_criterion").isNull, null).otherwise(col("BOL_criterion")))
+      .withColumn("BOL_criterion", when(col("EOL_criterion") === 1, 0).otherwise(col("BOL_criterion")))
+      .withColumn("BOL_criterion", when(datediff(col("Week_End_Date"), col("GA_date")) < (7 * 6), 1).otherwise(col("BOL_criterion")))
+      .withColumn("BOL_criterion", when(col("GA_date").isNull, 0).otherwise(col("BOL_criterion")))
+      .withColumn("BOL_criterion", when(col("Account").isin("Amazon-Proper") && col("SKU") === "M2U85A" && (col("Week_End_Date") === "2018-04-14" || col("Week_End_Date") === "2018-04-21"), 0).otherwise(col("BOL_criterion"))) // multiple date condition merged into 1
+      .withColumn("EOL_criterion", when(col("EOL_criterion").isNull, 0).otherwise(col("EOL_criterion")))
+      .withColumn("BOL_criterion", when(col("BOL_criterion").isNull, 0).otherwise(col("BOL_criterion")))
+      .withColumn("ASP_IR", when(col("EOL_criterion") === 1, when(col("Other_IR") =!= 0, col("Other_IR")).otherwise(col("ASP_IR"))).otherwise(col("ASP_IR")))
+      .withColumn("Other_IR", when(col("EOL_criterion") === 1, when(col("Other_IR") =!= 0, 0).otherwise(col("Other_IR"))).otherwise(col("Other_IR")))
+      .withColumn("ASP_Flag", when(col("ASP_IR") > 0, 1).otherwise(lit(0)))
+      .withColumn("Other_IR_Flag", when(col("Other_IR") > 0, 1).otherwise(lit(0)))
+
+    // comment this 2 line
+        retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-BOL-PART06.csv")
   }
 }

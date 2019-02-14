@@ -1,22 +1,19 @@
 package com.scienaptic.jobs.core
 
 import java.text.SimpleDateFormat
-import java.util.{Calendar, Date, Locale, UUID}
+import java.util.{Calendar, Date, Locale}
 
 import com.scienaptic.jobs.ExecutionContext
-import com.scienaptic.jobs.bean.{RetailHoliday, RetailHolidayTranspose, UnionOperation}
 import com.scienaptic.jobs.bean.UnionOperation.doUnion
-import com.scienaptic.jobs.utility.CommercialUtility.{addDaystoDateStringUDF, concatenateRank, createlist, extractWeekFromDateUDF}
 import com.scienaptic.jobs.utility.Utils.renameColumns
-import org.apache.spark
-import org.apache.spark.sql.functions._
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.StringIndexer
-import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql._
-import org.apache.spark.sql.types.{DateType, DoubleType, IntegerType, StringType}
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.StringType
 
 import scala.collection.mutable
+
 object RetailPreRegressionPart02 {
 
   val Cat_switch = 1
@@ -93,114 +90,160 @@ object RetailPreRegressionPart02 {
         0
     }
   })
+
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
-    import spark.implicits._
 
-    var retailJoincompAdTotalDFDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoincompAdTotalDFDF-PART01.csv")
+    var retailJoinAdPositionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoinAdPositionDF-PART01.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
 
-    var calendar = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Calendar/Retail/master_calendar_retail.csv")).cache()
-    calendar.columns.toList.foreach(x => {
-      calendar = calendar.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
-    })
-    calendar = calendar.cache()
-      .filter(!col("Account").isin("Rest of Retail"))
-      .withColumn("Account", when(col("Account").isin("Amazon.Com"), "Amazon-Proper").otherwise(col("Account")))
-      //      .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", null).otherwise(to_date(unix_timestamp(convertFaultyDateFormat(col("Week_End_Date")), "yyyy-MM-dd").cast("timestamp"))))
-      //      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
-      .withColumn("NP_IR_original", col("NP_IR"))
-      .withColumn("ASP_IR_original", col("ASP_IR"))
-      .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", lit(null)).otherwise(
-        when(col("Week_End_Date").contains("-"), to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
-          .otherwise(to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
-      ))
-      .drop("Season")
 
-
-    var retailJoinCalendarDF = retailJoincompAdTotalDFDF
-      .join(calendar, Seq("Account", "SKU", "Week_End_Date"), "left")
-      .withColumn("Merchant_Gift_Card", when(col("Merchant_Gift_Card").isNull, 0).otherwise(col("Merchant_Gift_Card")))
-      .withColumn("Flash_IR", when(col("Online") === 0, 0).otherwise(col("Flash_IR")))
-      .withColumn("Flash_IR", when(col("Flash_IR").isNull, 0).otherwise(col("Flash_IR")))
-
-    // write
-    //    retailJoinCalendarDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-371.csv")
-
-    val uniqueSKUNames = retailJoinCalendarDF.filter(col("Merchant_Gift_Card") > 0).select("SKU_Name").distinct().collect().map(_ (0).asInstanceOf[String]).toList
-
-    retailJoinCalendarDF = retailJoinCalendarDF.withColumn("GC_SKU_Name", when(col("SKU_Name").isin(uniqueSKUNames: _*), col("SKU_Name").cast("string"))
-      .otherwise(lit("NA")))
-
-    val SKUWhoChange = retailJoinCalendarDF.filter(col("Changed_Street_Price") =!= 0).select("SKU").distinct().collect().map(_ (0)).toList
-
-    // TODO done : check col data type for pmax UDF
-    retailJoinCalendarDF = retailJoinCalendarDF.withColumn("GAP_IR", when((col("SKU").isin(SKUWhoChange: _*)) && (col("Season").isin("BTB'18")), col("NP_IR"))
-      .otherwise(col("GAP_IR")))
-      .withColumn("GAP_IR", when(col("GAP_IR").isNull, 0).otherwise(col("GAP_IR")))
-      .withColumn("Other_IR_original", when(col("NP_IR_original").isNull && col("ASP_IR_original").isNull, col("GAP_IR")).otherwise(0))
-      .withColumn("NP_IR_original", when(col("NP_IR_original").isNull, 0).otherwise(col("NP_IR_original")))
-      .withColumn("ASP_IR_original", when(col("ASP_IR_original").isNull, 0).otherwise(col("ASP_IR_original")))
-      .withColumn("Total_IR_original", greatest(col("NP_IR_original"), col("ASP_IR_original"), col("Other_IR_original")))
-      .withColumn("NP_IR_original", when(col("Flash_IR") > 0, col("Flash_IR")).otherwise(col("NP_IR_original")))
-      .withColumn("NP_IR", col("NP_IR_original"))
-      .withColumn("Total_IR", greatest(col("NP_IR_original"), col("ASP_IR_original"), col("GAP_IR")))
-      .withColumn("ASP_IR", when(col("ASP_IR_original") >= (col("Total_IR") - col("NP_IR"))
-        , col("Total_IR") - col("NP_IR")).otherwise(col("ASP_IR_original")))
-      .withColumn("Other_IR", col("Total_IR") - (col("NP_IR") + col("ASP_IR")))
-      .withColumn("Ad", when(col("Total_IR") === 0, 0).otherwise(col("Ad")))
-
-    // write
-    //        retailJoinCalendarDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb07-r-424.csv")
-    var masterSprintCalendar = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/S-Print/Master_Calendar/Master_Calender_s-print.csv")).cache()
-    masterSprintCalendar.columns.toList.foreach(x => {
-      masterSprintCalendar = masterSprintCalendar.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
-    })
-    masterSprintCalendar = masterSprintCalendar.cache()
-      .select("Account", "SKU", "Rebate_SS", "Week_End_Date")
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
-
-    val retailJoinMasterSprintCalendarDF = retailJoinCalendarDF
-      .join(masterSprintCalendar, Seq("SKU", "Account", "Week_End_Date"), "left")
-      .withColumn("NP_IR", when(col("Brand").isin("Samsung"), col("Rebate_SS")).otherwise(col("NP_IR")))
-      //      .withColumn("NP_IR", when(col("Rebate_SS").isNull, null).otherwise(col("NP_IR")))
-      .withColumn("NP_IR", when(col("NP_IR").isNull, 0).otherwise(col("NP_IR")))
-      .drop("Rebate_SS")
-
-    var aggUpstream = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Upstream/AggUpstream.csv")).cache()
-    aggUpstream.columns.toList.foreach(x => {
-      aggUpstream = aggUpstream.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
-    })
-    aggUpstream = aggUpstream.cache()
+    var GAP1JoinSKUMappingDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-GAP1JoinSKUMappingDF-PART01.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-      .withColumn("Ave", when(col("Ave") === "NA" || col("Ave") === "", null).otherwise(col("Ave")))
-      .withColumn("Min", when(col("Min") === "NA" || col("Min") === "", null).otherwise(col("Min")))
-      .withColumn("Max", when(col("Max") === "NA" || col("Max") === "", null).otherwise(col("Max")))
+      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
 
-    val focusedAccounts = List("HP Shopping", "Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples")
 
-    val retailJoinAggUpstreamWithNATreatmentDF = aggUpstream
-      .join(retailJoinMasterSprintCalendarDF, Seq("SKU", "Account", "Week_End_Date", "Online"), "right")
-      .withColumn("GAP_Price", col("Street_Price") - col("Total_IR"))
-      .withColumn("ImpAve", when((col("Ave").isNull) && (col("GAP_Price").isNotNull), col("GAP_Price")).otherwise(col("Ave")))
-      .withColumn("ImpMin", when((col("Min").isNull) && (col("GAP_Price").isNotNull), col("GAP_Price")).otherwise(col("Min")))
-      .withColumn("NoAvail", when(col("InStock").isNull && col("OnlyInStore").isNull && col("OutofStock").isNull && col("DelayDel").isNull, 1).otherwise(0))
-      .withColumn("NoAvail", when(col("POS_Qty") > 0 && col("OutofStock").isin(7), 1).otherwise(col("NoAvail")))
-      .withColumn("OutofStock", when(col("POS_Qty") > 0 && col("OutofStock").isin(7), 0).otherwise(col("OutofStock")))
-      .withColumn("InStock", when(col("InStock").isNull, 0).otherwise(col("InStock")))
-      .withColumn("DelayDel", when(col("DelayDel").isNull, 0).otherwise(col("DelayDel")))
-      .withColumn("OutofStock", when(col("OutofStock").isNull, 0).otherwise(col("OutofStock")))
-      .withColumn("OnlyInStore", when(col("OnlyInStore").isNull, 0).otherwise(col("OnlyInStore")))
-      .withColumn("NoAvail", when(col("NoAvail").isNull, 0).otherwise(col("NoAvail")))
+    //GAP_1$SKU <- as.character(GAP_1$SKU)
+    //GAP_1$SKU_HP <- as.character(GAP_1$SKU_HP)
 
-    var retailJoinAggUpstreamDF = retailJoinAggUpstreamWithNATreatmentDF
-      .filter(col("Account").isin(focusedAccounts: _*))
+    val GAP1AggregateDF = GAP1JoinSKUMappingDF
+      .filter(col("Account").isin("Best Buy", "Office Depot-Max", "Staples") && col("Brand").isin("HP", "Samsung"))
+      .groupBy("SKU", "Account", "Week_End_Date", "Online")
+      .agg(max(col("Ad")).as("Ad"), max(col("Total_IR")).as("GAP_IR"))
+      //      .withColumn("GAP_IR", lit(null).cast(StringType))
+      //      .withColumn("Days_on_Promo", lit(null).cast(StringType))
 
-    // remove write
-      retailJoinAggUpstreamWithNATreatmentDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamWithNATreatmentDF-PART02.csv")
-      retailJoinAggUpstreamDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamDF-PART02.csv")
+    val retailJoinGAP1AggregateDF = retailJoinAdPositionDF
+      .join(GAP1AggregateDF.select("SKU", "Account", "Week_End_Date", "Online", "GAP_IR", "Ad"), Seq("SKU", "Account", "Week_End_Date", "Online"), "left")
+      .withColumn("GAP_IR", when(col("GAP_IR").isNull, 0).otherwise(col("GAP_IR")))
+      .withColumn("Ad", when(col("Ad").isNull, 0).otherwise(col("Ad")))
+
+    val aggregateGAP1Days = GAP1JoinSKUMappingDF
+      .filter(col("Account").isin("Costco", "Sam's Club") && col("Brand") === lit("HP"))
+      .groupBy("SKU", "Account", "Week_End_Date")
+      .agg(max(col("Days_on_Promo")).as("Days_on_Promo"))
+
+    val retailJoinAggregateGAP1DaysDF = retailJoinGAP1AggregateDF
+      .join(aggregateGAP1Days.select("SKU", "Account", "Week_End_Date", "Days_on_Promo"), Seq("SKU", "Account", "Week_End_Date"), "left")
+      .withColumn("Days_on_Promo", when(col("Days_on_Promo").isNull, 0).otherwise(col("Days_on_Promo")))
+
+    var adAccountDF = GAP1AggregateDF
+      .groupBy("SKU", "Week_End_Date", "Online")
+      .pivot("Account")
+      .agg(first(col("Ad")))
+    adAccountDF = adAccountDF
+      //      .join(GAP1AggregateDF, Seq("uuid"), "right")
+      .drop("uuid", "Account", "Ad") // check account if needed
+
+
+    val accountList = List("Best Buy", "Office Depot-Max", "Staples")
+    val adAccountDFColumns = adAccountDF.columns
+
+    // check if all columns exists and if not then assign null
+    accountList.foreach(x => {
+      if (!adAccountDFColumns.contains(x))
+        adAccountDF = adAccountDF.withColumn(x, lit(null).cast(StringType))
+    })
+
+    // NA treatment
+    accountList.foreach(account => {
+      adAccountDF = adAccountDF.withColumn(account, when(col(account).isNull, 0).otherwise(col(account)))
+        .withColumnRenamed(account, "Ad_" + account)
+    })
+
+    // TODO done: is NA treatment necessary here ?
+    val retailJoinAdAccountDF = retailJoinAggregateGAP1DaysDF
+      .join(adAccountDF, Seq("SKU", "Week_End_Date", "Online"), "left")
+      .withColumn("Ad_Best Buy", when(col("Ad_Best Buy").isNull, 0).otherwise(col("Ad_Best Buy")))
+      .withColumn("Ad_Office Depot-Max", when(col("Ad_Office Depot-Max").isNull, 0).otherwise(col("Ad_Office Depot-Max")))
+      .withColumn("Ad_Staples", when(col("Ad_Staples").isNull, 0).otherwise(col("Ad_Staples")))
+
+
+    val GAP2 = GAP1JoinSKUMappingDF
+      .groupBy("Brand", "SKU", "Account", "Week_End_Date", "L2_Category", "L1_Category", "Category_1", "Category_2")
+      .agg(max(col("Ad")).as("Ad"))
+
+    val compAd = GAP2
+      .groupBy("L2_Category", "Brand", "Week_End_Date", "Account")
+      .agg(mean(col("Ad")).as("Ad_avg"), sum(col("Ad")).as("Ad_total"))
+      .filter(!col("Brand").isin("Xerox"))
+
+    var compAdAvgDF = compAd
+      .groupBy("L2_Category", "Week_End_Date", "Account")
+      .pivot("Brand")
+      .agg(first("Ad_avg"))
+      //      .join(compAd, Seq("uuid"), "right") // check if needed
+      .drop("uuid", "Brand", "Ad_avg") // check brand if needed
+
+    val allBrands = List("Brother", "Canon", "Epson", "Lexmark", "Samsung", "HP")
+    val compAd2Columns = compAdAvgDF.columns
+    allBrands.foreach(x => {
+      if (!compAd2Columns.contains(x))
+        compAdAvgDF = compAdAvgDF.withColumn(x, lit(null).cast(StringType))
+    })
+    allBrands.foreach(brand => {
+      compAdAvgDF = compAdAvgDF.withColumn(brand, when(col(brand).isNull, 0).otherwise(col(brand)))
+        .withColumnRenamed(brand, "Ad_ratio_" + brand)
+    })
+
+    var retailJoinCompAdAvgDF = retailJoinAdAccountDF
+      .join(compAdAvgDF, Seq("L2_Category", "Week_End_Date", "Account"), "left")
+
+    allBrands.foreach(brand => {
+      retailJoinCompAdAvgDF = retailJoinCompAdAvgDF.withColumn("Ad_ratio_" + brand, when(col("Ad_ratio_" + brand).isNull, 0).otherwise(col("Ad_ratio_" + brand)))
+    })
+
+    compAdAvgDF = compAdAvgDF.drop("Ad_avg")
+
+    // TODO done : Need to verify Ad_total for aggregation
+    var compAdTotalDF = compAd
+      .groupBy("L2_Category", "Week_End_Date", "Account")
+      .pivot("Brand")
+      .agg(first("Ad_total"))
+      //      .join(compAd, Seq("uuid"), "right") // check if needed
+      .drop("uuid", "Ad_total", "Brand") // check brand if needed
+
+    val compAdTotalColumns = compAdTotalDF.columns
+    allBrands.foreach(x => {
+      if (!compAdTotalColumns.contains(x))
+        compAdTotalDF = compAdTotalDF.withColumn(x, lit(null).cast(StringType))
+    })
+    allBrands.foreach(brand => {
+      compAdTotalDF = compAdTotalDF.withColumn(brand, when(col(brand).isNull, 0).otherwise(col(brand)))
+        .withColumnRenamed(brand, "Ad_total_" + brand)
+    })
+
+    var retailJoincompAdTotalDFDF = retailJoinCompAdAvgDF
+      .join(compAdTotalDF, Seq("L2_Category", "Week_End_Date", "Account"), "left")
+
+    allBrands.foreach(brand => {
+      retailJoincompAdTotalDFDF = retailJoincompAdTotalDFDF.withColumn("Ad_total_" + brand, when(col("Ad_total_" + brand).isNull, 0).otherwise(col("Ad_total_" + brand)))
+    })
+
+    // need utility for the below
+    retailJoincompAdTotalDFDF = retailJoincompAdTotalDFDF.withColumn("Total_Ad_No_", col("Ad_total_Brother") +
+      col("Ad_total_Canon") + col("Ad_total_Lexmark") + col("Ad_total_Samsung") + col("Ad_total_Epson") + col("Ad_total_HP"))
+
+
+    allBrands.foreach(brand => {
+      retailJoincompAdTotalDFDF = retailJoincompAdTotalDFDF.withColumn("Ad_share_" + brand, when((col("Ad_total_" + brand) / col("Total_Ad_No_")).isNull, 0)
+        .otherwise(col("Ad_total_" + brand) / col("Total_Ad_No_")))
+    })
+
+    retailJoincompAdTotalDFDF = retailJoincompAdTotalDFDF
+      .drop("Total_Ad_No_")
+      .withColumn("Ad_Location", when(col("Ad_Location").isNull, "No_Ad").otherwise(col("Ad_Location").cast("string")))
+      .withColumn("Ad_Location", when(col("Ad_Best Buy") === 1 && col("Ad_Location") === "No_Ad", "No_Info")
+        .when(col("Ad_Office Depot-Max") === 1 && col("Ad_Location") === "No_Ad", "No_Info")
+        .when(col("Ad_Staples") === 1 && col("Ad_Location") === "No_Ad", "No_Info")
+        .otherwise(col("Ad_Location").cast("string")))
+      .dropDuplicates()
+
+    retailJoincompAdTotalDFDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoincompAdTotalDFDF-PART02.csv")
+    // Part 1 Ends here
 
   }
 }
