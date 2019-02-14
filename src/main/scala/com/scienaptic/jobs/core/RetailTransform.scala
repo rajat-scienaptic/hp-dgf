@@ -386,7 +386,7 @@ object RetailTransform {
 
     // formula
     val sPrintsHistoricalFormula01DF = sPrintsHistoricalUnitsGroup01DF.withColumn("Sum_Inv : Saleable Qty",
-      when(col("fum_Inv : Saleable Qty") > lit(0), 1)
+      when(col("Sum_Inv : Saleable Qty") > lit(0), 1)
         .otherwise(0))
 
     // Union
