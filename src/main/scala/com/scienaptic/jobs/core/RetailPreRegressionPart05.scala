@@ -4,8 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, Date, Locale}
 
 import com.scienaptic.jobs.ExecutionContext
-import com.scienaptic.jobs.bean.{RetailHoliday, RetailHolidayTranspose, UnionOperation}
-import com.scienaptic.jobs.core.RetailPreRegressionPart01.{checkPrevDistInvGTBaseline, concatenateRankWithDist, stability_range}
+import com.scienaptic.jobs.bean.UnionOperation
 import com.scienaptic.jobs.utility.CommercialUtility.createlist
 import com.scienaptic.jobs.utility.Utils.renameColumns
 import org.apache.spark.ml.Pipeline
@@ -13,7 +12,6 @@ import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.sql._
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.IntegerType
 
 import scala.collection.mutable
 
@@ -95,111 +93,141 @@ object RetailPreRegressionPart05 {
   })
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
-    import spark.implicits._
 
-    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-BOL-PART04.csv")
+    var retailUnionRetailOtherAccountsDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailUnionRetailOtherAccountsDF-part04.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
-      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    val christmasDF = Seq(("2014-12-27", 1), ("2015-12-26", 1), ("2016-12-31", 1), ("2017-12-30", 1), ("2018-12-29", 1), ("2019-12-28", 1)).toDF("Week_End_Date", "USChristmasDay")
-    val columbusDF = Seq(("2014-10-18", 1), ("2015-10-17", 1), ("2016-10-15", 1), ("2017-10-14", 1), ("2018-10-13", 1), ("2019-10-19", 1)).toDF("Week_End_Date", "USColumbusDay")
-    val independenceDF = Seq(("2014-07-05", 1), ("2015-07-04", 1), ("2016-07-09", 1), ("2017-07-08", 1), ("2018-07-07", 1), ("2019-07-06", 1)).toDF("Week_End_Date", "USIndependenceDay")
-    val laborDF = Seq(("2014-09-06", 1), ("2015-09-12", 1), ("2016-09-10", 1), ("2017-09-09", 1), ("2018-09-08", 1), ("2019-09-07", 1)).toDF("Week_End_Date", "USLaborDay")
-    val linconsBdyDF = Seq(("2014-02-15", 1), ("2015-02-14", 1), ("2016-02-13", 1), ("2017-02-18", 1), ("2018-02-17", 1), ("2019-02-16", 1)).toDF("Week_End_Date", "USLincolnsBirthday")
-    val memorialDF = Seq(("2014-05-31", 1), ("2015-05-30", 1), ("2016-06-04", 1), ("2017-06-03", 1), ("2018-06-02", 1), ("2019-06-01", 1)).toDF("Week_End_Date", "USMemorialDay")
-    val MLKingsDF = Seq(("2014-01-25", 1), ("2015-01-24", 1), ("2016-01-23", 1), ("2017-01-21", 1), ("2018-01-20", 1), ("2019-01-26", 1)).toDF("Week_End_Date", "USMLKingsBirthday")
-    val newYearDF = Seq(("2014-01-04", 1), ("2015-01-03", 1), ("2016-01-02", 1), ("2017-01-07", 1), ("2018-01-06", 1), ("2019-01-05", 1)).toDF("Week_End_Date", "USNewYearsDay")
-    val presidentsDayDF = Seq(("2014-02-22", 1), ("2015-02-21", 1), ("2016-02-20", 1), ("2017-02-25", 1), ("2018-02-24", 1), ("2019-02-23", 1)).toDF("Week_End_Date", "USPresidentsDay")
-    val veteransDayDF = Seq(("2014-11-15", 1), ("2015-11-14", 1), ("2016-11-12", 1), ("2017-11-11", 1), ("2018-11-17", 1), ("2019-11-16", 1)).toDF("Week_End_Date", "USVeteransDay")
-    val washingtonBdyDF = Seq(("2014-02-22", 1), ("2015-02-28", 1), ("2016-02-27", 1), ("2017-02-25", 1), ("2018-02-24", 1), ("2019-02-23", 1)).toDF("Week_End_Date", "USWashingtonsBirthday")
-    val thanksgngDF = Seq(("2014-11-29", 1), ("2015-11-28", 1), ("2016-11-26", 1), ("2017-11-25", 1), ("2018-11-24", 1), ("2019-11-30", 1)).toDF("Week_End_Date", "USThanksgivingDay")
+    /*do not uncomment
+     following are omitted variables
+    .withColumn("log_POS_Qty", log(col("POS_Qty")))
+    .withColumn("log_POS_Qty", when(col("log_POS_Qty").isNull, 0).otherwise(col("log_POS_Qty")))
+    .withColumn("log_POS_Qty", log(lit(1) - col("POS_Qty")))*/
 
-    val usCyberMonday = thanksgngDF.withColumn("Week_End_Date", date_add(col("Week_End_Date").cast("timestamp"), 7))
-      .withColumnRenamed("USThanksgivingDay", "USCyberMonday")
-    retailEOL = retailEOL.withColumn("Week_End_Date", to_date(col("Week_End_Date")))
-      .join(christmasDF, Seq("Week_End_Date"), "left")
-      .join(columbusDF, Seq("Week_End_Date"), "left")
-      .join(independenceDF, Seq("Week_End_Date"), "left")
-      .join(laborDF, Seq("Week_End_Date"), "left")
-      .join(linconsBdyDF, Seq("Week_End_Date"), "left")
-      .join(memorialDF, Seq("Week_End_Date"), "left")
-      .join(MLKingsDF, Seq("Week_End_Date"), "left")
-      .join(newYearDF, Seq("Week_End_Date"), "left")
-      .join(presidentsDayDF, Seq("Week_End_Date"), "left")
-      .join(veteransDayDF, Seq("Week_End_Date"), "left")
-      .join(washingtonBdyDF, Seq("Week_End_Date"), "left")
-      .join(thanksgngDF, Seq("Week_End_Date"), "left")
-      .join(usCyberMonday, Seq("Week_End_Date"), "left")
-
-    List("USChristmasDay", "USColumbusDay", "USIndependenceDay", "USLaborDay", "USLincolnsBirthday", "USMemorialDay", "USMLKingsBirthday", "USNewYearsDay", "USPresidentsDay", "USThanksgivingDay", "USVeteransDay", "USWashingtonsBirthday", "USCyberMonday")
-      .foreach(x => {
-        retailEOL = retailEOL.withColumn(x, when(col(x).isNull, 0).otherwise(col(x)))
-      })
-    /*
-     TODO : consider the above dataframe , value of each DF is 1 and pmax below would be 1 as assumption
-    retail$hol.dummy <- pmax(retail$USChristmasDay, retail$USColumbusDay, retail$USLaborDay, retail$USLincolnsBirthday, retail$USMemorialDay, retail$USMLKingsBirthday,
-      retail$USVeteransDay, retail$USWashingtonsBirthday, retail$USCyberMonday, retail$USIndependenceDay, retail$USNewYearsDay,
-      retail$USPresidentsDay, retail$USThanksgivingDay)*/
-
-    val holidaysListNATreatment = Seq("USChristmasDay", "USThanksgivingDay", "USMemorialDay", "USPresidentsDay", "USLaborDay")
-
-    var reatilWithHolidaysDF = retailEOL
-      .select("Week_End_Date", "USLaborDay", "USMemorialDay", "USPresidentsDay", "USThanksgivingDay", "USChristmasDay") //   retail_hol <- retail[,colnames(retail) %in% holidays]
+    var retailEOL = retailUnionRetailOtherAccountsDF.select("SKU", "ES_date", "GA_date").dropDuplicates()
+      .filter(col("ES_date").isNotNull || col("GA_date").isNotNull)
+      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("ES_date_wday", lit(7) - dayofweek(col("ES_date")).cast("int")) //As dayofweek returns in range 1-7 we want 0-6
+      .withColumn("GA_date_wday", lit(7) - dayofweek(col("GA_date")).cast("int"))
+      .withColumn("GA_date", expr("date_add(GA_date, GA_date_wday)"))
+      .withColumn("ES_date", expr("date_add(ES_date, ES_date_wday)"))
+      .drop("GA_date_wday", "ES_date_wday")
 
 
-    // TODO : retail_hol <- gather(retail_hol, holidays, holiday.dummy, USLaborDay:USChristmasDay) // also this variable is omitted line 886
-    // gather starts
-    implicit val retailHolidayEncoder = Encoders.product[RetailHoliday]
-    implicit val retailHolidayTranspose = Encoders.product[RetailHolidayTranspose]
+    val windForSKUAndAccount = Window.partitionBy("SKU&Account" /*, "uuid"*/).orderBy(/*"SKU", "Account",*/ "Week_End_Date")
+    var EOLcriterion = retailUnionRetailOtherAccountsDF
+      .groupBy("SKU", "Account", "Week_End_Date")
+      .agg(max("Distribution_Inv").as("Distribution_Inv"))
+      .sort("SKU", "Account", "Week_End_Date")
+      .withColumn("SKU&Account", concat(col("SKU"), col("Account")))
 
-    val retailHolidayDataSet = reatilWithHolidaysDF.as[RetailHoliday]
-    val names = retailHolidayDataSet.schema.fieldNames
+    val EOLcriterion1 = EOLcriterion
+      .groupBy("SKU", "Account")
+      .agg(max(col("Distribution_Inv")).as("Distribution_Inv2"))
 
-    val transposedData = retailHolidayDataSet.flatMap(row => Array(RetailHolidayTranspose(row.Week_End_Date, row.USMemorialDay, row.USPresidentsDay, row.USThanksgivingDay, names(1), row.USLaborDay),
-      RetailHolidayTranspose(row.Week_End_Date, row.USMemorialDay, row.USPresidentsDay, row.USThanksgivingDay, names(5), row.USChristmasDay)
-    ))
-    reatilWithHolidaysDF = transposedData.toDF()
-    // gather ends
+    EOLcriterion = EOLcriterion.join(EOLcriterion1, Seq("SKU", "Account"), "left")
 
-    reatilWithHolidaysDF = reatilWithHolidaysDF
-      .withColumn("holiday_dummy", col("holiday_dummy").cast(IntegerType))
-      .filter(col("holiday_dummy") === 1).distinct().drop("holiday_dummy")
-      // TODO done: check the format of Week_Ento_dated_Date
-      .withColumn("lag_week", date_sub(to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp"), "yyyy-MM-dd"), 7))
-      .withColumn("holiday_dummy", lit(1))
-    // TODO : verify -> spread(retail_hol, holidays, Week.End.Date) : 896
+    EOLcriterion = EOLcriterion.orderBy("SKU", "Account", "Week_End_Date")
+      .withColumn("rank", row_number().over(windForSKUAndAccount))
+      .withColumn("dist_threshold", col("Distribution_Inv2") * (lit(1) - lit(stability_range)))
 
-    var spreadHolidays = reatilWithHolidaysDF
-      .groupBy("Week_End_Date")
-      .pivot("holidays")
-      .agg(first(col("holiday_dummy")))
-    //      .withColumn("USChristmasDay", when(col("USChristmasDay") === 1, col("Week_End_Date").cast(StringType)).otherwise(col("USChristmasDay")))
-    //      .withColumn("USLaborDay", when(col("USLaborDay") === 1, col("Week_End_Date").cast(StringType)).otherwise(col("USLaborDay")))
+    var EOLWithCriterion1 = EOLcriterion
+      .groupBy("SKU&Account")
+      .agg((collect_list(concat_ws("_", col("rank"), col("Distribution_Inv")).cast("string"))).as("DistInvArray"))
 
-    reatilWithHolidaysDF = spreadHolidays
-      .join(reatilWithHolidaysDF, Seq("Week_End_Date"), "right")
-      .drop("holiday_dummy", "holidays", "Week_End_Date")
-      .withColumnRenamed("lag_week", "Week_End_Date")
+    EOLWithCriterion1 = EOLWithCriterion1
+      .withColumn("DistInvArray", when(col("DistInvArray").isNull, null).otherwise(concatenateRankWithDist(col("DistInvArray"))))
+    EOLcriterion = EOLcriterion.join(EOLWithCriterion1, Seq("SKU&Account"), "left")
+      .withColumn("EOL_criterion", when((col("rank") <= stability_weeks) || (col("Distribution_Inv") < col("dist_threshold")), 0)
+        .otherwise(checkPrevDistInvGTBaseline(col("DistInvArray"), col("rank"), col("Distribution_Inv"))))
+      .drop("rank", "DistInvArray", "SKU&Account", "Distribution_Inv2", "dist_threshold", "uuid")
 
-    holidaysListNATreatment.foreach(holiday => {
-      reatilWithHolidaysDF = reatilWithHolidaysDF.withColumnRenamed(holiday, "Lag_" + holiday)
+    //    EOLcriterion.where(col("SKU") === "1AS85A" && col("Account") === "Best Buy").show(50,false)
+    val EOLCriterionLast = EOLcriterion.where(col("EOL_criterion") === 1)
+      .groupBy("SKU", "Account")
+      .agg(max("Week_End_Date").as("last_date"))
+    //      .join(EOLcriterion.where(col("EOL_criterion") === 1), Seq("SKU_Name", "Account"), "right")
+
+    val EOLCriterionMax = retailUnionRetailOtherAccountsDF
+      .groupBy("SKU", "Account")
+      .agg(max("Week_End_Date").as("max_date"))
+    //      .join(retailEOL, Seq("SKU", "Account"), "right")
+
+    val EOLCriterionMin = retailUnionRetailOtherAccountsDF
+      .groupBy("SKU", "Account")
+      .agg(min("Week_End_Date").as("min_date"))
+    //      .join(retailEOL, Seq("SKU", "Account"), "right")
+
+    val EOLMaxJoinLastDF = EOLCriterionMax
+      .join(EOLCriterionLast, Seq("SKU", "Account"), "left")
+
+    val EOLMaxLastJoinMinDF = EOLMaxJoinLastDF
+      .join(EOLCriterionMin, Seq("SKU", "Account"), "left")
+
+    // comment below 2 lines
+    //    EOLMaxLastJoinMinDF.write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\EOLMaxLastJoinMinDF")
+    //    var EOLMaxLastJoinMinDF =  executionContext.spark.read.option("header", true).option("inferSchema", true).csv("D:\\files\\temp\\EOLMaxLastJoinMinDF")
+
+    val maxMaxDate = EOLMaxLastJoinMinDF.agg(max("max_date")).head().getDate(0)
+
+    var EOLNATreatmentDF = EOLMaxLastJoinMinDF
+      .withColumn("last_date", when(col("last_date").isNull, col("min_date")).otherwise(col("last_date")))
+      .drop("min_date")
+      .filter(col("max_date") =!= col("last_date") || col("max_date") =!= maxMaxDate)
+      .withColumn("diff_weeks", ((datediff(to_date(col("max_date")), to_date(col("last_date")))) / 7) + 1)
+
+    //    EOL_criterion <- EOL_criterion[rep(row.names(EOL_criterion), EOL_criterion$diff_weeks),]
+    //      EOL_criterion$add <- t(as.data.frame(strsplit(row.names(EOL_criterion), "\\.")))[,2]# t = transpose
+    //      EOL_criterion$add <- ifelse(grepl("\\.",row.names(EOL_criterion))==FALSE,0,as.numeric(EOL_criterion$add))
+    //      EOL_criterion$add <- EOL_criterion$add*7
+    //      EOL_criterion$Week.End.Date <- EOL_criterion$last_date+EOL_criterion$add
+
+    EOLNATreatmentDF = EOLNATreatmentDF.withColumn("diff_weeks", when(col("diff_weeks").isNull || col("diff_weeks") <= 0, 0).otherwise(col("diff_weeks")))
+      .withColumn("diff_weeks", col("diff_weeks").cast("int"))
+      .withColumn("repList", createlist(col("diff_weeks"))).withColumn("add", explode(col("repList"))).drop("repList")
+      .withColumn("add", col("add") * lit(7))
+      .withColumn("Week_End_Date", expr("date_add(last_date, add)")) //CHECK: check if min_date is in timestamp format!
+      .drop("max_date", "last_date", "diff_weeks", "add")
+      .withColumn("EOL_criterion", lit(1))
+
+
+    retailEOL = retailUnionRetailOtherAccountsDF.withColumn("Week_End_Date", to_date(col("Week_End_Date"))) // cast needed as join WED has datetype format
+      .join(EOLNATreatmentDF, Seq("SKU", "Account", "Week_End_Date"), "left")
+      .withColumn("EOL_criterion", when(col("EOL_criterion").isNull, 0).otherwise(col("EOL_criterion")))
+      .withColumn("EOL_criterion_old", col("EOL_criterion")) // Variable omitted
+
+    // comment ends here
+
+
+    // comment below 2 lines
+    //    retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb07-r-670.csv")
+
+    var retailEOLDates = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Calendar/EOL_Dates/EOL_Dates_Retail.csv")).cache()
+    retailEOLDates.columns.toList.foreach(x => {
+      retailEOLDates = retailEOLDates.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
+    retailEOLDates = retailEOLDates.cache()
+      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "MM/dd/yyyy").cast("timestamp")))
 
     retailEOL = retailEOL
-      .join(reatilWithHolidaysDF, Seq("Week_End_Date"), "left")
+      .withColumn("EOL_criterion_old", col("EOL_criterion"))
+      .join(retailEOLDates, Seq("Account", "SKU"), "left")
+      .withColumn("Week_End_Date", to_date(col("Week_End_date")))
+      .withColumn("EOL_Date", when(col("EOL_Date").isNull, null).otherwise(to_date(col("EOL_Date").cast("timestamp"))))
+      .withColumn("EOL_criterion", when(col("Week_End_Date") >= col("EOL_Date"), 1).otherwise(lit(0)))
+      .withColumn("EOL_criterion", when(col("EOL_Date").isNull, null).otherwise(col("EOL_criterion")))
+      .withColumn("EOL_criterion", when(col("EOL_criterion").isNull, col("EOL_criterion_old")).otherwise(col("EOL_criterion"))) // omitted variable
 
-    //    retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-914.csv")
+    var EOLCriterion2 = retailEOL
+      .withColumn("EOL_criterion", when(col("WeeK_End_Date") >= col("ES_date"), 1).otherwise(col("EOL_criterion")))
+      .withColumn("EOL_criterion", when(col("ES_date").isNull, null).otherwise(col("EOL_criterion")))
+      .withColumn("EOL_criterion", when(col("Account") === "Sam's Club", 0).otherwise(col("EOL_criterion")))
+      .withColumn("EOL_criterion", when(col("Online") === 1 && col("POS_Qty") > 0, 0).otherwise(col("EOL_criterion")))
 
-    holidaysListNATreatment.foreach(holiday => {
-      retailEOL = retailEOL.withColumn("Lag_" + holiday, when(col("Lag_" + holiday).isNull || col("Lag_" + holiday) === "", 0).otherwise(lit(1)))
-    })
+     retailEOL = EOLCriterion2
 
-    retailEOL = retailEOL
-      .withColumn("Amazon_Prime_Day", when(col("Week_End_Date") === "2018-07-21", 1).otherwise(0))
-
-    // write
-    retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-Holidays-PART05.csv")
+     retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-EOL-half-PART05.csv")
   }
 }

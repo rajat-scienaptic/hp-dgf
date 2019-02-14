@@ -95,81 +95,111 @@ object RetailPreRegressionPart07 {
   })
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
+    import spark.implicits._
 
-  var retailWithCompetitionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-PART06.csv")
-    .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-    .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
-    .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
-    .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
+    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-BOL-PART06.csv")
+      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    val retailBrandinHP = retailWithCompetitionDF.where(col("Brand").isin("HP"))
-      .withColumn("POSQty_pmax", greatest(col("POS_Qty"), lit(0)))
+    val christmasDF = Seq(("2014-12-27", 1), ("2015-12-26", 1), ("2016-12-31", 1), ("2017-12-30", 1), ("2018-12-29", 1), ("2019-12-28", 1)).toDF("Week_End_Date", "USChristmasDay")
+    val columbusDF = Seq(("2014-10-18", 1), ("2015-10-17", 1), ("2016-10-15", 1), ("2017-10-14", 1), ("2018-10-13", 1), ("2019-10-19", 1)).toDF("Week_End_Date", "USColumbusDay")
+    val independenceDF = Seq(("2014-07-05", 1), ("2015-07-04", 1), ("2016-07-09", 1), ("2017-07-08", 1), ("2018-07-07", 1), ("2019-07-06", 1)).toDF("Week_End_Date", "USIndependenceDay")
+    val laborDF = Seq(("2014-09-06", 1), ("2015-09-12", 1), ("2016-09-10", 1), ("2017-09-09", 1), ("2018-09-08", 1), ("2019-09-07", 1)).toDF("Week_End_Date", "USLaborDay")
+    val linconsBdyDF = Seq(("2014-02-15", 1), ("2015-02-14", 1), ("2016-02-13", 1), ("2017-02-18", 1), ("2018-02-17", 1), ("2019-02-16", 1)).toDF("Week_End_Date", "USLincolnsBirthday")
+    val memorialDF = Seq(("2014-05-31", 1), ("2015-05-30", 1), ("2016-06-04", 1), ("2017-06-03", 1), ("2018-06-02", 1), ("2019-06-01", 1)).toDF("Week_End_Date", "USMemorialDay")
+    val MLKingsDF = Seq(("2014-01-25", 1), ("2015-01-24", 1), ("2016-01-23", 1), ("2017-01-21", 1), ("2018-01-20", 1), ("2019-01-26", 1)).toDF("Week_End_Date", "USMLKingsBirthday")
+    val newYearDF = Seq(("2014-01-04", 1), ("2015-01-03", 1), ("2016-01-02", 1), ("2017-01-07", 1), ("2018-01-06", 1), ("2019-01-05", 1)).toDF("Week_End_Date", "USNewYearsDay")
+    val presidentsDayDF = Seq(("2014-02-22", 1), ("2015-02-21", 1), ("2016-02-20", 1), ("2017-02-25", 1), ("2018-02-24", 1), ("2019-02-23", 1)).toDF("Week_End_Date", "USPresidentsDay")
+    val veteransDayDF = Seq(("2014-11-15", 1), ("2015-11-14", 1), ("2016-11-12", 1), ("2017-11-11", 1), ("2018-11-17", 1), ("2019-11-16", 1)).toDF("Week_End_Date", "USVeteransDay")
+    val washingtonBdyDF = Seq(("2014-02-22", 1), ("2015-02-28", 1), ("2016-02-27", 1), ("2017-02-25", 1), ("2018-02-24", 1), ("2019-02-23", 1)).toDF("Week_End_Date", "USWashingtonsBirthday")
+    val thanksgngDF = Seq(("2014-11-29", 1), ("2015-11-28", 1), ("2016-11-26", 1), ("2017-11-25", 1), ("2018-11-24", 1), ("2019-11-30", 1)).toDF("Week_End_Date", "USThanksgivingDay")
 
-    val HPComp1 = retailBrandinHP
-      .groupBy("Week_End_Date", "L1_Category", "Account")
-      .agg(sum("POSQty_pmax").as("sum2"), (sum(col("Promo_Pct") * col("POSQty_pmax"))).as("sum1"))
-      .withColumn("sum1", when(col("sum1") < 0, 0).otherwise(col("sum1")))
-      .withColumn("sum2", when(col("sum2") < 0, 0).otherwise(col("sum2")))
-      .withColumn("L1_competition_HP_ssmodel", col("sum1") / col("sum2"))
-      .drop("sum1", "sum2", "temp_sum1", "temp_sum2")
-    //.join(commercialBrandinHP, Seq("Week_End_Date","L1_Category"), "right")
+    val usCyberMonday = thanksgngDF.withColumn("Week_End_Date", date_add(col("Week_End_Date").cast("timestamp"), 7))
+      .withColumnRenamed("USThanksgivingDay", "USCyberMonday")
+    retailEOL = retailEOL.withColumn("Week_End_Date", to_date(col("Week_End_Date")))
+      .join(christmasDF, Seq("Week_End_Date"), "left")
+      .join(columbusDF, Seq("Week_End_Date"), "left")
+      .join(independenceDF, Seq("Week_End_Date"), "left")
+      .join(laborDF, Seq("Week_End_Date"), "left")
+      .join(linconsBdyDF, Seq("Week_End_Date"), "left")
+      .join(memorialDF, Seq("Week_End_Date"), "left")
+      .join(MLKingsDF, Seq("Week_End_Date"), "left")
+      .join(newYearDF, Seq("Week_End_Date"), "left")
+      .join(presidentsDayDF, Seq("Week_End_Date"), "left")
+      .join(veteransDayDF, Seq("Week_End_Date"), "left")
+      .join(washingtonBdyDF, Seq("Week_End_Date"), "left")
+      .join(thanksgngDF, Seq("Week_End_Date"), "left")
+      .join(usCyberMonday, Seq("Week_End_Date"), "left")
 
-    val HPComp2 = retailBrandinHP
-      .groupBy("Week_End_Date", "L2_Category", "Account")
-      .agg(sum("POSQty_pmax").as("sum2"), (sum(col("Promo_Pct") * col("POSQty_pmax"))).as("sum1"))
-      .withColumn("sum1", when(col("sum1") < 0, 0).otherwise(col("sum1")))
-      .withColumn("sum2", when(col("sum2") < 0, 0).otherwise(col("sum2")))
-      .withColumn("L2_competition_HP_ssmodel", col("sum1") / col("sum2"))
-      .drop("sum1", "sum2", "temp_sum1", "temp_sum2")
+    List("USChristmasDay", "USColumbusDay", "USIndependenceDay", "USLaborDay", "USLincolnsBirthday", "USMemorialDay", "USMLKingsBirthday", "USNewYearsDay", "USPresidentsDay", "USThanksgivingDay", "USVeteransDay", "USWashingtonsBirthday", "USCyberMonday")
+      .foreach(x => {
+        retailEOL = retailEOL.withColumn(x, when(col(x).isNull, 0).otherwise(col(x)))
+      })
+    /*
+     TODO : consider the above dataframe , value of each DF is 1 and pmax below would be 1 as assumption
+    retail$hol.dummy <- pmax(retail$USChristmasDay, retail$USColumbusDay, retail$USLaborDay, retail$USLincolnsBirthday, retail$USMemorialDay, retail$USMLKingsBirthday,
+      retail$USVeteransDay, retail$USWashingtonsBirthday, retail$USCyberMonday, retail$USIndependenceDay, retail$USNewYearsDay,
+      retail$USPresidentsDay, retail$USThanksgivingDay)*/
 
-    retailWithCompetitionDF = retailWithCompetitionDF.withColumn("L1_Category", col("L1_Category"))
-      .join(HPComp1, Seq("Week_End_Date", "L1_Category", "Account"), "left")
+    val holidaysListNATreatment = Seq("USChristmasDay", "USThanksgivingDay", "USMemorialDay", "USPresidentsDay", "USLaborDay")
+
+    var reatilWithHolidaysDF = retailEOL
+      .select("Week_End_Date", "USLaborDay", "USMemorialDay", "USPresidentsDay", "USThanksgivingDay", "USChristmasDay") //   retail_hol <- retail[,colnames(retail) %in% holidays]
+
+
+    // TODO : retail_hol <- gather(retail_hol, holidays, holiday.dummy, USLaborDay:USChristmasDay) // also this variable is omitted line 886
+    // gather starts
+    implicit val retailHolidayEncoder = Encoders.product[RetailHoliday]
+    implicit val retailHolidayTranspose = Encoders.product[RetailHolidayTranspose]
+
+    val retailHolidayDataSet = reatilWithHolidaysDF.as[RetailHoliday]
+    val names = retailHolidayDataSet.schema.fieldNames
+
+    val transposedData = retailHolidayDataSet.flatMap(row => Array(RetailHolidayTranspose(row.Week_End_Date, row.USMemorialDay, row.USPresidentsDay, row.USThanksgivingDay, names(1), row.USLaborDay),
+      RetailHolidayTranspose(row.Week_End_Date, row.USMemorialDay, row.USPresidentsDay, row.USThanksgivingDay, names(5), row.USChristmasDay)
+    ))
+    reatilWithHolidaysDF = transposedData.toDF()
+    // gather ends
+
+    reatilWithHolidaysDF = reatilWithHolidaysDF
+      .withColumn("holiday_dummy", col("holiday_dummy").cast(IntegerType))
+      .filter(col("holiday_dummy") === 1).distinct().drop("holiday_dummy")
+      // TODO done: check the format of Week_Ento_dated_Date
+      .withColumn("lag_week", date_sub(to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp"), "yyyy-MM-dd"), 7))
+      .withColumn("holiday_dummy", lit(1))
+    // TODO : verify -> spread(retail_hol, holidays, Week.End.Date) : 896
+
+    var spreadHolidays = reatilWithHolidaysDF
+      .groupBy("Week_End_Date")
+      .pivot("holidays")
+      .agg(first(col("holiday_dummy")))
+    //      .withColumn("USChristmasDay", when(col("USChristmasDay") === 1, col("Week_End_Date").cast(StringType)).otherwise(col("USChristmasDay")))
+    //      .withColumn("USLaborDay", when(col("USLaborDay") === 1, col("Week_End_Date").cast(StringType)).otherwise(col("USLaborDay")))
+
+    reatilWithHolidaysDF = spreadHolidays
+      .join(reatilWithHolidaysDF, Seq("Week_End_Date"), "right")
+      .drop("holiday_dummy", "holidays", "Week_End_Date")
+      .withColumnRenamed("lag_week", "Week_End_Date")
+
+    holidaysListNATreatment.foreach(holiday => {
+      reatilWithHolidaysDF = reatilWithHolidaysDF.withColumnRenamed(holiday, "Lag_" + holiday)
+    })
+
+    retailEOL = retailEOL
+      .join(reatilWithHolidaysDF, Seq("Week_End_Date"), "left")
+
+    //    retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-914.csv")
+
+    holidaysListNATreatment.foreach(holiday => {
+      retailEOL = retailEOL.withColumn("Lag_" + holiday, when(col("Lag_" + holiday).isNull || col("Lag_" + holiday) === "", 0).otherwise(lit(1)))
+    })
+
+    retailEOL = retailEOL
+      .withColumn("Amazon_Prime_Day", when(col("Week_End_Date") === "2018-07-21", 1).otherwise(0))
 
     // write
-    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1168.csv")
-
-    retailWithCompetitionDF = retailWithCompetitionDF
-      .join(HPComp2, Seq("Week_End_Date", "L2_Category", "Account"), "left")
-
-    // write
-    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1171.csv")
-
-    retailWithCompetitionDF = retailWithCompetitionDF
-      .withColumn("L1_competition_HP_ssmodel", when((col("L1_competition_HP_ssmodel").isNull) || (col("L1_competition_HP_ssmodel") < 0), 0).otherwise(col("L1_competition_HP_ssmodel")))
-      .withColumn("L2_competition_HP_ssmodel", when((col("L2_competition_HP_ssmodel").isNull) || (col("L2_competition_HP_ssmodel") < 0), 0).otherwise(col("L2_competition_HP_ssmodel")))
-      .na.fill(0, Seq("L1_competition_HP_ssmodel", "L2_competition_HP_ssmodel"))
-
-    // write
-    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1184.csv")
-
-    val ODOMHPmodel1 = retailWithCompetitionDF
-      .filter(col("Brand").isin("Samsung") && col("Account").isin("Office Depot-Max", "Amazon-Proper"))
-      .withColumn("temp_sum2", greatest(col("POS_Qty"), lit(0)))
-      .withColumn("temp_sum1", col("Promo_Pct") * greatest(col("POS_Qty"), lit(0)))
-      .groupBy("Week_End_Date", "L1_Category", "Account")
-      .agg(sum("temp_sum2").as("sum2"), (sum("temp_sum1").as("sum1")))
-      .withColumn("L1_competition_ssdata_HPmodel", col("sum1") / col("sum2"))
-      .drop("sum1", "sum2", "temp_sum1", "temp_sum2")
-
-    val ODOMHPmodel2 = retailWithCompetitionDF
-      .filter(col("Brand").isin("Samsung") && col("Account").isin("Office Depot-Max", "Amazon-Proper"))
-      .withColumn("temp_sum2", greatest(col("POS_Qty"), lit(0)))
-      .withColumn("temp_sum1", col("Promo_Pct") * greatest(col("POS_Qty"), lit(0)))
-      .groupBy("Week_End_Date", "L2_Category", "Account")
-      .agg(sum("temp_sum2").as("sum2"), (sum("temp_sum1").as("sum1")))
-      .withColumn("L2_competition_ssdata_HPmodel", col("sum1") / col("sum2"))
-      .drop("sum1", "sum2", "temp_sum1", "temp_sum2")
-
-    retailWithCompetitionDF = retailWithCompetitionDF
-      .join(ODOMHPmodel1, Seq("Week_End_Date", "L1_Category", "Account"), "left")
-      .join(ODOMHPmodel2, Seq("Week_End_Date", "L2_Category", "Account"), "left")
-      .withColumn("L1_competition_ssdata_HPmodel", when((col("L1_competition_ssdata_HPmodel").isNull) || (col("L1_competition_ssdata_HPmodel") < 0), 0).otherwise(col("L1_competition_ssdata_HPmodel")))
-      .withColumn("L2_competition_ssdata_HPmodel", when((col("L2_competition_ssdata_HPmodel").isNull) || (col("L2_competition_ssdata_HPmodel") < 0), 0).otherwise(col("L2_competition_ssdata_HPmodel")))
-      .na.fill(0, Seq("L1_competition_ssdata_HPmodel", "L2_competition_ssdata_HPmodel"))
-
-
-    // write
-    retailWithCompetitionDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-HP-PART07.csv")
-
+    retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-Holidays-PART07.csv")
   }
 }

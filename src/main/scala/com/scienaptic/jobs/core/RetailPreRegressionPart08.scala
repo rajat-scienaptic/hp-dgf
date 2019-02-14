@@ -93,97 +93,143 @@ object RetailPreRegressionPart08 {
         0
     }
   })
-
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
+    val allBrands = List("Brother", "Canon", "Epson", "Lexmark", "Samsung", "HP")
 
-
-    var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-HP-PART07.csv")
+    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Holidays-PART07.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    var inkPromo = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Calendar/Ink_Promo/Ink BOGO data.csv"))
-    inkPromo.columns.toList.foreach(x => {
-      inkPromo = inkPromo.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
+    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv")).cache()
+    npd.columns.toList.foreach(x => {
+      npd = npd.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
-    inkPromo = inkPromo.cache()
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
+    npd = npd.cache()
+      .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", lit(null)).otherwise(
+        when(col("Week_End_Date").contains("-"), to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
+          .otherwise(to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
+      ))
 
-    retailWithCompetitionDF = retailWithCompetitionDF
-      .join(inkPromo, Seq("Category", "Account", "Week_End_Date"), "left")
-      .withColumn("BOGO_dummy", when(col("BOGO_dummy").isNull, "No.BOGO").otherwise(col("BOGO_dummy")))
-      .withColumn("BOGO", when(col("BOGO_dummy") === "No.BOGO", 0).otherwise(1))
-      .withColumn("wed_cat", concat_ws(".", col("Week_End_Date"), col("L1_Category")))
-    //      .withColumn("POS_Qty", when(col("POS_Qty") < 0, 0).otherwise(col("POS_Qty")))
 
-    var retailWithCompetitionDFtmep1 = retailWithCompetitionDF
-      .groupBy("wed_cat")
-      .agg(sum(col("Promo_Pct") * col("POS_Qty")).as("z"), sum(col("POS_Qty")).as("w"))
+    /*================= Brand not Main Brands =======================*/
 
-    retailWithCompetitionDF = retailWithCompetitionDF.join(retailWithCompetitionDFtmep1, Seq("wed_cat"), "left")
-      .withColumn("L1_cannibalization", (col("z") - (col("Promo_Pct") * col("POS_Qty"))) / (col("w") - col("POS_Qty")))
-      .drop("z", "w", "wed_cat")
-      .withColumn("wed_cat", concat_ws(".", col("Week_End_Date"), col("L2_Category")))
+    val npdChannelBrandFilterRetail = npd.where((col("Channel") === "Retail") && (col("Brand").isin("Canon", "Epson", "Brother", "Lexmark", "Samsung")))
+      .where((col("DOLLARS") > 0) && (col("MSRP__") > 0))
+
+    val L1Competition = npdChannelBrandFilterRetail
+      .groupBy("L1_Category", "Week_End_Date", "Brand")
+      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
+      .withColumn("L1_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
+    //.join(npdChannelBrandFilterNotRetail, Seq("L1_Category","Week_End_Date","Brand"), "right")
+
+    var L1Comp = L1Competition
+      /*.withColumn("uuid", generateUUID())*/
+      .groupBy("L1_Category", "Week_End_Date" /*, "uuid"*/).pivot("Brand").agg(first("L1_competition")).drop("uuid")
+    val L1CompColumns = L1Comp.columns
+    allBrands.foreach(x => {
+      if (!L1CompColumns.contains(x))
+        L1Comp = L1Comp.withColumn(x, lit(null))
+    })
+    allBrands.foreach(x => {
+      L1Comp = L1Comp.withColumn(x, when(col(x).isNull, 0).otherwise(col(x)))
+        .withColumnRenamed(x, "L1_competition_" + x)
+    })
+
+
+    val L2Competition = npdChannelBrandFilterRetail
+      .groupBy("L2_Category", "Week_End_Date", "Brand")
+      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
+      .withColumn("L2_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
+    //.join(npdChannel6FilterNotRetail, Seq("L2_Category","Week_End_Date","Brand"), "right")
+
+    var L2Comp = L2Competition /*.withColumn("uuid", generateUUID())*/
+      .groupBy("L2_Category", "Week_End_Date" /*, "uuid"*/)
+      .pivot("Brand")
+      .agg(first("L2_competition")).drop("uuid")
+
+    val L2CompColumns = L2Comp.columns
+    allBrands.foreach(x => {
+      if (!L2CompColumns.contains(x))
+        L2Comp = L2Comp.withColumn(x, lit(null))
+    })
+    allBrands.foreach(x => {
+      L2Comp = L2Comp.withColumn(x, when(col(x).isNull, 0).otherwise(col(x)))
+        .withColumnRenamed(x, "L2_competition_" + x)
+    })
+
+    var retailWithCompetitionDF = retailEOL.join(L1Comp, Seq("L1_Category", "Week_End_Date"), "left")
+      .join(L2Comp, Seq("L2_Category", "Week_End_Date"), "left")
+
+    allBrands.foreach(x => {
+      val l1Name = "L1_competition_" + x
+      val l2Name = "L2_competition_" + x
+      retailWithCompetitionDF = retailWithCompetitionDF.withColumn(l1Name, when((col(l1Name).isNull) || (col(l1Name) < 0), 0).otherwise(col(l1Name)))
+        .withColumn(l2Name, when(col(l2Name).isNull || col(l2Name) < 0, 0).otherwise(col(l2Name)))
+    })
+    retailWithCompetitionDF = retailWithCompetitionDF.na.fill(0, Seq("L1_competition_Brother", "L1_competition_Canon", "L1_competition_Epson", "L1_competition_Lexmark", "L1_competition_Samsung"))
+      .na.fill(0, Seq("L2_competition_Brother", "L2_competition_Epson", "L2_competition_Canon", "L2_competition_Lexmark", "L2_competition_Samsung"))
+
+    /*====================================== Brand Not HP ================================= */
+
+    val npdChannelNotRetailBrandNotHP = npd.where((col("Channel") === "Retail") && (col("Brand") =!= "HP"))
+      .where((col("DOLLARS") > 0) && (col("MSRP__") > 0))
+
+    val L1CompetitionNonHP = npdChannelNotRetailBrandNotHP
+      .groupBy("L1_Category", "Week_End_Date")
+      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
+      .withColumn("L1_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
+    //.join(npdChannelNotRetailBrandNotHP, Seq("L1_Category","Week_End_Date"), "right")
+
+    val L2CompetitionNonHP = npdChannelNotRetailBrandNotHP
+      .groupBy("L2_Category", "Week_End_Date")
+      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
+      .withColumn("L2_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
+    //.join(npdChannelNotRetailBrandNotHP, Seq("L2_Category","Week_End_Date"), "right")
+
+    retailWithCompetitionDF = retailWithCompetitionDF.join(L1CompetitionNonHP, Seq("L1_Category", "Week_End_Date"), "left")
+      .join(L2CompetitionNonHP, Seq("L2_Category", "Week_End_Date"), "left")
+      .withColumn("L1_competition", when((col("L1_competition").isNull) || (col("L1_competition") < 0), 0).otherwise(col("L1_competition")))
+      .withColumn("L2_competition", when((col("L2_competition").isNull) || (col("L2_competition") < 0), 0).otherwise(col("L2_competition")))
+      .na.fill(0, Seq("L1_competition", "L2_competition"))
 
     // write
-    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1125.csv")
-    //        var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("D:\\files\\temp\\retail-r-1125.csv").cache()
-    //          .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-    //          .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
-    //          .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
-    //          .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    var retailWithCompetitionDFtemp2 = retailWithCompetitionDF
-      .groupBy("wed_cat")
-      .agg(sum(col("Promo_Pct") * col("POS_Qty")).as("z"), sum(col("POS_Qty")).as("w"))
+    /*=================================== Brand Not Samsung ===================================*/
 
-    retailWithCompetitionDF = retailWithCompetitionDF.join(retailWithCompetitionDFtemp2, Seq("wed_cat"), "left")
-      .withColumn("L2_cannibalization", (col("z") - (col("Promo_Pct") * col("POS_Qty"))) / (col("w") - col("POS_Qty")))
-      .drop("z", "w", "wed_cat")
+    val npdChannelNotRetailBrandNotSamsung = npd.where((col("Channel") === "Retail") && (col("Brand") =!= "Samsung"))
+      .where((col("DOLLARS") > 0) && (col("MSRP__") > 0))
+    val L1CompetitionSS = npdChannelNotRetailBrandNotSamsung
+      .groupBy("L1_Category", "Week_End_Date")
+      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
+      .withColumn("L1_competition_ss", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
+    //.join(npdChannelNotRetailBrandNotSamsung, Seq("L1_Category","Week_End_Date"), "right")
 
-    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1134.csv")
+    val L2CompetitionSS = npdChannelNotRetailBrandNotSamsung
+      .groupBy("L2_Category", "Week_End_Date")
+      .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
+      .withColumn("L2_competition_ss", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
+    //.join(npdChannelNotRetailBrandNotSamsung, Seq("L2_Category","Week_End_Date"), "right")
 
-
-    var retailWithCompCannDF = retailWithCompetitionDF
-
-    //DON'T remove join
-    val retailWithAdj = retailWithCompCannDF.withColumn("Adj_Qty", when(col("POS_Qty") <= 0, 0).otherwise(col("POS_Qty")))
-    val retailGroupWEDSKU = retailWithAdj.groupBy("Week_End_Date", "SKU")
-      .agg(sum(col("Promo_Pct") * col("Adj_Qty")).as("sumSKU1"), sum("Adj_Qty").as("sumSKU2"))
-      .withColumn("Week_End_Date", col("Week_End_Date"))
-      .join(retailWithAdj.withColumn("Week_End_Date", col("Week_End_Date")), Seq("Week_End_Date", "SKU"), "right")
+    retailWithCompetitionDF = retailWithCompetitionDF.join(L1CompetitionSS, Seq("L1_Category", "Week_End_Date"), "left")
+      .join(L2CompetitionSS, Seq("L2_Category", "Week_End_Date"), "left")
 
     //write
-    //    retailGroupWEDSKU.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1161.csv")
+    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1110.csv")
 
-    val retailGroupWEDL1Temp = retailGroupWEDSKU
-      .groupBy("Week_End_Date", "Brand", "L1_Category")
-      .agg(sum(col("Promo_Pct") * col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
+    retailWithCompetitionDF = retailWithCompetitionDF
+      .withColumn("L1_competition_ss", when((col("L1_competition_ss").isNull) || (col("L1_competition_ss") < 0), 0).otherwise(col("L1_competition_ss")))
+      .withColumn("L2_competition_ss", when((col("L2_competition_ss").isNull) || (col("L2_competition_ss") < 0), 0).otherwise(col("L2_competition_ss")))
+      .na.fill(0, Seq("L1_competition_ss", "L2_competition_ss"))
 
-    val retailGroupWEDL1 = retailGroupWEDSKU.withColumn("L1_Category", col("L1_Category"))
-      .join(retailGroupWEDL1Temp.withColumn("L1_Category", col("L1_Category")), Seq("Week_End_Date", "Brand", "L1_Category"), "left")
-      .withColumn("L1_cannibalization", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2"))) // chenged the name to L2_cannibalization
-      .drop("sum1", "sum2")
-    //    retailGroupWEDSKU.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1166.csv")
+    retailWithCompetitionDF = retailWithCompetitionDF
+      .withColumn("L1_competition", when(col("Brand").isin("Samsung"), col("L1_competition_ss")).otherwise(col("L1_competition")))
+      .withColumn("L2_competition", when(col("Brand").isin("Samsung"), col("L2_competition_ss")).otherwise(col("L2_competition")))
+      .drop("L2_competition_ss", "L1_competition_ss")
+    /* ========================================================================================== */
 
-    val retailGroupWEDL1Temp2 = retailGroupWEDL1
-      .groupBy("Week_End_Date", "Brand", "L2_Category")
-      .agg(sum(col("Promo_Pct") * col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
-
-    //    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1172.csv")
-    retailWithCompCannDF = retailGroupWEDL1.withColumn("L2_Category", col("L2_Category"))
-      .join(retailGroupWEDL1Temp2.withColumn("L2_Category", col("L2_Category")), Seq("Week_End_Date", "Brand", "L2_Category"), "left")
-      .withColumn("L2_cannibalization", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2")))
-      .drop("sum1", "sum2", "sumSKU1", "sumSKU2", "Adj_Qty")
-      .withColumn("L1_cannibalization", when(col("L1_cannibalization").isNull || col("L1_cannibalization") === "", 0).otherwise(col("L1_cannibalization")))
-      .withColumn("L2_cannibalization", when(col("L2_cannibalization").isNull || col("L2_cannibalization") === "", 0).otherwise(col("L2_cannibalization")))
-      .na.fill(0, Seq("L2_cannibalization", "L1_cannibalization"))
-      .withColumn("Sale_Price", col("Street_Price") - col("Total_IR"))
-      .withColumn("Price_Range_20_Perc_high", lit(1.2) * col("Sale_Price"))
-
-    retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART08.csv")
-
+    retailWithCompetitionDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-PART08.csv")
   }
 }

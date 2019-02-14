@@ -4,14 +4,11 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, Date, Locale}
 
 import com.scienaptic.jobs.ExecutionContext
-import com.scienaptic.jobs.core.RetailPreRegressionPart01.Cat_switch
-import com.scienaptic.jobs.utility.CommercialUtility.extractWeekFromDateUDF
+import com.scienaptic.jobs.utility.Utils.renameColumns
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.sql._
-import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{IntegerType, StringType}
 
 import scala.collection.mutable
 
@@ -91,80 +88,55 @@ object RetailPreRegressionPart11 {
         0
     }
   })
+
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCannDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-SuppliesGM-PART10.csv")
+
+    var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-half-PART10.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    val SKUCategeory = retailWithCompCannDF
-      .filter(col("EOL_criterion") === 0 && col("BOL_criterion") === 0)
-      .groupBy("SKU", "Account")
-      .agg(count(col("SKU")).as("n"), mean(col("POS_Qty")).as("POS_Qty"), countDistinct("Promo_Pct").as("var_of_discount"))
-      .filter(col("n") >= 5 && col("POS_QTY") >= 100 && col("var_of_discount") >= 3)
-      .drop("n", "POS_QTY", "var_of_discount")
-      .withColumn("SKU_category", col("SKU"))
+    var retailWithCompCannDF = retailWithCompetitionDF
 
-    retailWithCompCannDF = retailWithCompCannDF
-      .join(SKUCategeory, Seq("SKU", "Account"), "left")
-      .withColumn("SKU_category", when(col("SKU_category").isNull, lit("Low Volume SKU") + col("L1_category")).otherwise(col("SKU_Name")))
+    //DON'T remove join
+    val retailWithAdj = retailWithCompCannDF.withColumn("Adj_Qty", when(col("POS_Qty") <= 0, 0).otherwise(col("POS_Qty")))
+    val retailGroupWEDSKU = retailWithAdj.groupBy("Week_End_Date", "SKU")
+      .agg(sum(col("Promo_Pct") * col("Adj_Qty")).as("sumSKU1"), sum("Adj_Qty").as("sumSKU2"))
+      .withColumn("Week_End_Date", col("Week_End_Date"))
+      .join(retailWithAdj.withColumn("Week_End_Date", col("Week_End_Date")), Seq("Week_End_Date", "SKU"), "right")
 
-    val retailWithHolidayAndQtyFilter = retailWithCompCannDF.where((col("Promo_Flag") === 0) && (col("EOL_criterion") === 0) && (col("BOL_criterion") === 0) && (col("USThanksgivingDay") === 0) && (col("USCyberMonday") === 0) && (col("POS_Qty") > 0))
-    var npbl = retailWithHolidayAndQtyFilter
-      .groupBy("Account", "SKU_Name")
-      .agg(mean("POS_Qty").as("no_promo_avg"), stddev("POS_Qty").as("no_promo_sd"), min("POS_Qty").as("no_promo_min"), max("POS_Qty").as("no_promo_max"))
+    //write
+    //    retailGroupWEDSKU.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1161.csv")
 
-    retailWithHolidayAndQtyFilter.createOrReplaceTempView("npbl")
-    val npblTemp = spark.sql("select SKU_Name,Account, PERCENTILE(POS_Qty, 0.50) OVER (PARTITION BY SKU_Name, Account) as no_promo_med from npbl")
-      .dropDuplicates("SKU_Name", "Account", "no_promo_med")
+    val retailGroupWEDL1Temp = retailGroupWEDSKU
+      .groupBy("Week_End_Date", "Brand", "L1_Category")
+      .agg(sum(col("Promo_Pct") * col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
 
-    npbl = npbl.withColumn("SKU_Name", col("SKU_Name")).withColumn("Account", col("Account"))
-      .join(npblTemp.withColumn("SKU_Name", col("SKU_Name")).withColumn("Account", col("Account")), Seq("Account", "SKU_Name"), "inner")
-      .withColumn("no_promo_med", when(col("SKU_Name") === "Envy 5535" && col("Account") === "Office Depot-Max", 21).otherwise(col("no_promo_med")))
-      .withColumn("no_promo_med", when(col("SKU_Name") === "OJ Pro 8610" && col("Account") === "Office Depot-Max", 4057).otherwise(col("no_promo_med")))
-      .withColumn("no_promo_med", when(col("SKU_Name") === "OJ Pro 8610" && col("Account") === "Staples", 232).otherwise(col("no_promo_med")))
+    val retailGroupWEDL1 = retailGroupWEDSKU.withColumn("L1_Category", col("L1_Category"))
+      .join(retailGroupWEDL1Temp.withColumn("L1_Category", col("L1_Category")), Seq("Week_End_Date", "Brand", "L1_Category"), "left")
+      .withColumn("L1_cannibalization", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2"))) // chenged the name to L2_cannibalization
+      .drop("sum1", "sum2")
+    //    retailGroupWEDSKU.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1166.csv")
 
-    retailWithCompCannDF = retailWithCompCannDF
-      .join(npbl, Seq("SKU_Name", "Account"), "left")
-      .withColumn("no_promo_avg", when(col("no_promo_avg").isNull, 0).otherwise(col("no_promo_avg")))
-      .withColumn("no_promo_med", when(col("no_promo_med").isNull, 0).otherwise(col("no_promo_med")))
-      .withColumn("low_baseline", when(((col("no_promo_avg") >= min_baseline) && (col("no_promo_med") > baselineThreshold)) || ((col("no_promo_med") >= min_baseline) && (col("no_promo_avg") >= baselineThreshold)), 0).otherwise(1))
-      .withColumn("low_volume", when(col("POS_Qty") > 0, 0).otherwise(1))
-      .withColumn("raw_bl_avg", col("no_promo_avg") * (col("seasonality_npd2") + lit(1)))
-      .withColumn("raw_bl_med", col("no_promo_med") * (col("seasonality_npd2") + lit(1)))
-      .withColumn("low_baseline", when(col("Online") === 1, 0).otherwise(col("low_baseline")))
+    val retailGroupWEDL1Temp2 = retailGroupWEDL1
+      .groupBy("Week_End_Date", "Brand", "L2_Category")
+      .agg(sum(col("Promo_Pct") * col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
 
-    val retailLowConfidence = retailWithCompCannDF
-      .filter(col("Promo_Flag") === 0 && col("low_volume") === 0 && col("EOL_criterion") === 0 && col("BOL_criterion") === 0 &&
-        col("USThanksgivingDay") === 0 && col("USCyberMonday") === 0)
-      .groupBy("SKU_Name", "Account")
-      .agg(count("SKU").as("n"))
-      .filter(col("n") < 5)
-      .drop("n")
-      .withColumn("low_confidence", lit(1))
+    //    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1172.csv")
+    retailWithCompCannDF = retailGroupWEDL1.withColumn("L2_Category", col("L2_Category"))
+      .join(retailGroupWEDL1Temp2.withColumn("L2_Category", col("L2_Category")), Seq("Week_End_Date", "Brand", "L2_Category"), "left")
+      .withColumn("L2_cannibalization", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2")))
+      .drop("sum1", "sum2", "sumSKU1", "sumSKU2", "Adj_Qty")
+      .withColumn("L1_cannibalization", when(col("L1_cannibalization").isNull || col("L1_cannibalization") === "", 0).otherwise(col("L1_cannibalization")))
+      .withColumn("L2_cannibalization", when(col("L2_cannibalization").isNull || col("L2_cannibalization") === "", 0).otherwise(col("L2_cannibalization")))
+      .na.fill(0, Seq("L2_cannibalization", "L1_cannibalization"))
+      .withColumn("Sale_Price", col("Street_Price") - col("Total_IR"))
+      .withColumn("Price_Range_20_Perc_high", lit(1.2) * col("Sale_Price"))
 
-    retailWithCompCannDF = retailWithCompCannDF
-      .join(retailLowConfidence, Seq("Account", "SKU_Name"), "left")
-      .withColumn("low_confidence", when(col("low_confidence").isNull, lit(0)).otherwise(col("low_confidence")))
-      .withColumn("NP_Flag", when((col("Account") === "Costco" || col("Account") === "Sam's Club") && col("Promo_Flag") === 1, lit(1)).otherwise(col("NP_Flag")))
-      .withColumn("high_disc_Flag", when(col("Promo_Pct") <= 0.55, 0).otherwise(lit(1)))
-
-    // CHECK  -> always_promo <- ave(retail$Promo.Flag, retail$Account, retail$SKU, retail$Season, FUN=mean)
-    //  retail$always_promo.Flag <- ifelse(always_promo==1,1,0)
-    val retailPromoMean = retailWithCompCannDF
-      .groupBy("Account", "SKU_Name", "Season")
-      .agg(mean(col("Promo_Flag")).as("PromoFlagAvg"))
-
-    retailWithCompCannDF = retailWithCompCannDF.join(retailPromoMean, Seq("Account", "SKU_Name", "Season"), "left")
-      .withColumn("always_promo_Flag", when(col("PromoFlagAvg") === 1, 1).otherwise(0)).drop("PromoFlagAvg")
-
-    retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-NoPromo-SkuCategory-PART11.csv")
-
-
-
+    retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART11.csv")
 
   }
 }
