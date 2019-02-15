@@ -87,7 +87,10 @@ object RetailTransform2 {
     val bbyBundleInfo = Utils.loadCSV(executionContext, bbyBundleInfoSource.filePath).get
     val existingPOS = Utils.loadCSV(executionContext, existingPOSSource.filePath).get
     val auxTablesOnlineFormula01DF = Utils.loadCSV(executionContext, AUX_TABLE_ONLINE_PATH).get
+      .withColumn("Max_wed", to_date(unix_timestamp(col("Max_wed"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
     val mainUnion05Union04AndSPrintFormula = Utils.loadCSV(executionContext, MAIN_UNION_PATH).get
+      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
 
 
     // formula
