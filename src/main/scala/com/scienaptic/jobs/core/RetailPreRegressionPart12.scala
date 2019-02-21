@@ -145,7 +145,7 @@ object RetailPreRegressionPart12 {
     retailWithCompCannDF = retailWithCompCannDF
       .withColumn("Week", when(col("Week_End_Date").isNull, null).otherwise(extractWeekFromDateUDF(col("Week_End_Date").cast("string"), lit("yyyy-MM-dd")).cast(StringType)))
       .join(seasonalityNPD, Seq("L1_Category", "Week"), "left").drop("Week")
-      .withColumn("seasonality_npd2", when((col("USCyberMonday") === lit(1)) || (col("USThanksgivingDay") === lit(1)), 0).otherwise(col("seasonality_npd").cast(IntegerType)))
+      .withColumn("seasonality_npd2", when((col("USCyberMonday") === lit(1)) || (col("USThanksgivingDay") === lit(1)), 0).otherwise(col("seasonality_npd")))
       .withColumn("seasonality_npd2", when(col("PL") === "4X", lit(1)).otherwise(col("seasonality_npd2")))
 
 

@@ -17,7 +17,7 @@ class App(args: Array[String]) extends ConfigurationFactory[AppConfiguration](ar
 
   private def start(): Unit = {
     println("Spark-job Started.")
-    val sparkConf = new SparkConf().setAppName("HP-Pricing-Data")
+    val sparkConf = new SparkConf()
     sparkConf.set("spark.sql.crossJoin.enabled", "true")
     val spark = SparkSession.builder
       .master(configuration.sparkConfig.master)
