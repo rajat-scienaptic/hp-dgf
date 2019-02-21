@@ -87,12 +87,12 @@ object RetailPreRegressionPart15 {
     //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1500.csv")
 
     val retailWithCompCannForTrendDF = retailWithCompCannDF
-      .groupBy("Week_End_Date")
+      .groupBy("trend")
       .agg(min("Week_End_Date").as("minWED"))
-      .withColumn("WEDDiff", (datediff(col("Week_End_Date"), col("minWED")) / 7)).drop("minWED")
 
     retailWithCompCannDF = retailWithCompCannDF.withColumn("Week_End_Date", col("Week_End_Date"))
-      .join(retailWithCompCannForTrendDF.withColumn("Week_End_Date", col("Week_End_Date")), Seq("Week_End_Date"), "left")
+      .join(retailWithCompCannForTrendDF.withColumn("Week_End_Date", col("Week_End_Date")), Seq("trend"), "left")
+      .withColumn("WEDDiff", (datediff(col("Week_End_Date"), col("minWED")) / 7)).drop("minWED")
       .withColumn("trend", col("trend") + col("WEDDiff")).drop("WEDDiff")
       .withColumn("Promo_Pct_Ave", lit(lit(1) - col("ImpAve") / col("Street_Price")))
       .withColumn("Promo_Pct_Min", lit(lit(1) - col("ImpMin") / col("Street_Price")))
