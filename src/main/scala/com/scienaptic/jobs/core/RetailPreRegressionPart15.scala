@@ -90,8 +90,8 @@ object RetailPreRegressionPart15 {
       .groupBy("trend")
       .agg(min("Week_End_Date").as("minWED"))
 
-    retailWithCompCannDF = retailWithCompCannDF.withColumn("Week_End_Date", col("Week_End_Date"))
-      .join(retailWithCompCannForTrendDF.withColumn("Week_End_Date", col("Week_End_Date")), Seq("trend"), "left")
+    retailWithCompCannDF = retailWithCompCannDF
+      .join(retailWithCompCannForTrendDF, Seq("trend"), "left")
       .withColumn("WEDDiff", (datediff(col("Week_End_Date"), col("minWED")) / 7)).drop("minWED")
       .withColumn("trend", col("trend") + col("WEDDiff")).drop("WEDDiff")
       .withColumn("Promo_Pct_Ave", lit(lit(1) - col("ImpAve") / col("Street_Price")))
