@@ -272,6 +272,8 @@ object RetailPreRegressionPart21 {
     //      .withColumn("Street_Price", col("Street_Price_x"))
     //      .drop("Street_Price_x", "Street_Price_y")
       .withColumn("Ad", when(col("Ad").isNull, 0).otherwise(col("Ad")))
+      .withColumn("exclude", when(col("exclude").isNull, 0).otherwise(col("exclude")))
+      .withColumn("Days_on_Promo", when(col("Total_IR") > 0 && col("Days_on_Promo") === 0, 7).otherwise(col("Days_on_Promo")))
     //      .filter(!col("Account") === "Walmart")
     //      //    #Rename c_ variables for Walmart
     //      //    colnames(retail)[colnames(retail)=="Ã¯..Online"] <- "Online"
@@ -280,7 +282,7 @@ object RetailPreRegressionPart21 {
 
     val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
-    retailWithCompCann3DF.select("SKU","Week_End_Date","Account","mnth","Online","trend","SKU_Name","L1_Category",
+    retailWithCompCann3DF = retailWithCompCann3DF.select("SKU","Week_End_Date","Account","mnth","Online","trend","SKU_Name","L1_Category",
       "Category","L2_Category","SKU_number","Ave","Min","Max","InStock","DelayDel","OutofStock","OnlyInStore","Special_Programs",
       "IPSLES","Season","Category_Subgroup","Line","PL","GA_date","ES_date","Distribution_Inv","Category_1","Category_2","Category_3",
       "HPS/OPS","Series","Category Custom","Brand","Max_Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year",
@@ -316,6 +318,48 @@ object RetailPreRegressionPart21 {
       "Price_Amazon_com","Price_Best_Buy","Price_Best_Buy_com","Price_Office_Depot_Max","Price_Office_Depot_Max_com",
       "Price_Staples","Price_Staples_com","Price_Min_Online","Price_Min_Offline","Delta_Price_Online","Delta_Price_Offline",
       "Price_Gap_Online","Price_Gap_Offline","Street_Price")
-      .write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_"+currentTS+".csv")
+
+    retailWithCompCann3DF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_"+currentTS+".csv")
+
+
+    val regData = retailWithCompCann3DF
+      .withColumn("MasterIR", col("NP_IR") + col("ASP_IR"))
+      .withColumn("MasterPrice", col("Street_Price") - col("MasterIR"))
+      .withColumn("EffectDiscount", col("Street_Price") + col("ImpMin"))
+      .withColumn("ExecutionRatio", when(col("MasterIR") === 0, 0).otherwise((col("EffectDiscount") - col("MasterIR")) / col("MasterIR")))
+
+
+    var discount2 = regData
+      .filter(col("USCyberMonday") === 0 && col("USThanksgivingDay") === 0 && col("ASP_IR") === 0)
+      .select("Account", "SKU", "POS_Qty", "Street_Price", "MasterPrice", "NP_IR", "ASP_IR", "MasterIR", "ImpMin", "EffectDiscount", "ExecutionRatio")
+      .filter(col("MasterIR") =!= 0)
+      .groupBy("Account", "SKU")
+      // summarise_at(vars(-POS.Qty), funs(weighted.mean(.,POS.Qty, na.rm = T))) %>% -> is simplified to calculate just mean.
+      // Note that weighted mean takes data and weight columns but in this case as only one column is specified so its just the MEAN that we need to calculate
+      .agg(mean(col("POS_Qty")).as("POS_Qty"))
+      .drop("POS_Qty")
+
+    discount2 = discount2
+      .join(regData.dropDuplicates("SKU").select("SKU", "SKU_Name"), Seq("SKU"), "left")
+
+    // write
+    //    discount2.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\ExecutivePromo2.csv")
+
+    val excluded = retailWithCompCann3DF
+      .filter(col("exclude") === 1 && col("low_volume") === 0 && col("Special_Programs").isin("None", "BOPIS") &&
+        col("Season").isin("BTS'18", "STS'18", "BTB'18", "HOL'17", "BTS'17", "STS'17", "BTB'17"))
+      .groupBy("Account", "SKU_Name", "Season", "Online")
+      .agg(
+        sum(col("POS_Qty")).as("Total_qty"),
+        sum(col("low_baseline")).as("Low_base"),
+        sum(col("EOL_criterion")).as("EOL_drop"),
+        sum(col("BOL_criterion")).as("BOL_drop"),
+        sum(col("NP_Flag")).as("NP_IR"),
+        sum(col("Promo_Flag")).as("Total_IR")
+      )
+      .orderBy(col("Account"), col("Total_qty").desc)
+
+    // write
+    //    excluded.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\Excluded.csv")
   }
 }

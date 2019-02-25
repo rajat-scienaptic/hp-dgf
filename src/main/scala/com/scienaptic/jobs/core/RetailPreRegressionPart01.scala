@@ -179,6 +179,7 @@ object RetailPreRegressionPart01 {
     GAP1 = GAP1.cache()
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("Total_IR", when(col("Account") === "Best Buy" && col("SKU") === "V1N08A", 0).otherwise(col("Total_IR")))
+      .withColumn("Total_IR", when(col("Account") === "Office Depot-Max" && col("SKU") === "V1N07A", 0).otherwise(col("Total_IR")))
 
     val adPositionDF = GAP1.filter(col("Brand").isin("HP", "Samsung"))
       .select("SKU", "Week_End_Date", "Account", "Online", "Ad_Location", "Brand", "Product")
