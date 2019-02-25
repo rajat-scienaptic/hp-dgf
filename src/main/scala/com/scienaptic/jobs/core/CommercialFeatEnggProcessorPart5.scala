@@ -54,7 +54,7 @@ object CommercialFeatEnggProcessor5 {
     //writeDF(seasonalityNPD,"seasonalityNPD")
       commercial = commercial.join(seasonalityNPD, Seq("L1_Category","Week"), "left")
         .drop("Week")
-        .withColumn("seasonality_npd2", when((col("USCyberMonday")===lit(1)) || (col("USThanksgivingDay")===lit(1)),0).otherwise(col("seasonality_npd").cast("int")))
+        .withColumn("seasonality_npd2", when((col("USCyberMonday")===lit(1)) || (col("USThanksgivingDay")===lit(1)),0).otherwise(col("seasonality_npd")))
         .join(ifs2.where(col("Account")==="Commercial").select("SKU","Hardware_GM","Supplies_GM","Hardware_Rev","Supplies_Rev", "Changed_Street_Price", "Valid_Start_Date", "Valid_End_Date"), Seq("SKU"), "left")
         .withColumn("Valid_Start_Date", when(col("Valid_Start_Date").isNull, dat2000_01_01).otherwise(col("Valid_Start_Date")))
         .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))
