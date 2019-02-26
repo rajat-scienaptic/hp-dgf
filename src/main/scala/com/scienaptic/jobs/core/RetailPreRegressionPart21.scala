@@ -50,6 +50,7 @@ object RetailPreRegressionPart21 {
     }
   })
 
+  val TEMP_OUTPUT_DIR = "/etherData/retailTemp/RetailFeatEngg/temp/preregression_output_retail.csv"
   val pmax = udf((col1: Double, col2: Double, col3: Double) => math.max(col1, math.max(col2, col3)))
   val pmax2 = udf((col1: Double, col2: Double) => math.max(col1, col2))
   val pmin = udf((col1: Double, col2: Double, col3: Double) => math.min(col1, math.min(col2, col3)))
@@ -319,7 +320,51 @@ object RetailPreRegressionPart21 {
       "Price_Staples","Price_Staples_com","Price_Min_Online","Price_Min_Offline","Delta_Price_Online","Delta_Price_Offline",
       "Price_Gap_Online","Price_Gap_Offline","Street_Price")
 
-    retailWithCompCann3DF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_"+currentTS+".csv")
+    retailWithCompCann3DF.write.mode(SaveMode.Overwrite).option("header", true).csv(TEMP_OUTPUT_DIR)
+
+    var retailFinalDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv(TEMP_OUTPUT_DIR)
+      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
+
+    retailFinalDF.select("SKU","Week_End_Date","Account","mnth","Online","trend","SKU_Name","L1_Category",
+      "Category","L2_Category","SKU_number","Ave","Min","Max","InStock","DelayDel","OutofStock","OnlyInStore","Special_Programs",
+      "IPSLES","Season","Category_Subgroup","Line","PL","GA_date","ES_date","Distribution_Inv","Category_1","Category_2","Category_3",
+      "HPS/OPS","Series","Category Custom","Brand","Max_Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year",
+      "Changed_Street_Price","POS_Qty","Ad_Location","GAP_IR","Ad","Days_on_Promo","Ad_Best Buy","Ad_Office Depot-Max","Ad_Staples",
+      "Ad_ratio_Brother","Ad_ratio_Canon","Ad_ratio_Epson","Ad_ratio_HP","Ad_ratio_Lexmark","Ad_ratio_Samsung","Ad_total_Brother",
+      "Ad_total_Canon","Ad_total_Epson","Ad_total_HP","Ad_total_Lexmark","Ad_total_Samsung","Ad_share_Brother","Ad_share_Canon",
+      "Ad_share_Lexmark","Ad_share_Samsung","Ad_share_Epson","Ad_share_HP","NP_IR","ASP_IR","IPS","NP_Program_ID","ASP_Program_ID",
+      "ASP_Planned_Units","ASP_Planned_Spend","BOPIS","Merchant_Gift_Card","Flash_IR","NP_IR_original","ASP_IR_original",
+      "GC_SKU_Name","Other_IR_original","Total_IR_original","Total_IR","Other_IR","NoAvail","GAP_Price","ImpAve","ImpMin",
+      "ImpAve_AmazonProper","ImpMin_AmazonProper","ImpAve_BestBuy","ImpMin_BestBuy","ImpAve_HPShopping","ImpMin_HPShopping",
+      "ImpAve_OfficeDepotMax","ImpMin_OfficeDepotMax","ImpAve_Staples","ImpMin_Staples","AMZ_Sales_Price","LBB","Promo_Flag",
+      "NP_Flag","ASP_Flag","Other_IR_Flag","Promo_Pct","Discount_Depth_Category","price","EOL_criterion","EOL_criterion_old",
+      "EOL_Date","BOL_criterion","USChristmasDay","USColumbusDay","USIndependenceDay","USLaborDay","USLincolnsBirthday",
+      "USMemorialDay","USMLKingsBirthday","USNewYearsDay","USPresidentsDay","USThanksgivingDay","USCyberMonday","USVeteransDay",
+      "USWashingtonsBirthday","Lag_USMemorialDay","Lag_USPresidentsDay","Lag_USThanksgivingDay","Lag_USChristmasDay",
+      "Lag_USLaborDay","Amazon_Prime_Day","L1_competition_Brother","L1_competition_Canon","L1_competition_Epson",
+      "L1_competition_Lexmark","L1_competition_Samsung","L2_competition_Brother","L2_competition_Canon","L2_competition_Epson",
+      "L2_competition_Lexmark","L2_competition_Samsung","L1_competition","L2_competition","L1_competition_HP_ssmodel",
+      "L2_competition_HP_ssmodel","L1_competition_ssdata_HPmodel","L2_competition_ssdata_HPmodel","BOGO_dummy","BOGO",
+      "L1_cannibalization","L2_cannibalization","Sale_Price","Price_Range_20_Perc_high","seasonality_npd","seasonality_npd2",
+      "Hardware_GM","Supplies_GM","Hardware_Rev","Supplies_Rev","Valid_Start_Date","Valid_End_Date","aveHWGM","aveSuppliesGM",
+      "avg_discount_SKU_Account","supplies_GM_scaling_factor","Supplies_GM_unscaled","Supplies_GM_no_promo","Supplies_Rev_unscaled",
+      "Supplies_Rev_no_promo","L1_cannibalization_log","L2_cannibalization_log","L1_competition_log","L2_competition_log",
+      "SKU_category","no_promo_avg","no_promo_med","no_promo_sd","no_promo_min","no_promo_max","low_baseline","low_volume",
+      "raw_bl_avg","raw_bl_med","low_confidence","high_disc_Flag","always_promo_Flag","Season_most_recent","Promo_Pct_Ave",
+      "Promo_Pct_Min","L1_cannibalization_OnOffline_Min","L1_Innercannibalization_OnOffline_Min","L2_cannibalization_OnOffline_Min",
+      "L2_Innercannibalization_OnOffline_Min","PriceBand","PriceBand_cannibalization_OnOffline_Min","PriceBand_Innercannibalization_OnOffline_Min",
+      "Cate","Cate_cannibalization_OnOffline_Min","Cate_Innercannibalization_OnOffline_Min","BOPISbtbhol","BOPISbts",
+      "cann_group","cann_receiver","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","Direct_Cann_Weber",
+      "Direct_Cann_Muscatel_Weber","Direct_Cann_Muscatel_Palermo","Direct_Cann_Palermo","LBB_adj","exclude",
+      "Street_PriceWhoChange_log","SKUWhoChange","PriceChange_HPS_OPS","Org_SP","Pec_Street_Price_Changed_BeforeSqr",
+      "Pec_Street_Price_Changed","AE_NP_IR","AE_ASP_IR","AE_Other_IR","instore_labor","Selling_Price","Amazon-Proper0",
+      "Price_Amazon_com","Price_Best_Buy","Price_Best_Buy_com","Price_Office_Depot_Max","Price_Office_Depot_Max_com",
+      "Price_Staples","Price_Staples_com","Price_Min_Online","Price_Min_Offline","Delta_Price_Online","Delta_Price_Offline",
+      "Price_Gap_Online","Price_Gap_Offline","Street_Price")
+    .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_"+currentTS+".csv")
 
 
     val regData = retailWithCompCann3DF
