@@ -29,6 +29,7 @@ object GAPTransform5 {
 
   val dat2000_01_01 = to_date(unix_timestamp(lit("2000-01-01"),"yyyy-MM-dd").cast("timestamp"))
   val dat9999_12_31 = to_date(unix_timestamp(lit("9999-12-31"),"yyyy-MM-dd").cast("timestamp"))
+  val TEMP_OUTPUT_DIR = "/etherData/GAPTemp/temp/gap_data_full.csv"
 
   def execute(executionContext: ExecutionContext): Unit = {
     val sparkConf = new SparkConf().setAppName("gap")
@@ -85,7 +86,17 @@ object GAPTransform5 {
         .select("Brand","Product","SKU","Account","Online","Week_End_Date","Ad"
         ,"Total_IR","Days_on_Promo","Promotion_Type","Ad_Location","L2_Category","L1_Category"
           ,"Category_2","Category_1")
+
     finalmerge.write.option("header","true").mode(SaveMode.Overwrite)
+      .csv(TEMP_OUTPUT_DIR)
+
+    var gapDataFull = spark.read.option("header","true").option("inferSchema","true").csv(TEMP_OUTPUT_DIR)
+      .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
+
+    gapDataFull.select("Brand","Product","SKU","Account","Online","Week_End_Date","Ad"
+        ,"Total_IR","Days_on_Promo","Promotion_Type","Ad_Location","L2_Category","L1_Category"
+        ,"Category_2","Category_1")
+    .coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
       .csv("/etherData/Pricing/Outputs/POS_GAP/gap_data_full_"+currentTS+".csv")
 
 

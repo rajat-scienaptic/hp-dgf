@@ -6,7 +6,7 @@ scalaVersion := "2.11.12"
 
 resolvers += "Job Server Bintray" at "https://dl.bintray.com/spark-jobserver/maven"
 
-assemblyJarName in assembly := "hp-spark-submit.jar"
+assemblyJarName in assembly := "hp-spark-submit-R-new.jar"
 
 mainClass in assembly := Some("com.scienaptic.jobs.App")
 

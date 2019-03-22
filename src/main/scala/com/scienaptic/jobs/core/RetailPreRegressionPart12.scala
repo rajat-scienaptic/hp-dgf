@@ -151,7 +151,7 @@ object RetailPreRegressionPart12 {
 
     retailWithCompCannDF = retailWithCompCannDF
       .join(IFS2.filter(col("Account").isin("Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples", "Costco", "Sam's Club", "HP Shopping", "Walmart"))
-        .select("SKU", "Account", "Street_Price", "Hardware_GM", "Supplies_GM", "Hardware_Rev", "Supplies_Rev", "Valid_Start_Date", "Valid_End_Date"), Seq("SKU", "Account", "Street_Price"), "left")
+        .select("SKU", "Account", "Street_Price", "Hardware_GM", "Supplies_GM", "Hardware_Rev", "Supplies_Rev", "Valid_Start_Date", "Valid_End_Date", "supplies_GM_scaling_factor"), Seq("SKU", "Account", "Street_Price"), "left")
       .withColumn("Valid_Start_Date", when(col("Valid_Start_Date").isNull, dat2000_01_01).otherwise(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))
       //      .withColumn("Street_Price", when(col("Street_Price").isNull, col("Street_Price_Org")).otherwise(col("Street_Price")))
