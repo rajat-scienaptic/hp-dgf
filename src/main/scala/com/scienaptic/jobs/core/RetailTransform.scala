@@ -189,6 +189,7 @@ object RetailTransform {
         .when(col("Account Major") === "Sams Club", "Fry's Electronics Inc")
         .when(col("Account Major") === "Target Corporation", "Target Stores")
         .when(col("Account Major") === "Wal Mart Online", "Wal-Mart Online")
+        .when(col("Account Major") === "Wal Mart", "Wal-Mart Online")
         .otherwise(col("Account Major")))
 
 

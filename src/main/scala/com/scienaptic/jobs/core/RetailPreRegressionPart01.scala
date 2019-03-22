@@ -131,6 +131,7 @@ object RetailPreRegressionPart01 {
       //      .drop("Street_Price") // removed to avoid ambiguity
       .join(IFS2.dropDuplicates("SKU", "Street_Price").select("SKU", "Changed_Street_Price", "Street_Price", "Valid_Start_Date", "Valid_End_Date"), Seq("SKU"), "left")
       .withColumn("Changed_Street_Price", when(col("Changed_Street_Price").isNull, 0).otherwise(col("Changed_Street_Price")))
+      .withColumn("Changed_Street_Price", when((col("Changed_Street_Price") === 1) && (col("Category").isin("Home","SMB")), 0).otherwise(col("Changed_Street_Price")))
       .withColumn("Special_Programs", lit("None"))
       .withColumn("Valid_Start_Date", when(col("Valid_Start_Date").isNull, dat2000_01_01).otherwise(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))

@@ -6,6 +6,7 @@ object HPDataProcessor {
     executionContext.configuration.config match {
       case "retail" => RetailTransform.execute(executionContext)
       case "retail-2" => RetailTransform2.execute(executionContext)
+      case "retail-3" => RetailTransform3.execute(executionContext)
       case "commercial" => CommercialSimplifiedTransform.execute(executionContext)
       case "preregression-commercial" => CommercialFeatEnggProcessor.execute(executionContext)
       case "preregression-commercial-2" => CommercialFeatEnggProcessor2.execute(executionContext)

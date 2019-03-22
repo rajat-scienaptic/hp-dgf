@@ -78,6 +78,8 @@ object RetailTransform2 {
     /* Source Map with all sources' information */
     val sourceMap = executionContext.configuration.sources
 
+    val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+
     /* Map with all operations source operations */
     val auxTablesOnlineSource = sourceMap(AUX_TABLES_ONLINE_SOURCE)
     val auxTablesSKUHierarchySource = sourceMap(AUX_TABLES_SKU_HIERARCHY_SOURCE)
@@ -97,7 +99,7 @@ object RetailTransform2 {
     val auxTablesOnlineFormula02DF = auxTablesOnlineFormula01DF.withColumn("Product Base ID",
       when(col("Product Base ID") === "M9L74A", "M9L75A")
         .when((col("Product Base ID") === "J9V91A") || (col("Product Base ID")) === "J9V92A", "J9V90A")
-        .when(col("Product Base ID") === "Z3M52A", "K7G93A")
+            .when(col("Product Base ID") === "Z3M52A", "K7G93A")
         .otherwise(col("Product Base ID")))
 
     // group
@@ -290,7 +292,7 @@ object RetailTransform2 {
     val bbyBundleInfoJoin04LeftDF = bbyBundleInfoJoin04Map(LEFT_JOIN).withColumnRenamed("SKU ACV Inv", "Distribution_Inv")
     val bbyBundleInfoJoin04InnerDF = bbyBundleInfoJoin04Map(INNER_JOIN).withColumnRenamed("SKU ACV Inv", "Distribution_Inv")
     val bbyBundleInfoJoin04RightDF = bbyBundleInfoJoin04Map(RIGHT_JOIN)
-
+    print("bbyBundleInfoJoin04InnerDF - " + bbyBundleInfoJoin04InnerDF.count() + " >> ")
     // formula
     val bbyBundleInfoFormula06DF = bbyBundleInfoJoin04LeftDF.withColumn("Distribution_Inv",
       when(col("POS_Qty") > 0, 1)
@@ -301,27 +303,29 @@ object RetailTransform2 {
     val calMaxWED = unionFormulaAndInnerJoinDF.agg(max("Week_End_Date")).head().getDate(NUMERAL0)
     val unionAppendMaxWeekEndDate = unionFormulaAndInnerJoinDF.withColumn("Max_Week_End_Date", lit(calMaxWED))
 
-
+    print("unionAppendMaxWeekEndDate - calMaxWED " + unionAppendMaxWeekEndDate.count() + " " + calMaxWED.toString)
     // browse here
 
     // filter
     val last26Weeks70000DaysDF = unionAppendMaxWeekEndDate.withColumn("date_last_26weeks", date_sub(col("Max_Week_End_Date"), 182))
+    print("Datelast26Weeks " + last26Weeks70000DaysDF.select("date_last_26weeks").show(1))
     val bbyBundleInfoWedGreaterThan70000Filter01 = bbyBundleInfoSource.filterOperation(FILTER01)
     val bbyBundleInfoWedGreaterThan70000Filter01DF = FilterOperation.doFilter(last26Weeks70000DaysDF, bbyBundleInfoWedGreaterThan70000Filter01, bbyBundleInfoWedGreaterThan70000Filter01.conditionTypes(NUMERAL0)).get
-
-
-    /* Existing POS */
+    print("bbyBundleInfoWedGreaterThan70000Filter01DF - " + bbyBundleInfoWedGreaterThan70000Filter01DF.count() + " >> ")
+    /* Commenting Existing POS starts */
     val existingPOSSelect01 = existingPOSSource.selectOperation(SELECT01)
     val existingPOSSelect01DF = SelectOperation.doSelect(existingPOS, existingPOSSelect01.cols, existingPOSSelect01.isUnknown).get
 
-    // join
+    // join 
     val bbyBundleInfoAndAuxTablesOnlineJoin05 = bbyBundleInfoSource.joinOperation(JOIN05)
     val bbyBundleInfoLast26WeeksRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), bbyBundleInfoWedGreaterThan70000Filter01DF)
     val bbyBundleInfoJoin05Map = JoinAndSelectOperation.doJoinAndSelect(existingPOSSelect01DF, bbyBundleInfoLast26WeeksRenamedDF, bbyBundleInfoAndAuxTablesOnlineJoin05)
-    val bbyBundleInfoJoin05LeftDF = /*Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02), */ bbyBundleInfoJoin05Map(LEFT_JOIN)
+    val bbyBundleInfoJoin05LeftDF = /*Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME02),*/  bbyBundleInfoJoin05Map(LEFT_JOIN)
 
     // union
     val unionFilterAndJoin05DF = UnionOperation.doUnion(bbyBundleInfoJoin05LeftDF, bbyBundleInfoWedGreaterThan70000Filter01DF).get
+
+    /* Commenting Existing POS ends */
 
     // formula
     val bbyBundleInfoFormula07DF = unionFilterAndJoin05DF.withColumn("Season",
@@ -339,14 +343,13 @@ object RetailTransform2 {
     // unique
     val format = new SimpleDateFormat("d-M-y h-m-s");
 
-    val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
     bbyBundleInfoSort01DF.dropDuplicates(List("Account", "Online", "SKU", "Week_End_Date", "Max_Week_End_Date"))
       .select("Account","Online","SKU","SKU_Name","IPSLES","Week_End_Date","POS_Qty","Season","Street_Price",
         "Category","Category_Subgroup","Line","PL","L1_Category","L2_Category","Raw_POS_Qty","GA_date","ES_date",
         "Distribution_Inv","Category_1","Category_2","Category_3","HPS/OPS","Series","Category Custom","Brand",
-        "Max_Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Promo Exclude")
-      .write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/POS_Retail/posqty_output_retail_"+currentTS+".csv")
+        "Max_Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year")
+      .write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/POS_Retail/temp/before_posqty_output_retail_"+currentTS+".csv")
     // formula
     //val bbyBundleInfoFormula08DF = bbyBundleInfoSort01DF.withColumn("Workflow Run Date", current_date())
 
