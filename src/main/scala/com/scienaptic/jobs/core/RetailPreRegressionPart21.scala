@@ -93,10 +93,11 @@ object RetailPreRegressionPart21 {
         0
     }
   })
+
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCann3DF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART20.csv")
+    var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART20.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -127,10 +128,11 @@ object RetailPreRegressionPart21 {
       .withColumn("exclude", when(col("low_volume") === 0 && col("EOL_criterion") === 0 && col("BOL_criterion") === 0 &&
         col("Week_End_Date") <= maximumRegressionDate && col("low_baseline") === 0 && col("Special_Programs").isin("None", "BOPIS"), lit(0)).otherwise(lit(1)))
       .withColumn("exclude", when((!col("Account").isin("Amazon-Proper", "Staples")) && col("PL").isin("4X"), 1).otherwise(col("exclude")))
-      .withColumn("exclude", when((col("Account").isin("Amazon-Proper", "Costco", "Sam's Club")) && col("PL").isin("3Y"), 1).otherwise(col("exclude")))
+      .withColumn("exclude", when((col("Account").isin("Costco", "Sam's Club")) && col("PL").isin("3Y"), 1).otherwise(col("exclude")))
       .withColumn("exclude", when((col("PL").isin("3Y")) && (col("low_baseline") === 1) && (col("POS_Qty") > 0), 0).otherwise(col("exclude")))
       .withColumn("exclude", when((col("SKU_Name").isin("LJP M426fdn", "LJP M477fdw")) && (col("low_baseline") === 1) && (col("POS_Qty") > 0), 0).otherwise(col("exclude")))
       .withColumn("exclude", when(col("Brand").isin("Samsung"), 1).otherwise(col("exclude")))
+      .withColumn("exclude", when(col("Account").isin("Sam's Club"), 1).otherwise(col("exclude")))
       .withColumn("exclude", when(col("SKU_Name").contains("Sprocket"), 1).otherwise(col("exclude")))
       .withColumn("exclude", when(col("Account").isin("Walmart", "HP Shopping", "Rest of Retail"), 1).otherwise(col("exclude")))
       .withColumn("ImpMin_AmazonProper", when(col("Account").isin("Amazon-Proper"), col("ImpMin")).otherwise(col("ImpMin_AmazonProper")))
@@ -247,7 +249,7 @@ object RetailPreRegressionPart21 {
     //retail_acc.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1884.csv")
 
     retailWithCompCann3DF = retailWithCompCann3DF.drop("Street_Price")
-        .withColumn("Week_End_Date", col("Week_End_Date"))
+      .withColumn("Week_End_Date", col("Week_End_Date"))
       .join(retail_acc.withColumn("Week_End_Date", col("Week_End_Date")), Seq("SKU", "Week_End_Date"), "left")
       .withColumn("Price_Min_Online", when(
         col("Account") === "Amazon-Proper", least(col("Price_Staples_com"), col("Price_Best_Buy_com"), col("Price_Office_Depot_Max_com")))
@@ -272,6 +274,34 @@ object RetailPreRegressionPart21 {
       .withColumn("Price_Gap_Offline", when(col("Price_Gap_Offline").isNull, 0).otherwise(col("Price_Gap_Offline")))
     //      .withColumn("Street_Price", col("Street_Price_x"))
     //      .drop("Street_Price_x", "Street_Price_y")
+
+    // walmart
+    val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Walmart/walmart_link.csv")
+      .withColumnRenamed("retail_sku", "SKU")
+      .withColumnRenamed("retail_sku_desc", "SKU_Name")
+
+    retailWithCompCann3DF = retailWithCompCann3DF
+      .join(skuWalmart.select("SKU", "walmart_sku"), Seq("SKU"), "left")
+
+    var walmart = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Walmart/wmt_prereg_w_dropins_1_30_19.csv"))
+    walmart.columns.toList.foreach(x => {
+      walmart = walmart.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
+    })
+    walmart = walmart
+      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
+      .select("SKU", "Week_End_Date", "avg_price")
+        .cache()
+
+    val walmartGroupAndAgg = walmart.groupBy("SKU", "Week_End_Date").agg(min(col("avg_price")).as("Walmart_Price"))
+
+    retailWithCompCann3DF = retailWithCompCann3DF
+      .join(walmartGroupAndAgg, Seq("SKU", "Week_End_Date"), "left")
+      .withColumn("Delta_Price_Walmart", log("Selling_Price") - log("Walmart_Price"))
+      .withColumn("Price_Gap_Walmart", when((col("Selling_Price") - col("Walmart_Price")) > 0,
+        col("Selling_Price") - col("Walmart_Price")).otherwise(lit(0)))
+      .withColumn("Price_Gap_Walmart", when(col("Price_Gap_Walmart").isNull, 0).otherwise(col("Price_Gap_Walmart")))
       .withColumn("Ad", when(col("Ad").isNull, 0).otherwise(col("Ad")))
       .withColumn("exclude", when(col("exclude").isNull, 0).otherwise(col("exclude")))
       .withColumn("Days_on_Promo", when(col("Total_IR") > 0 && col("Days_on_Promo") === 0, 7).otherwise(col("Days_on_Promo")))
@@ -283,88 +313,89 @@ object RetailPreRegressionPart21 {
 
     val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
-    retailWithCompCann3DF = retailWithCompCann3DF.select("SKU","Week_End_Date","Account","mnth","Online","trend","SKU_Name","L1_Category",
-      "Category","L2_Category","SKU_number","Ave","Min","Max","InStock","DelayDel","OutofStock","OnlyInStore","Special_Programs",
-      "IPSLES","Season","Category_Subgroup","Line","PL","GA_date","ES_date","Distribution_Inv","Category_1","Category_2","Category_3",
-      "HPS/OPS","Series","Category Custom","Brand","Max_Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year",
-      "Changed_Street_Price","POS_Qty","Ad_Location","GAP_IR","Ad","Days_on_Promo","Ad_Best Buy","Ad_Office Depot-Max","Ad_Staples",
-      "Ad_ratio_Brother","Ad_ratio_Canon","Ad_ratio_Epson","Ad_ratio_HP","Ad_ratio_Lexmark","Ad_ratio_Samsung","Ad_total_Brother",
-      "Ad_total_Canon","Ad_total_Epson","Ad_total_HP","Ad_total_Lexmark","Ad_total_Samsung","Ad_share_Brother","Ad_share_Canon",
-      "Ad_share_Lexmark","Ad_share_Samsung","Ad_share_Epson","Ad_share_HP","NP_IR","ASP_IR","IPS","NP_Program_ID","ASP_Program_ID",
-      "ASP_Planned_Units","ASP_Planned_Spend","BOPIS","Merchant_Gift_Card","Flash_IR","NP_IR_original","ASP_IR_original",
-      "GC_SKU_Name","Other_IR_original","Total_IR_original","Total_IR","Other_IR","NoAvail","GAP_Price","ImpAve","ImpMin",
-      "ImpAve_AmazonProper","ImpMin_AmazonProper","ImpAve_BestBuy","ImpMin_BestBuy","ImpAve_HPShopping","ImpMin_HPShopping",
-      "ImpAve_OfficeDepotMax","ImpMin_OfficeDepotMax","ImpAve_Staples","ImpMin_Staples","AMZ_Sales_Price","LBB","Promo_Flag",
-      "NP_Flag","ASP_Flag","Other_IR_Flag","Promo_Pct","Discount_Depth_Category","price","EOL_criterion","EOL_criterion_old",
-      "EOL_Date","BOL_criterion","USChristmasDay","USColumbusDay","USIndependenceDay","USLaborDay","USLincolnsBirthday",
-      "USMemorialDay","USMLKingsBirthday","USNewYearsDay","USPresidentsDay","USThanksgivingDay","USCyberMonday","USVeteransDay",
-      "USWashingtonsBirthday","Lag_USMemorialDay","Lag_USPresidentsDay","Lag_USThanksgivingDay","Lag_USChristmasDay",
-      "Lag_USLaborDay","Amazon_Prime_Day","L1_competition_Brother","L1_competition_Canon","L1_competition_Epson",
-      "L1_competition_Lexmark","L1_competition_Samsung","L2_competition_Brother","L2_competition_Canon","L2_competition_Epson",
-      "L2_competition_Lexmark","L2_competition_Samsung","L1_competition","L2_competition","L1_competition_HP_ssmodel",
-      "L2_competition_HP_ssmodel","L1_competition_ssdata_HPmodel","L2_competition_ssdata_HPmodel","BOGO_dummy","BOGO",
-      "L1_cannibalization","L2_cannibalization","Sale_Price","Price_Range_20_Perc_high","seasonality_npd","seasonality_npd2",
-      "Hardware_GM","Supplies_GM","Hardware_Rev","Supplies_Rev","Valid_Start_Date","Valid_End_Date","aveHWGM","aveSuppliesGM",
-      "avg_discount_SKU_Account","supplies_GM_scaling_factor","Supplies_GM_unscaled","Supplies_GM_no_promo","Supplies_Rev_unscaled",
-      "Supplies_Rev_no_promo","L1_cannibalization_log","L2_cannibalization_log","L1_competition_log","L2_competition_log",
-      "SKU_category","no_promo_avg","no_promo_med","no_promo_sd","no_promo_min","no_promo_max","low_baseline","low_volume",
-      "raw_bl_avg","raw_bl_med","low_confidence","high_disc_Flag","always_promo_Flag","Season_most_recent","Promo_Pct_Ave",
-      "Promo_Pct_Min","L1_cannibalization_OnOffline_Min","L1_Innercannibalization_OnOffline_Min","L2_cannibalization_OnOffline_Min",
-      "L2_Innercannibalization_OnOffline_Min","PriceBand","PriceBand_cannibalization_OnOffline_Min","PriceBand_Innercannibalization_OnOffline_Min",
-      "Cate","Cate_cannibalization_OnOffline_Min","Cate_Innercannibalization_OnOffline_Min","BOPISbtbhol","BOPISbts",
-      "cann_group","cann_receiver","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","Direct_Cann_Weber",
-      "Direct_Cann_Muscatel_Weber","Direct_Cann_Muscatel_Palermo","Direct_Cann_Palermo","LBB_adj","exclude",
-      "Street_PriceWhoChange_log","SKUWhoChange","PriceChange_HPS_OPS","Org_SP","Pec_Street_Price_Changed_BeforeSqr",
-      "Pec_Street_Price_Changed","AE_NP_IR","AE_ASP_IR","AE_Other_IR","instore_labor","Selling_Price","Amazon-Proper0",
-      "Price_Amazon_com","Price_Best_Buy","Price_Best_Buy_com","Price_Office_Depot_Max","Price_Office_Depot_Max_com",
-      "Price_Staples","Price_Staples_com","Price_Min_Online","Price_Min_Offline","Delta_Price_Online","Delta_Price_Offline",
-      "Price_Gap_Online","Price_Gap_Offline","Street_Price")
+    retailWithCompCann3DF = retailWithCompCann3DF.select("SKU", "Week_End_Date", "Account", "mnth", "Online", "trend", "SKU_Name", "L1_Category",
+      "Category", "L2_Category", "SKU_number", "Ave", "Min", "Max", "InStock", "DelayDel", "OutofStock", "OnlyInStore", "Special_Programs",
+      "IPSLES", "Season", "Category_Subgroup", "Line", "PL", "GA_date", "ES_date", "Distribution_Inv", "Category_1", "Category_2", "Category_3",
+      "HPS/OPS", "Series", "Category Custom", "Brand", "Max_Week_End_Date", "Season_Ordered", "Cal_Month", "Cal_Year", "Fiscal_Qtr", "Fiscal_Year",
+      "Changed_Street_Price", "POS_Qty", "Ad_Location", "GAP_IR", "Ad", "Days_on_Promo", "Ad_Best Buy", "Ad_Office Depot-Max", "Ad_Staples",
+      "Ad_ratio_Brother", "Ad_ratio_Canon", "Ad_ratio_Epson", "Ad_ratio_HP", "Ad_ratio_Lexmark", "Ad_ratio_Samsung", "Ad_total_Brother",
+      "Ad_total_Canon", "Ad_total_Epson", "Ad_total_HP", "Ad_total_Lexmark", "Ad_total_Samsung", "Ad_share_Brother", "Ad_share_Canon",
+      "Ad_share_Lexmark", "Ad_share_Samsung", "Ad_share_Epson", "Ad_share_HP", "NP_IR", "ASP_IR", "IPS", "NP_Program_ID", "ASP_Program_ID",
+      "ASP_Planned_Units", "ASP_Planned_Spend", "BOPIS", "Merchant_Gift_Card", "Flash_IR", "NP_IR_original", "ASP_IR_original",
+      "GC_SKU_Name", "Other_IR_original", "Total_IR_original", "Total_IR", "Other_IR", "NoAvail", "GAP_Price", "ImpAve", "ImpMin",
+      "ImpAve_AmazonProper", "ImpMin_AmazonProper", "ImpAve_BestBuy", "ImpMin_BestBuy", "ImpAve_HPShopping", "ImpMin_HPShopping",
+      "ImpAve_OfficeDepotMax", "ImpMin_OfficeDepotMax", "ImpAve_Staples", "ImpMin_Staples", "AMZ_Sales_Price", "LBB", "Promo_Flag",
+      "NP_Flag", "ASP_Flag", "Other_IR_Flag", "Promo_Pct", "Discount_Depth_Category", "price", "EOL_criterion", "EOL_criterion_old",
+      "EOL_Date", "BOL_criterion", "USChristmasDay", "USColumbusDay", "USIndependenceDay", "USLaborDay", "USLincolnsBirthday",
+      "USMemorialDay", "USMLKingsBirthday", "USNewYearsDay", "USPresidentsDay", "USThanksgivingDay", "USCyberMonday", "USVeteransDay",
+      "USWashingtonsBirthday", "Lag_USMemorialDay", "Lag_USPresidentsDay", "Lag_USThanksgivingDay", "Lag_USChristmasDay",
+      "Lag_USLaborDay", "Amazon_Prime_Day", "L1_competition_Brother", "L1_competition_Canon", "L1_competition_Epson",
+      "L1_competition_Lexmark", "L1_competition_Samsung", "L2_competition_Brother", "L2_competition_Canon", "L2_competition_Epson",
+      "L2_competition_Lexmark", "L2_competition_Samsung", "L1_competition", "L2_competition", "L1_competition_HP_ssmodel",
+      "L2_competition_HP_ssmodel", "L1_competition_ssdata_HPmodel", "L2_competition_ssdata_HPmodel", "BOGO_dummy", "BOGO",
+      "L1_cannibalization", "L2_cannibalization", "Sale_Price", "Price_Range_20_Perc_high", "seasonality_npd", "seasonality_npd2",
+      "Hardware_GM", "Supplies_GM", "Hardware_Rev", "Supplies_Rev", "Valid_Start_Date", "Valid_End_Date", "aveHWGM", "aveSuppliesGM",
+      "avg_discount_SKU_Account", "supplies_GM_scaling_factor", "Supplies_GM_unscaled", "Supplies_GM_no_promo", "Supplies_Rev_unscaled",
+      "Supplies_Rev_no_promo", "L1_cannibalization_log", "L2_cannibalization_log", "L1_competition_log", "L2_competition_log",
+      "SKU_category", "no_promo_avg", "no_promo_med", "no_promo_sd", "no_promo_min", "no_promo_max", "low_baseline", "low_volume",
+      "raw_bl_avg", "raw_bl_med", "low_confidence", "high_disc_Flag", "always_promo_Flag", "Season_most_recent", "Promo_Pct_Ave",
+      "Promo_Pct_Min", "L1_cannibalization_OnOffline_Min", "L1_Innercannibalization_OnOffline_Min", "L2_cannibalization_OnOffline_Min",
+      "L2_Innercannibalization_OnOffline_Min", "PriceBand", "PriceBand_cannibalization_OnOffline_Min", "PriceBand_Innercannibalization_OnOffline_Min",
+      "Cate", "Cate_cannibalization_OnOffline_Min", "Cate_Innercannibalization_OnOffline_Min", "BOPISbtbhol", "BOPISbts",
+      "cann_group", "cann_receiver", "Direct_Cann_201", "Direct_Cann_225", "Direct_Cann_252", "Direct_Cann_277", "Direct_Cann_Weber",
+      "Direct_Cann_Muscatel_Weber", "Direct_Cann_Muscatel_Palermo", "Direct_Cann_Palermo", "LBB_adj", "exclude",
+      "Street_PriceWhoChange_log", "SKUWhoChange", "PriceChange_HPS_OPS", "Org_SP", "Pec_Street_Price_Changed_BeforeSqr",
+      "Pec_Street_Price_Changed", "AE_NP_IR", "AE_ASP_IR", "AE_Other_IR", "instore_labor", "Selling_Price", "Amazon-Proper0",
+      "Price_Amazon_com", "Price_Best_Buy", "Price_Best_Buy_com", "Price_Office_Depot_Max", "Price_Office_Depot_Max_com",
+      "Price_Staples", "Price_Staples_com", "Price_Min_Online", "Price_Min_Offline", "Delta_Price_Online", "Delta_Price_Offline",
+      "Price_Gap_Online", "Price_Gap_Offline", "Street_Price")
 
-    retailWithCompCann3DF.write.mode(SaveMode.Overwrite).option("header", true).csv(TEMP_OUTPUT_DIR)
+    retailWithCompCann3DF
+      .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_" + currentTS + ".csv")
 
-    var retailFinalDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv(TEMP_OUTPUT_DIR)
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
-      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
-      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
-
-    retailFinalDF.select("SKU","Week_End_Date","Account","mnth","Online","trend","SKU_Name","L1_Category",
-      "Category","L2_Category","SKU_number","Ave","Min","Max","InStock","DelayDel","OutofStock","OnlyInStore","Special_Programs",
-      "IPSLES","Season","Category_Subgroup","Line","PL","GA_date","ES_date","Distribution_Inv","Category_1","Category_2","Category_3",
-      "HPS/OPS","Series","Category Custom","Brand","Max_Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year",
-      "Changed_Street_Price","POS_Qty","Ad_Location","GAP_IR","Ad","Days_on_Promo","Ad_Best Buy","Ad_Office Depot-Max","Ad_Staples",
-      "Ad_ratio_Brother","Ad_ratio_Canon","Ad_ratio_Epson","Ad_ratio_HP","Ad_ratio_Lexmark","Ad_ratio_Samsung","Ad_total_Brother",
-      "Ad_total_Canon","Ad_total_Epson","Ad_total_HP","Ad_total_Lexmark","Ad_total_Samsung","Ad_share_Brother","Ad_share_Canon",
-      "Ad_share_Lexmark","Ad_share_Samsung","Ad_share_Epson","Ad_share_HP","NP_IR","ASP_IR","IPS","NP_Program_ID","ASP_Program_ID",
-      "ASP_Planned_Units","ASP_Planned_Spend","BOPIS","Merchant_Gift_Card","Flash_IR","NP_IR_original","ASP_IR_original",
-      "GC_SKU_Name","Other_IR_original","Total_IR_original","Total_IR","Other_IR","NoAvail","GAP_Price","ImpAve","ImpMin",
-      "ImpAve_AmazonProper","ImpMin_AmazonProper","ImpAve_BestBuy","ImpMin_BestBuy","ImpAve_HPShopping","ImpMin_HPShopping",
-      "ImpAve_OfficeDepotMax","ImpMin_OfficeDepotMax","ImpAve_Staples","ImpMin_Staples","AMZ_Sales_Price","LBB","Promo_Flag",
-      "NP_Flag","ASP_Flag","Other_IR_Flag","Promo_Pct","Discount_Depth_Category","price","EOL_criterion","EOL_criterion_old",
-      "EOL_Date","BOL_criterion","USChristmasDay","USColumbusDay","USIndependenceDay","USLaborDay","USLincolnsBirthday",
-      "USMemorialDay","USMLKingsBirthday","USNewYearsDay","USPresidentsDay","USThanksgivingDay","USCyberMonday","USVeteransDay",
-      "USWashingtonsBirthday","Lag_USMemorialDay","Lag_USPresidentsDay","Lag_USThanksgivingDay","Lag_USChristmasDay",
-      "Lag_USLaborDay","Amazon_Prime_Day","L1_competition_Brother","L1_competition_Canon","L1_competition_Epson",
-      "L1_competition_Lexmark","L1_competition_Samsung","L2_competition_Brother","L2_competition_Canon","L2_competition_Epson",
-      "L2_competition_Lexmark","L2_competition_Samsung","L1_competition","L2_competition","L1_competition_HP_ssmodel",
-      "L2_competition_HP_ssmodel","L1_competition_ssdata_HPmodel","L2_competition_ssdata_HPmodel","BOGO_dummy","BOGO",
-      "L1_cannibalization","L2_cannibalization","Sale_Price","Price_Range_20_Perc_high","seasonality_npd","seasonality_npd2",
-      "Hardware_GM","Supplies_GM","Hardware_Rev","Supplies_Rev","Valid_Start_Date","Valid_End_Date","aveHWGM","aveSuppliesGM",
-      "avg_discount_SKU_Account","supplies_GM_scaling_factor","Supplies_GM_unscaled","Supplies_GM_no_promo","Supplies_Rev_unscaled",
-      "Supplies_Rev_no_promo","L1_cannibalization_log","L2_cannibalization_log","L1_competition_log","L2_competition_log",
-      "SKU_category","no_promo_avg","no_promo_med","no_promo_sd","no_promo_min","no_promo_max","low_baseline","low_volume",
-      "raw_bl_avg","raw_bl_med","low_confidence","high_disc_Flag","always_promo_Flag","Season_most_recent","Promo_Pct_Ave",
-      "Promo_Pct_Min","L1_cannibalization_OnOffline_Min","L1_Innercannibalization_OnOffline_Min","L2_cannibalization_OnOffline_Min",
-      "L2_Innercannibalization_OnOffline_Min","PriceBand","PriceBand_cannibalization_OnOffline_Min","PriceBand_Innercannibalization_OnOffline_Min",
-      "Cate","Cate_cannibalization_OnOffline_Min","Cate_Innercannibalization_OnOffline_Min","BOPISbtbhol","BOPISbts",
-      "cann_group","cann_receiver","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","Direct_Cann_Weber",
-      "Direct_Cann_Muscatel_Weber","Direct_Cann_Muscatel_Palermo","Direct_Cann_Palermo","LBB_adj","exclude",
-      "Street_PriceWhoChange_log","SKUWhoChange","PriceChange_HPS_OPS","Org_SP","Pec_Street_Price_Changed_BeforeSqr",
-      "Pec_Street_Price_Changed","AE_NP_IR","AE_ASP_IR","AE_Other_IR","instore_labor","Selling_Price","Amazon-Proper0",
-      "Price_Amazon_com","Price_Best_Buy","Price_Best_Buy_com","Price_Office_Depot_Max","Price_Office_Depot_Max_com",
-      "Price_Staples","Price_Staples_com","Price_Min_Online","Price_Min_Offline","Delta_Price_Online","Delta_Price_Offline",
-      "Price_Gap_Online","Price_Gap_Offline","Street_Price")
-    .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_"+currentTS+".csv")
+//    var retailFinalDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv(TEMP_OUTPUT_DIR)
+//      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+//      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
+//      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
+//      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
+//
+//    retailFinalDF.select("SKU", "Week_End_Date", "Account", "mnth", "Online", "trend", "SKU_Name", "L1_Category",
+//      "Category", "L2_Category", "SKU_number", "Ave", "Min", "Max", "InStock", "DelayDel", "OutofStock", "OnlyInStore", "Special_Programs",
+//      "IPSLES", "Season", "Category_Subgroup", "Line", "PL", "GA_date", "ES_date", "Distribution_Inv", "Category_1", "Category_2", "Category_3",
+//      "HPS/OPS", "Series", "Category Custom", "Brand", "Max_Week_End_Date", "Season_Ordered", "Cal_Month", "Cal_Year", "Fiscal_Qtr", "Fiscal_Year",
+//      "Changed_Street_Price", "POS_Qty", "Ad_Location", "GAP_IR", "Ad", "Days_on_Promo", "Ad_Best Buy", "Ad_Office Depot-Max", "Ad_Staples",
+//      "Ad_ratio_Brother", "Ad_ratio_Canon", "Ad_ratio_Epson", "Ad_ratio_HP", "Ad_ratio_Lexmark", "Ad_ratio_Samsung", "Ad_total_Brother",
+//      "Ad_total_Canon", "Ad_total_Epson", "Ad_total_HP", "Ad_total_Lexmark", "Ad_total_Samsung", "Ad_share_Brother", "Ad_share_Canon",
+//      "Ad_share_Lexmark", "Ad_share_Samsung", "Ad_share_Epson", "Ad_share_HP", "NP_IR", "ASP_IR", "IPS", "NP_Program_ID", "ASP_Program_ID",
+//      "ASP_Planned_Units", "ASP_Planned_Spend", "BOPIS", "Merchant_Gift_Card", "Flash_IR", "NP_IR_original", "ASP_IR_original",
+//      "GC_SKU_Name", "Other_IR_original", "Total_IR_original", "Total_IR", "Other_IR", "NoAvail", "GAP_Price", "ImpAve", "ImpMin",
+//      "ImpAve_AmazonProper", "ImpMin_AmazonProper", "ImpAve_BestBuy", "ImpMin_BestBuy", "ImpAve_HPShopping", "ImpMin_HPShopping",
+//      "ImpAve_OfficeDepotMax", "ImpMin_OfficeDepotMax", "ImpAve_Staples", "ImpMin_Staples", "AMZ_Sales_Price", "LBB", "Promo_Flag",
+//      "NP_Flag", "ASP_Flag", "Other_IR_Flag", "Promo_Pct", "Discount_Depth_Category", "price", "EOL_criterion", "EOL_criterion_old",
+//      "EOL_Date", "BOL_criterion", "USChristmasDay", "USColumbusDay", "USIndependenceDay", "USLaborDay", "USLincolnsBirthday",
+//      "USMemorialDay", "USMLKingsBirthday", "USNewYearsDay", "USPresidentsDay", "USThanksgivingDay", "USCyberMonday", "USVeteransDay",
+//      "USWashingtonsBirthday", "Lag_USMemorialDay", "Lag_USPresidentsDay", "Lag_USThanksgivingDay", "Lag_USChristmasDay",
+//      "Lag_USLaborDay", "Amazon_Prime_Day", "L1_competition_Brother", "L1_competition_Canon", "L1_competition_Epson",
+//      "L1_competition_Lexmark", "L1_competition_Samsung", "L2_competition_Brother", "L2_competition_Canon", "L2_competition_Epson",
+//      "L2_competition_Lexmark", "L2_competition_Samsung", "L1_competition", "L2_competition", "L1_competition_HP_ssmodel",
+//      "L2_competition_HP_ssmodel", "L1_competition_ssdata_HPmodel", "L2_competition_ssdata_HPmodel", "BOGO_dummy", "BOGO",
+//      "L1_cannibalization", "L2_cannibalization", "Sale_Price", "Price_Range_20_Perc_high", "seasonality_npd", "seasonality_npd2",
+//      "Hardware_GM", "Supplies_GM", "Hardware_Rev", "Supplies_Rev", "Valid_Start_Date", "Valid_End_Date", "aveHWGM", "aveSuppliesGM",
+//      "avg_discount_SKU_Account", "supplies_GM_scaling_factor", "Supplies_GM_unscaled", "Supplies_GM_no_promo", "Supplies_Rev_unscaled",
+//      "Supplies_Rev_no_promo", "L1_cannibalization_log", "L2_cannibalization_log", "L1_competition_log", "L2_competition_log",
+//      "SKU_category", "no_promo_avg", "no_promo_med", "no_promo_sd", "no_promo_min", "no_promo_max", "low_baseline", "low_volume",
+//      "raw_bl_avg", "raw_bl_med", "low_confidence", "high_disc_Flag", "always_promo_Flag", "Season_most_recent", "Promo_Pct_Ave",
+//      "Promo_Pct_Min", "L1_cannibalization_OnOffline_Min", "L1_Innercannibalization_OnOffline_Min", "L2_cannibalization_OnOffline_Min",
+//      "L2_Innercannibalization_OnOffline_Min", "PriceBand", "PriceBand_cannibalization_OnOffline_Min", "PriceBand_Innercannibalization_OnOffline_Min",
+//      "Cate", "Cate_cannibalization_OnOffline_Min", "Cate_Innercannibalization_OnOffline_Min", "BOPISbtbhol", "BOPISbts",
+//      "cann_group", "cann_receiver", "Direct_Cann_201", "Direct_Cann_225", "Direct_Cann_252", "Direct_Cann_277", "Direct_Cann_Weber",
+//      "Direct_Cann_Muscatel_Weber", "Direct_Cann_Muscatel_Palermo", "Direct_Cann_Palermo", "LBB_adj", "exclude",
+//      "Street_PriceWhoChange_log", "SKUWhoChange", "PriceChange_HPS_OPS", "Org_SP", "Pec_Street_Price_Changed_BeforeSqr",
+//      "Pec_Street_Price_Changed", "AE_NP_IR", "AE_ASP_IR", "AE_Other_IR", "instore_labor", "Selling_Price", "Amazon-Proper0",
+//      "Price_Amazon_com", "Price_Best_Buy", "Price_Best_Buy_com", "Price_Office_Depot_Max", "Price_Office_Depot_Max_com",
+//      "Price_Staples", "Price_Staples_com", "Price_Min_Online", "Price_Min_Offline", "Delta_Price_Online", "Delta_Price_Offline",
+//      "Price_Gap_Online", "Price_Gap_Offline", "Street_Price")
+//      .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_" + currentTS + ".csv")
 
 
     val regData = retailWithCompCann3DF
@@ -392,7 +423,7 @@ object RetailPreRegressionPart21 {
 
     val excluded = retailWithCompCann3DF
       .filter(col("exclude") === 1 && col("low_volume") === 0 && col("Special_Programs").isin("None", "BOPIS") &&
-        col("Season").isin("BTS'18", "STS'18", "BTB'18", "HOL'17", "BTS'17", "STS'17", "BTB'17"))
+        col("Season").isin("HOL'18", "BTS'18", "STS'18", "BTB'18"))
       .groupBy("Account", "SKU_Name", "Season", "Online")
       .agg(
         sum(col("POS_Qty")).as("Total_qty"),

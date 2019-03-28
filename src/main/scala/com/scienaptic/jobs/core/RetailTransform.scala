@@ -89,7 +89,7 @@ object RetailTransform {
     val auxTablesOnlineSource = sourceMap(AUX_TABLES_ONLINE_SOURCE)
     val auxTablesSKUHierarchySource = sourceMap(AUX_TABLES_SKU_HIERARCHY_SOURCE)
     val bbyBundleInfoSource = sourceMap(BBY_BUNDLE_INFO_SOURCE)
-    val existingPOSSource = sourceMap(EXISTING_POS_SOURCE)
+//    val existingPOSSource = sourceMap(EXISTING_POS_SOURCE)
 
 
     val odomOrcaDF = Utils.loadCSV(executionContext, odomOrcaSource.filePath).get
@@ -104,11 +104,10 @@ object RetailTransform {
     val auxTablesOnline = Utils.loadCSV(executionContext, auxTablesOnlineSource.filePath).get
     val auxTablesSKUHierarchy = Utils.loadCSV(executionContext, auxTablesSKUHierarchySource.filePath).get
     val bbyBundleInfo = Utils.loadCSV(executionContext, bbyBundleInfoSource.filePath).get
-    val existingPOS = Utils.loadCSV(executionContext, existingPOSSource.filePath).get
 
     /* AUX TABLES WEEKEND */
     val auxTablesWeekendselect01DF = SelectOperation.doSelect(auxTablesWeekend, auxTablesWeekendSource.selectOperation(SELECT01).cols, auxTablesWeekendSource.selectOperation(SELECT01).isUnknown).get
-      .withColumn("wed", to_date(unix_timestamp(col("wed"), "dd/MM/yyyy").cast("timestamp"), "yyyy-MM-dd"))
+      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
 
     /* ODOOM ORCA */
     // Select01
@@ -144,17 +143,13 @@ object RetailTransform {
     // Select01
     val staplesComUnitsSelect01DF = Utils.convertListToDFColumnWithRename(staplesComUnitsSource.renameOperation(RENAME01),
       SelectOperation.doSelect(staplesDotComUnitsDF, staplesComUnitsSource.selectOperation(SELECT01).cols, staplesComUnitsSource.selectOperation(SELECT01).isUnknown).get)
+      .withColumn("wed", to_date(unix_timestamp(col("wed"), "dd-MM-yyyy").cast("timestamp"), "yyyy-MM-dd"))
 
     // formula
     val staplesComUnitsFormula01DF = Utils.litColumn(staplesComUnitsSelect01DF, "Account Major", "Staples")
 
     // union
-    val staplesComUnitsFormulaLitNullDF = staplesComUnitsFormula01DF.withColumn("season_ordered", lit(null: String))
-      .withColumn("cal_month", lit(null: String))
-      .withColumn("cal_year", lit(null: String))
-      .withColumn("fiscal_quarter", lit(null: String))
-      .withColumn("fiscal_year", lit(null: String))
-    val staplesComUnitsUnionDF = UnionOperation.doUnion(odomOrcaJoin01InnerDF, staplesComUnitsFormulaLitNullDF).get
+    val staplesComUnitsUnionDF = UnionOperation.doUnion(odomOrcaJoin01InnerDF, staplesComUnitsFormula01DF).get
 
     /* Orca 2014 16 Archive */
     // select
@@ -189,6 +184,7 @@ object RetailTransform {
         .when(col("Account Major") === "Sams Club", "Fry's Electronics Inc")
         .when(col("Account Major") === "Target Corporation", "Target Stores")
         .when(col("Account Major") === "Wal Mart Online", "Wal-Mart Online")
+        .when(col("Account Major") === "Wal Mart", "Wal-Mart Online")
         .otherwise(col("Account Major")))
 
 
@@ -201,7 +197,7 @@ object RetailTransform {
 
     // filter
     val orca201617And2017QryFilter01IfFalse = orcaQry2017ToDateSource.filterOperation(FILTER01)
-    val oorca201617And2017QryFilter01IfFalseDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter01IfFalse, orca201617And2017QryFilter01IfFalse.conditionTypes(NUMERAL0)).get
+    val oorca201617And2017QryFilter01IfFalseDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter01IfFalse, orca201617And2017QryFilter01IfFalse.conditionTypes(NUMERAL1)).get
 
     // filter
     val orca201617And2017QryFilter02IfTrue = orcaQry2017ToDateSource.filterOperation(FILTER02)
@@ -269,10 +265,10 @@ object RetailTransform {
     val staplesComUnitsSelect02DF = SelectOperation.doSelect(staplesComUnitsJoin01InnerDF, staplesComUnitsSource.selectOperation(SELECT02).cols, staplesComUnitsSource.selectOperation(SELECT02).isUnknown).get
 
     // select -> formula
-    val staplesComUnitsSetOnline1FormalaDF = Utils.litColumn(staplesComUnitsSelect02DF, "Online", 1)
+    val staplesComUnitsSetOnline1FormalaDF = Utils.litColumn(staplesComUnitsSelect02DF, "Online", lit(1))
 
     // formula
-    val staplesComUnitsCalcFormala01DF = staplesComUnitsJoin01InnerDF.withColumn("Offline Units", lit(staplesComUnitsJoin01InnerDF("Sum_POS Qty") - staplesComUnitsJoin01InnerDF("Online Units")))
+    val staplesComUnitsCalcFormala01DF = staplesComUnitsJoin01InnerDF.withColumn("Offline Units", col("Sum_POS Qty") - col("Online Units"))
 
     // formula -> select
     val staplesComUnitsSelect03DF = SelectOperation.doSelect(staplesComUnitsCalcFormala01DF, staplesComUnitsSource.selectOperation(SELECT03).cols, staplesComUnitsSource.selectOperation(SELECT03).isUnknown).get
@@ -292,7 +288,7 @@ object RetailTransform {
     val hpComSubsStrFormalaDF = hpComJoin01InnerDF
       .withColumn("Product Number", substring(col("Product Number"), 0, 6))
       .withColumn("Account Major", lit("HP Shopping"))
-      .withColumn("Online", lit("1"))
+      .withColumn("Online", lit(1))
 
     // browse here
 
@@ -342,9 +338,9 @@ object RetailTransform {
     // browse here
 
     // formula
-    val amazonArapAddAmazonFormula01 = Utils.litColumn(amazonArapJoin01InnerDF, "Account", "Amazon.com")
+    val amazonArapAddAmazonFormula01 = Utils.litColumn(amazonArapJoin01InnerDF, "Account", "Amazon.Com")
     val amazonArapAddOnlineFormula01 = Utils.litColumn(amazonArapAddAmazonFormula01, "Online", 1)
-    val amazonArapAdd6DaysMoreFormula01 = amazonArapAddOnlineFormula01.withColumn("Week_End_Date", date_add(to_date(col("Week Beginning").cast("timestamp"), "yyyy-mm-dd"), 6))
+    val amazonArapAdd6DaysMoreFormula01 = amazonArapAddOnlineFormula01.withColumn("Week_End_Date", date_add(to_date(unix_timestamp(col("Week Beginning"), "yyyy-MM-dd").cast("timestamp")), 6))
 
     // select
     val amazonArapSelect02 = amazonArapSource.selectOperation(SELECT02)
@@ -370,7 +366,7 @@ object RetailTransform {
 
     /* S Prints Historical Units */
     // convert to Date (MM/dd/yyyy)
-    val sPrintsHistoricalUnitsDateConvDF = sPrintHistoricalUnitsDF.withColumn("Week_End_Date", to_date(unix_timestamp(col("wed"), "MM/dd/yyyy").cast("timestamp")))
+    val sPrintsHistoricalUnitsDateConvDF = sPrintHistoricalUnitsDF.withColumn("Week_End_Date", to_date(unix_timestamp(col("wed"), "MM/dd/yyyy").cast("timestamp"),"yyyy-MM-dd"))
 
     // select
     val sPrintsHistoricalUnitsSelect01 = sPrintHistoricalUnitsSource.selectOperation(SELECT01)
@@ -386,14 +382,14 @@ object RetailTransform {
 
     // formula
     val sPrintsHistoricalFormula01DF = sPrintsHistoricalUnitsGroup01DF.withColumn("Sum_Inv : Saleable Qty",
-      when(col("Sum_Inv : Saleable Qty") > lit(0), 1)
+      when(col("Sum_Inv : Saleable Qty") > 0, 1)
         .otherwise(0))
 
     // Union
     val mainUnion01StaplesLeftAndStaplesSelect = UnionOperation.doUnion(staplesComUnitsJoin01LefttDF, staplesComUnitsSelect03DF).get
     val mainUnion02Union01AndStaplesFormula = UnionOperation.doUnion(mainUnion01StaplesLeftAndStaplesSelect, staplesComUnitsSetOnline1FormalaDF).get
     val mainUnion03Union02AndHPQryFormula = UnionOperation.doUnion(mainUnion02Union01AndStaplesFormula, hpComSubsStrFormalaDF).get
-    val mainUnion04Union03AndAmazonArapSelect = UnionOperation.doUnion(mainUnion03Union02AndHPQryFormula, amazonArapSelect03DF.withColumn("Product Base Desc", lit(null: String))).get
+    val mainUnion04Union03AndAmazonArapSelect = UnionOperation.doUnion(mainUnion03Union02AndHPQryFormula, amazonArapSelect03DF).get
     val mainUnion05Union04AndSPrintFormula = UnionOperation.doUnion(mainUnion04Union03AndAmazonArapSelect, sPrintsHistoricalFormula01DF).get
 
     mainUnion05Union04AndSPrintFormula.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/mainUnion05Union04AndSPrintFormula.csv")
