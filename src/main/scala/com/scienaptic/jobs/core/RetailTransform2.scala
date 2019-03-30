@@ -217,8 +217,8 @@ object RetailTransform2 {
     val bbyDataSet = bbyBundleInfo.as[BBYBundle]
     val names = bbyDataSet.schema.fieldNames
 
-    val transposedData = bbyDataSet.flatMap(row => Array(BBYBundleTranspose(row.`HP SKU`, row.`Week Ending`, row.Units, names(3), row.`B&M Units`),
-      BBYBundleTranspose(row.`HP SKU`, row.`Week Ending`, row.Units, names(4), row.`_COM Units`)))
+    val transposedData = bbyDataSet.flatMap(row => Array(BBYBundleTranspose( row.`Week Ending`,row.Units, row.`HP SKU`, names(3), row.`B&M Units`),
+      BBYBundleTranspose(row.`Week Ending`,row.Units, row.`HP SKU`, names(4), row.`_COM Units`)))
 
     val bbyBundleInfoTransposeDF = transposedData.toDF()
       .withColumn("Week Ending", to_date(col("Week Ending"), "yyyy-MM-dd"))
