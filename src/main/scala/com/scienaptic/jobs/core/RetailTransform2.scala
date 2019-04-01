@@ -302,7 +302,7 @@ object RetailTransform2 {
         otherwise (0))
 
     // union with append max weekend date
-    val unionFormulaAndInnerJoinDF = UnionOperation.doUnion(bbyBundleInfoFormula06DF, bbyBundleInfoJoin04InnerDF).get
+    val unionFormulaAndInnerJoinDF = UnionOperation.doUnion(bbyBundleInfoJoin04InnerDF, bbyBundleInfoFormula06DF).get
     val calMaxWED = unionFormulaAndInnerJoinDF.agg(max("Week_End_Date")).head().getDate(NUMERAL0)
     val unionAppendMaxWeekEndDate = unionFormulaAndInnerJoinDF.withColumn("Max_Week_End_Date", lit(calMaxWED))
 
