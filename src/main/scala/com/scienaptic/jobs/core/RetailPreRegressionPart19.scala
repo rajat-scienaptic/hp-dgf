@@ -143,7 +143,7 @@ object RetailPreRegressionPart19 {
       .withColumn("BOPISbtbhol", when(col("BOPIS") === 1 && col("Season").isin("BTB'16", "BTB'17", "HOL'16"), 1).otherwise(lit(0)))
       .withColumn("BOPISbts", when(col("BOPIS") === 1 && col("Season").isin("BTS'16", "BTS'17"), lit(1)).otherwise(lit(0)))
       .withColumn("Special_Programs", when(col("BOPIS") === 1 && col("Account").isin("Staples"), "BOPIS").otherwise(col("Special_Programs")))
-      .distinct()
+      .dropDuplicates("SKU","Account", "Week_End_Date", "Online","Special_Programs")
 
     retailWithCompCann3DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-CateCannOfflineOnline-PART19.csv")
 
