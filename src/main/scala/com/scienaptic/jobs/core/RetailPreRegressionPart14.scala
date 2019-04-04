@@ -125,7 +125,7 @@ object RetailPreRegressionPart14 {
       .join(npblTemp.withColumn("SKU_Name", col("SKU_Name")).withColumn("Account", col("Account")), Seq("Account", "SKU_Name"), "inner")
       .withColumn("no_promo_med", when(col("SKU_Name") === "Envy 5535" && col("Account") === "Office Depot-Max", 21).otherwise(col("no_promo_med")))
       .withColumn("no_promo_med", when(col("SKU_Name") === "OJ Pro 8610" && col("Account") === "Office Depot-Max", 4057).otherwise(col("no_promo_med")))
-      .withColumn("no_promo_med", when(col("SKU_Name") === "OJ Pro 8610" && col("Account") === "Staples", 232).otherwise(col("no_promo_med")))
+      .withColumn("no_promo_med", when(col("SKU_Name") === "OJ Pro 6830" && col("Account") === "Staples", 232).otherwise(col("no_promo_med")))
 
     retailWithCompCannDF = retailWithCompCannDF
       .join(npbl, Seq("SKU_Name", "Account"), "left")
@@ -133,8 +133,8 @@ object RetailPreRegressionPart14 {
       .withColumn("no_promo_med", when(col("no_promo_med").isNull, 0).otherwise(col("no_promo_med")))
       .withColumn("low_baseline", when(((col("no_promo_avg") >= min_baseline) && (col("no_promo_med") > baselineThreshold)) || ((col("no_promo_med") >= min_baseline) && (col("no_promo_avg") >= baselineThreshold)), 0).otherwise(1))
       .withColumn("low_volume", when(col("POS_Qty") > 0, 0).otherwise(1))
-      .withColumn("raw_bl_avg", col("no_promo_avg") * (col("seasonality_npd2") + lit(1)))
-      .withColumn("raw_bl_med", col("no_promo_med") * (col("seasonality_npd2") + lit(1)))
+      .withColumn("raw_bl_avg", col("no_promo_avg") * (col("seasonality_npd2") + 1))
+      .withColumn("raw_bl_med", col("no_promo_med") * (col("seasonality_npd2") + 1))
       .withColumn("low_baseline", when(col("Online") === 1, 0).otherwise(col("low_baseline")))
 
     val retailLowConfidence = retailWithCompCannDF

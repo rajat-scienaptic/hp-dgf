@@ -113,7 +113,7 @@ object RetailPreRegressionPart13 {
       )
 
     /*
-    TODO : rownames() in R
+    Removed : rownames() in R
       #   supplies_GM_scaling_factor <- data.frame("supplies_GM_scaling_factor" = model$coefficients[grepl("Promo.Pct",names(model$coefficients))])
 
       #supplies_GM_scaling_factor$Account = if(supplies_GM_scaling_factor ="Best Buy","Best Buy",
@@ -135,7 +135,7 @@ object RetailPreRegressionPart13 {
         }
       }
 
-     */
+
 
     Cat_switch match {
       case 1 => {
@@ -162,7 +162,7 @@ object RetailPreRegressionPart13 {
       }
 
     }
-
+    */
     val avgDiscountSKUAccountDF = retailWithCompCannDF
       .groupBy("SKU_Name", "Account")
       .agg((sum(col("POS_Qty") * col("Total_IR")) / sum(col("POS_Qty") * col("Street_Price"))).as("avg_discount_SKU_Account"))

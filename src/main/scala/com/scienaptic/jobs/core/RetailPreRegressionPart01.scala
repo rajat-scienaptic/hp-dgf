@@ -185,7 +185,7 @@ object RetailPreRegressionPart01 {
     val adPositionDF = GAP1.filter(col("Brand").isin("HP", "Samsung"))
       .select("SKU", "Week_End_Date", "Account", "Online", "Ad_Location", "Brand", "Product")
       .filter(col("Ad_Location").isNotNull)
-      .filter(col("Ad_Location") =!= lit("0"))
+      .filter(col("Ad_Location") =!= 0)
       .distinct()
 
     val adPositionJoinSKUMappingDF = adPositionDF.join(SKUMapping, Seq("Product"), "left")
