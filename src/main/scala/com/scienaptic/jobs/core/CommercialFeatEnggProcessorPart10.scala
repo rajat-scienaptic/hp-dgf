@@ -107,10 +107,40 @@ object CommercialFeatEnggProcessor10 {
     //writeDF(commercialWithCompCannDF, "commercialWithCompCannDF_WITH_DIRECT_CANN")
 
     commercial = commercial.drop("is225","is201","is252","is277","isM40","isM42","isM45","isM47")
+      /* Code Change: Avik April 6: VApr6: No more required to check these */
+      /*
       .withColumn("Hardware_GM", when(col("Category_1")==="Value" && col("Week_End_Date")>="2016-07-01", col("Hardware_GM")+lit(68)).otherwise(col("Hardware_GM")))
       .withColumn("Hardware_GM", when(col("Category_1")==="Value" && col("Week_End_Date")>="2017-05-01", col("Hardware_GM")+lit(8)).otherwise(col("Hardware_GM")))
       .withColumn("Hardware_GM", when(col("Category Custom")==="A4 SMB" && col("Week_End_Date")>="2017-11-01", col("Hardware_GM")-lit(7.51)).otherwise(col("Hardware_GM")))
       .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 Value","A3 Value") && col("Week_End_Date")>="2017-11-01", col("Hardware_GM")+lit(33.28)).otherwise(col("Hardware_GM")))
+      */
+
+    /* Code Change: Avik April 6: VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund) */
+    var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("/home/avik/Scienaptic/HP/data/Aux Tables.csv"))
+    canon = canon
+      .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd-MM-yyyy").cast("timestamp")))
+      .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
+      .withColumn("wk_day_start", dayofweek(col("Start_date")))
+      .withColumn("wk_day_end", dayofweek(col("End_date")))
+      .withColumn("WSD", date_add(expr("date_sub(Start_date, wk_day_start)"),7))
+      .withColumn("WED", when(col("wk_day_end")>3,date_add(expr("date_sub(End_date, wk_day_end)"),7)).otherwise(expr("date_sub(End_date,wk_day_end)")))
+      .withColumn("WED",to_date(col("WED")))
+      .withColumn("Amount", regexp_replace(col("Amount"),lit("\\$"),lit("")).cast("double"))
+      .withColumn("week_diff", abs(datediff(col("WSD"), col("WED"))/7)+1)
+      .withColumn("repList", createlist(col("week_diff")))
+      .withColumn("repeatNum", explode(col("repList")))
+      .withColumn("repeatNum", (col("repeatNum")+1)*7)
+      .withColumn("WED", expr("date_add(WSD,repeatNum)"))
+      //.drop("repList").drop("repeatNum")
+    canon = canon.select("Category Custom","WED","Amount")
+      .withColumnRenamed("WED","Week_End_Date")
+      //.withColumnRenamed("Category Custom","Category_Custom")
+    commercial = commercial.join(canon, Seq("Category_Custom","Week_End_Date"))
+      .withColumn("Amount",when(col("Amount").isNull, 0).otherwise(col("Amount")))
+      .withColumn("Hardware_GM", col("Hardware_GM")+col("Amount"))
+    /* Code change END: Avik April 6 : VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund)*/
+
+    commercial = commercial
       .withColumn("Supplies_GM", when(col("L1_Category")==="Scanners",0).otherwise(col("Supplies_GM")))
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_DIRECT_CANN_20")
 
@@ -124,7 +154,7 @@ object CommercialFeatEnggProcessor10 {
       .withColumn("Street_PriceWhoChange_log", when(col("Changed_Street_Price")===0, 0).otherwise(log(col("Street Price")*col("Changed_Street_Price"))))
       .withColumn("SKUWhoChange", when(col("Changed_Street_Price")===0, 0).otherwise(col("SKU")))
       .withColumn("PriceChange_HPS_OPS", when(col("Changed_Street_Price")===0, 0).otherwise(col("HPS_OPS")))
-    //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_EXCLUDE_SKUWHOCHANGE")
+
 
 
     val maxWED = commercial.agg(max("Week_End_Date")).head().getDate(0)
