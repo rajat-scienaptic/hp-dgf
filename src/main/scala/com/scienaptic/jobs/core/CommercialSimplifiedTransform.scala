@@ -99,7 +99,7 @@ object CommercialSimplifiedTransform {
 
     val sourceMap = executionContext.configuration.sources
 
-    val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    //val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
     val iecSource = sourceMap(IEC_SOURCE)
     val xsClaimsSource = sourceMap(XS_CLAIMS_SOURCE)
@@ -270,7 +270,7 @@ object CommercialSimplifiedTransform {
     /*
     * OUTPUT - claims_consolidated.csv
     * */
-    claimsAndSKUJoinsUnionDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/claims_consolidated_"+currentTS+".csv")
+    //claimsAndSKUJoinsUnionDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/claims_consolidated_"+currentTS+".csv")
 
     /*Group - 385*/
     val claimsResellerWEDSKUProgramGroup = xsClaimsSource.groupOperation(RESELLER_WED_SKU_PROGRAM_AGG_CLAIM_REBATE_QUANTITY)
@@ -737,7 +737,8 @@ object CommercialSimplifiedTransform {
     /*
     * Union Inventory and S-Print Union - 413
     * */
-    val stOnyxInventorySPrintUnionDF = doUnion(tidyHistAndSKUHierInnerJoinDF, doUnion(stOnyxMergeInventoryInnerJoinDF, stOnyxMergeInventoryLeftJoinDF).get).get
+    /* Avik Change : RCode: Version Apr6: Tidy Dataframe had Reseller_Cluster, but other had Reseller Cluster */
+    val stOnyxInventorySPrintUnionDF = doUnion(tidyHistAndSKUHierInnerJoinDF.withColumnRenamed("Reseller_Cluster","Reseller Cluster"), doUnion(stOnyxMergeInventoryInnerJoinDF, stOnyxMergeInventoryLeftJoinDF).get).get
     //writeDF(stOnyxInventorySPrintUnionDF,"INVENTORY_AND_S-PRINT")
     /*
     * Calculate Promo Spend, eTailer, Reseller Cluster - 398
@@ -763,7 +764,8 @@ object CommercialSimplifiedTransform {
         .withColumn("Spend",col("Promo Spend"))
         .select("Reseller Cluster","VPA","Street Price","SKU","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1_Category","L2_Category","PLC Status","GA date","ES date","Week_End_Date","Season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","SKU_Name","Big_Deal_Qty","Non_Big_Deal_Qty","Qty","IR","Promo Flag","Inv_Qty","eTailer","Promo Spend","Spend")
     //writeDF(posqtyOutputCommercialDF,"POSQTY_OUTPUT_COMMERCIAL")
-    posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
+    posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/April8Run/posqty_commercial_output.csv")
+    //posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
 
   }
 }
