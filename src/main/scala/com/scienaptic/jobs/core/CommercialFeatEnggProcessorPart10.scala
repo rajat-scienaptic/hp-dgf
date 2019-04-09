@@ -116,7 +116,7 @@ object CommercialFeatEnggProcessor10 {
       */
 
     /* Code Change: Avik April 6: VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund) */
-    var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("/home/avik/Scienaptic/HP/data/Aux Tables.csv"))
+    var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/AUX/Aux_canon.csv"))
     canon = canon
       .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd-MM-yyyy").cast("timestamp")))
       .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
@@ -135,7 +135,7 @@ object CommercialFeatEnggProcessor10 {
     canon = canon.select("Category Custom","WED","Amount")
       .withColumnRenamed("WED","Week_End_Date")
       //.withColumnRenamed("Category Custom","Category_Custom")
-    commercial = commercial.join(canon, Seq("Category_Custom","Week_End_Date"))
+    commercial = commercial.join(canon, Seq("Category_Custom","Week_End_Date"), "left")
       .withColumn("Amount",when(col("Amount").isNull, 0).otherwise(col("Amount")))
       .withColumn("Hardware_GM", col("Hardware_GM")+col("Amount"))
     /* Code change END: Avik April 6 : VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund)*/
