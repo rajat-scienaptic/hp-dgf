@@ -168,6 +168,7 @@ object RetailPreRegressionPart01 {
       .join(retailAggregatePOSDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
       .withColumn("rank", row_number().over(wind))
       .filter(col("rank") === 1)
+      .drop("rank")
 //      .dropDuplicates("SKU", "Account", "Week_End_Date", "Online", "Special_Programs") // duplicated line:112 R
 
     var SKUMapping = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/S-Print/SKU_Mapping/s-print_SKU_mapping.csv"))
