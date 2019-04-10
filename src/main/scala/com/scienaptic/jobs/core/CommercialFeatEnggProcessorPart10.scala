@@ -134,10 +134,11 @@ object CommercialFeatEnggProcessor10 {
       //.drop("repList").drop("repeatNum")
     canon = canon.select("Category Custom","WED","Amount")
       .withColumnRenamed("WED","Week_End_Date")
-      //.withColumnRenamed("Category Custom","Category_Custom")
-    commercial = commercial.join(canon, Seq("Category_Custom","Week_End_Date"), "left")
+      .withColumnRenamed("Category Custom","Category_Custom")
+    commercial = commercial.withColumnRenamed("Category Custom","Category_Custom").join(canon, Seq("Category_Custom","Week_End_Date"), "left")
       .withColumn("Amount",when(col("Amount").isNull, 0).otherwise(col("Amount")))
       .withColumn("Hardware_GM", col("Hardware_GM")+col("Amount"))
+        .withColumnRenamed("Category_Custom","Category Custom")
     /* Code change END: Avik April 6 : VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund)*/
 
     commercial = commercial

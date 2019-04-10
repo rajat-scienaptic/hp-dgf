@@ -169,7 +169,7 @@ object CommercialFeatEnggProcessor {
       .withColumn("Discount_Depth_Category", when(col("Promo_Pct")===0, "No Discount").when(col("Promo_Pct")<=0.2, "Very Low").when(col("Promo_Pct")<=0.3, "Low").when(col("Promo_Pct")===0.4, "Moderate").when(col("Promo_Pct")<="0.5", "Heavy").otherwise(lit("Very Heavy")))
       .withColumn("log_Qty", log(col("Qty")))
       .withColumn("log_Qty", when(col("log_Qty").isNull, 0).otherwise(col("log_Qty")))
-      .withColumn("price", lit(1)-col("Promo_Pct"))
+      .withColumn("price", log(lit(1)-col("Promo_Pct")))
       .withColumn("price", when(col("price").isNull, 0).otherwise(col("price")))
       .withColumn("Inv_Qty_log", log(col("Inv_Qty")))
       .withColumn("Inv_Qty_log", when(col("Inv_Qty_log").isNull, 0).otherwise(col("Inv_Qty_log")))
