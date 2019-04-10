@@ -162,10 +162,13 @@ object RetailPreRegressionPart01 {
       .agg(sum(col("POS_Qty")).as("POS_Qty"))
 
     retailMergeIFS2DF = retailMergeIFS2DF.drop("POS_Qty")
-
+    val wind = Window.partitionBy("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
+      .orderBy(col("Distribution_Inv").asc)
     val retailJoinRetailTreatmentAndAggregatePOSDF = retailMergeIFS2DF
       .join(retailAggregatePOSDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
-      .dropDuplicates("SKU", "Account", "Week_End_Date", "Online", "Special_Programs") // duplicated line:112 R
+      .withColumn("rank", row_number().over(wind))
+      .filter(col("rank") === 1)
+//      .dropDuplicates("SKU", "Account", "Week_End_Date", "Online", "Special_Programs") // duplicated line:112 R
 
     var SKUMapping = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/S-Print/SKU_Mapping/s-print_SKU_mapping.csv"))
     SKUMapping.columns.toList.foreach(x => {
