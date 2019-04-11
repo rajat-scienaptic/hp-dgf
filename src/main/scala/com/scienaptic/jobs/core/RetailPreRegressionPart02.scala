@@ -22,7 +22,7 @@ object RetailPreRegressionPart02 {
   val dateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
   val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
   val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
-  val maximumRegressionDate = "2018-12-29"
+  val maximumRegressionDate = "2019-03-09"
   val minimumRegressionDate = "2014-01-01"
   val monthDateFormat = new SimpleDateFormat("MMM", Locale.ENGLISH)
 
@@ -120,9 +120,12 @@ object RetailPreRegressionPart02 {
       .withColumn("Ad", when(col("Ad").isNull, 0).otherwise(col("Ad")))
 
     val aggregateGAP1Days = GAP1JoinSKUMappingDF
-      .filter(col("Account").isin("Costco", "Sam's Club") && col("Brand") === lit("HP"))
-      .groupBy("SKU", "Account", "Week_End_Date")
-      .agg(max(col("Days_on_Promo")).as("Days_on_Promo"))
+      .filter(col("Account").isin("Costco", "Sam's Club") && col("Brand") === "HP")
+      .withColumn("conc_col",concat(col("SKU"),col("Account"),col("Week_End_Date")))
+      .groupBy("SKU", "Account", "Week_End_Date","conc_col")
+      .agg(count("conc_col").as("count_group"), sum(when(col("Days_on_Promo").isNotNull,1).otherwise(0)).as("count_days"), max(col("Days_on_Promo")).as("max_Days_on_Promo"))
+      .withColumn("Days_on_Promo", when(col("count_group") =!=col("count_days"),null).otherwise(col("max_Days_on_Promo")))
+      .drop("conc_col","max_Days_on_Promo")
 
     val retailJoinAggregateGAP1DaysDF = retailJoinGAP1AggregateDF
       .join(aggregateGAP1Days.select("SKU", "Account", "Week_End_Date", "Days_on_Promo"), Seq("SKU", "Account", "Week_End_Date"), "left")

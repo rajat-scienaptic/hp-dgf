@@ -22,7 +22,7 @@ object RetailPreRegressionPart13 {
   val dateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
   val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
   val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
-  val maximumRegressionDate = "2018-12-29"
+  val maximumRegressionDate = "2019-03-09"
   val minimumRegressionDate = "2014-01-01"
   val monthDateFormat = new SimpleDateFormat("MMM", Locale.ENGLISH)
 
@@ -105,15 +105,15 @@ object RetailPreRegressionPart13 {
     supplies_GM_scaling_factor <- data.frame("supplies_GM_scaling_factor" = model$coefficients[grepl("Promo.Pct",names(model$coefficients))])
      remove retailWithCompCannDF and use Data frame from R file
      */
-    var supplies_GM_scaling_factor = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Depth/DepthDataConverted.csv").cache()
-      .withColumn("Account", when(col("Account").contains("Best Buy"), "Best Buy")
-        .when(col("Account").contains("Office Depot-Max"), "Office Depot-Max")
-        .when(col("Account").contains("Staples"), "Staples")
-        .when(col("Account").contains("Costco"), "Costco").otherwise(null)
-      )
+//    var supplies_GM_scaling_factor = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Depth/DepthDataConverted.csv").cache()
+//      .withColumn("Account", when(col("Account").contains("Best Buy"), "Best Buy")
+//        .when(col("Account").contains("Office Depot-Max"), "Office Depot-Max")
+//        .when(col("Account").contains("Staples"), "Staples")
+//        .when(col("Account").contains("Costco"), "Costco").otherwise(null)
+//      )
 
     /*
-    TODO : rownames() in R
+    Removed : rownames() in R
       #   supplies_GM_scaling_factor <- data.frame("supplies_GM_scaling_factor" = model$coefficients[grepl("Promo.Pct",names(model$coefficients))])
 
       #supplies_GM_scaling_factor$Account = if(supplies_GM_scaling_factor ="Best Buy","Best Buy",
@@ -135,7 +135,7 @@ object RetailPreRegressionPart13 {
         }
       }
 
-     */
+
 
     Cat_switch match {
       case 1 => {
@@ -162,7 +162,7 @@ object RetailPreRegressionPart13 {
       }
 
     }
-
+    */
     val avgDiscountSKUAccountDF = retailWithCompCannDF
       .groupBy("SKU_Name", "Account")
       .agg((sum(col("POS_Qty") * col("Total_IR")) / sum(col("POS_Qty") * col("Street_Price"))).as("avg_discount_SKU_Account"))

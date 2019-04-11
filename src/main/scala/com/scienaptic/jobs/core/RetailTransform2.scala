@@ -217,8 +217,8 @@ object RetailTransform2 {
     val bbyDataSet = bbyBundleInfo.as[BBYBundle]
     val names = bbyDataSet.schema.fieldNames
 
-    val transposedData = bbyDataSet.flatMap(row => Array(BBYBundleTranspose(row.`HP SKU`, row.`Week Ending`, row.Units, names(3), row.`B&M Units`),
-      BBYBundleTranspose(row.`HP SKU`, row.`Week Ending`, row.Units, names(4), row.`_COM Units`)))
+    val transposedData = bbyDataSet.flatMap(row => Array(BBYBundleTranspose( row.`Week Ending`,row.Units, row.`HP SKU`, names(3), row.`B&M Units`),
+      BBYBundleTranspose(row.`Week Ending`,row.Units, row.`HP SKU`, names(4), row.`_COM Units`)))
 
     val bbyBundleInfoTransposeDF = transposedData.toDF()
       .withColumn("Week Ending", to_date(col("Week Ending"), "yyyy-MM-dd"))
@@ -302,7 +302,7 @@ object RetailTransform2 {
         otherwise (0))
 
     // union with append max weekend date
-    val unionFormulaAndInnerJoinDF = UnionOperation.doUnion(bbyBundleInfoFormula06DF, bbyBundleInfoJoin04InnerDF).get
+    val unionFormulaAndInnerJoinDF = UnionOperation.doUnion(bbyBundleInfoJoin04InnerDF, bbyBundleInfoFormula06DF).get
     val calMaxWED = unionFormulaAndInnerJoinDF.agg(max("Week_End_Date")).head().getDate(NUMERAL0)
     val unionAppendMaxWeekEndDate = unionFormulaAndInnerJoinDF.withColumn("Max_Week_End_Date", lit(calMaxWED))
 

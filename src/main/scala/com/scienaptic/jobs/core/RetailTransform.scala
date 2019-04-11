@@ -143,7 +143,7 @@ object RetailTransform {
     // Select01
     val staplesComUnitsSelect01DF = Utils.convertListToDFColumnWithRename(staplesComUnitsSource.renameOperation(RENAME01),
       SelectOperation.doSelect(staplesDotComUnitsDF, staplesComUnitsSource.selectOperation(SELECT01).cols, staplesComUnitsSource.selectOperation(SELECT01).isUnknown).get)
-      .withColumn("wed", to_date(unix_timestamp(col("wed"), "dd-MM-yyyy").cast("timestamp"), "yyyy-MM-dd"))
+      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
 
     // formula
     val staplesComUnitsFormula01DF = Utils.litColumn(staplesComUnitsSelect01DF, "Account Major", "Staples")
@@ -191,7 +191,7 @@ object RetailTransform {
     // join
     val orca201617And2017QryAndAuxTablesJoin01 = orcaQry2017ToDateSource.joinOperation(JOIN01)
     val orca201617And2017QryAndAuxTablesJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryFormulaDF, auxTablesWeekendselect01DF, orca201617And2017QryAndAuxTablesJoin01)
-    val orca201617And2017QryAndAuxTablesInnerJoin01 = orca201617And2017QryAndAuxTablesJoin01Map(INNER_JOIN).withColumn("wed", to_date(unix_timestamp(col("wed"), "dd/MM/yyyy").cast("timestamp"), "yyyy-MM-dd"))
+    val orca201617And2017QryAndAuxTablesInnerJoin01 = orca201617And2017QryAndAuxTablesJoin01Map(INNER_JOIN)
 
     // browse here
 
@@ -204,7 +204,7 @@ object RetailTransform {
     val orca201617And2017QryFilter02IfTrueDF = FilterOperation.doFilter(oorca201617And2017QryFilter01IfFalseDF, orca201617And2017QryFilter02IfTrue, orca201617And2017QryFilter02IfTrue.conditionTypes(NUMERAL0)).get
 
     // formula
-    val orca201617And2017Qry7DaysLessFormula = orca201617And2017QryFilter02IfTrueDF.withColumn("wed", date_sub(to_date(unix_timestamp(col("wed"), "dd-MM-yyyy").cast("timestamp"), "yyyy-MM-dd"), 7))
+    val orca201617And2017Qry7DaysLessFormula = orca201617And2017QryFilter02IfTrueDF.withColumn("wed", date_sub(to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")), 7))
 
     // filter
     val orca201617And2017QryFilter03IfFalse = orcaQry2017ToDateSource.filterOperation(FILTER03)
@@ -361,7 +361,7 @@ object RetailTransform {
     val amazonArapJoin02InnerDF = amazonArapJoin02Map(INNER_JOIN)
 
     // select
-    val amazonArapSelect03 = amazonArapSource.selectOperation(SELECT02)
+    val amazonArapSelect03 = amazonArapSource.selectOperation(SELECT03)
     val amazonArapSelect03DF = SelectOperation.doSelect(amazonArapJoin02InnerDF, amazonArapSelect03.cols, amazonArapSelect03.isUnknown).get
 
     /* S Prints Historical Units */
@@ -379,6 +379,7 @@ object RetailTransform {
     // group
     val sPrintsHistoricalUnitsGroup01 = sPrintHistoricalUnitsSource.groupOperation(GROUP01)
     val sPrintsHistoricalUnitsGroup01DF = GroupOperation.doGroup(sPrintsHistoricalUnitsChannelRetailFilter01DF, sPrintsHistoricalUnitsGroup01).get
+      .withColumnRenamed("HP_SKU_Short", "SKU")
 
     // formula
     val sPrintsHistoricalFormula01DF = sPrintsHistoricalUnitsGroup01DF.withColumn("Sum_Inv : Saleable Qty",
@@ -386,16 +387,24 @@ object RetailTransform {
         .otherwise(0))
 
     // Union
-    val mainUnion01StaplesLeftAndStaplesSelect = UnionOperation.doUnion(staplesComUnitsJoin01LefttDF, staplesComUnitsSelect03DF).get
-    val mainUnion02Union01AndStaplesFormula = UnionOperation.doUnion(mainUnion01StaplesLeftAndStaplesSelect, staplesComUnitsSetOnline1FormalaDF).get
-    val mainUnion03Union02AndHPQryFormula = UnionOperation.doUnion(mainUnion02Union01AndStaplesFormula, hpComSubsStrFormalaDF).get
-    val mainUnion04Union03AndAmazonArapSelect = UnionOperation.doUnion(mainUnion03Union02AndHPQryFormula, amazonArapSelect03DF).get
-    val mainUnion05Union04AndSPrintFormula = UnionOperation.doUnion(mainUnion04Union03AndAmazonArapSelect, sPrintsHistoricalFormula01DF).get
+    val mainUnion01StaplesLeftAndStaplesSelect = UnionOperation.doUnion(staplesComUnitsJoin01LefttDF, staplesComUnitsSelect03DF.withColumnRenamed("Offline Units", "Sum_POS Qty")).get
+    val mainUnion02Union01AndStaplesFormula = UnionOperation.doUnion(mainUnion01StaplesLeftAndStaplesSelect, staplesComUnitsSetOnline1FormalaDF.withColumnRenamed("Online Units", "Sum_POS Qty")).get
+    val mainUnion03Union02AndHPQryFormula = UnionOperation.doUnion(mainUnion02Union01AndStaplesFormula, hpComSubsStrFormalaDF
+      .withColumnRenamed("Account Major", "Account Major Consol")
+      .withColumnRenamed("Product Number", "Product Base ID")
+      .withColumnRenamed("Units", "Sum_POS Qty")
+    ).get
+    val mainUnion04Union03AndAmazonArapSelect = UnionOperation.doUnion(mainUnion03Union02AndHPQryFormula, amazonArapSelect03DF
+      .withColumnRenamed("Account", "Account Major Consol")
+      .withColumnRenamed("SKU", "Product Base ID")
+    ).get
+    val mainUnion05Union04AndSPrintFormula = UnionOperation.doUnion(mainUnion04Union03AndAmazonArapSelect, sPrintsHistoricalFormula01DF
+      .withColumnRenamed("Account Consol", "Account Major Consol")
+      .withColumnRenamed("SKU", "Product Base ID")
+      .withColumnRenamed("Sum_Sales : Net Qty", "Sum_POS Qty")
+    ).get
 
     mainUnion05Union04AndSPrintFormula.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/mainUnion05Union04AndSPrintFormula.csv")
-
-
-
   }
 
 }

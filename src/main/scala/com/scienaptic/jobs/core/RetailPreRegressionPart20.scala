@@ -23,7 +23,7 @@ object RetailPreRegressionPart20 {
   val dateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
   val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
   val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
-  val maximumRegressionDate = "2018-12-29"
+  val maximumRegressionDate = "2019-03-09"
   val minimumRegressionDate = "2014-01-01"
   val monthDateFormat = new SimpleDateFormat("MMM", Locale.ENGLISH)
 
@@ -179,8 +179,8 @@ object RetailPreRegressionPart20 {
       .withColumn("Direct_Cann_Muscatel_Weber", when(col("Direct_Cann_Muscatel_Weber").isNull, 0).otherwise(col("Direct_Cann_Muscatel_Weber")))
       .withColumn("Direct_Cann_Muscatel_Palermo", when(col("Direct_Cann_Muscatel_Palermo").isNull, 0).otherwise(col("Direct_Cann_Muscatel_Palermo")))
       .withColumn("Direct_Cann_Palermo", when(col("Direct_Cann_Palermo").isNull, 0).otherwise(col("Direct_Cann_Palermo")))
-      .withColumn("LBB", when(col("LBB").isNull, 0).otherwise(col("LBB")))
       .withColumn("LBB", when(col("Account") === "Amazon-Proper", col("LBB")).otherwise(lit(0)))
+      .withColumn("LBB", when(col("LBB").isNull, 0).otherwise(col("LBB")))
 
     retailWithCompCann3DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART20.csv")
 

@@ -24,7 +24,7 @@ object RetailPreRegressionPart04 {
   val dateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
   val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
   val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
-  val maximumRegressionDate = "2018-12-29"
+  val maximumRegressionDate = "2019-03-09"
   val minimumRegressionDate = "2014-01-01"
   val monthDateFormat = new SimpleDateFormat("MMM", Locale.ENGLISH)
 
@@ -173,7 +173,8 @@ object RetailPreRegressionPart04 {
     //    retailJoinSpreadPrice.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-Feb07-364.csv")
     val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
     var amz = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/etherData/Pricing/Outputs/POS_Amazon/amazon_sales_price_"+currentTS+".csv")).cache()
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+//      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
     amz.columns.toList.foreach(x => {
       amz = amz.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })

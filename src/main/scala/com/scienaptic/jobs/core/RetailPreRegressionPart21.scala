@@ -24,7 +24,7 @@ object RetailPreRegressionPart21 {
   val dateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
   val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
   val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
-  val maximumRegressionDate = "2018-12-29"
+  val maximumRegressionDate = "2019-03-09"
   val minimumRegressionDate = "2014-01-01"
   val monthDateFormat = new SimpleDateFormat("MMM", Locale.ENGLISH)
 
@@ -111,10 +111,15 @@ object RetailPreRegressionPart21 {
     retailWithCompCann3DF = retailWithCompCann3DF
       .join(tableLBB, Seq("Account", "SKU", "Online"), "left")
       .withColumn("LBB", when(col("Account") === "Amazon-Proper", col("LBB")).otherwise(lit(0)))
-      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2016-07-01", col("Hardware_GM") + lit(68)).otherwise(col("Hardware_GM")))
-      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM")))
-      .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2017-11-01", col("Hardware_GM") - lit(7.51)).otherwise(col("Hardware_GM")))
-      .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 Value", "A3 Value") && col("Week_End_Date") >= "2017-11-01", col("Hardware_GM") + lit(33.28)).otherwise(col("Hardware_GM")))
+//      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2016-07-01", col("Hardware_GM") + lit(68)).otherwise(col("Hardware_GM")))
+//      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM")))
+//      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM"))
+      .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 SMB","A4 Enterprise") && col("Week_End_Date") >= "2016-07-01" && col("Week_End_Date") <= "2017-04-30", col("Hardware_GM") + 68).otherwise(col("Hardware_GM")))
+      .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 SMB","A4 Enterprise") && col("Week_End_Date") >= "2017-05-01" && col("Week_End_Date") <= "2017-10-30", col("Hardware_GM") + 76).otherwise(col("Hardware_GM")))
+      .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2017-11-01" && col("Week_End_Date") <= "2018-10-30", col("Hardware_GM") + 68.49).otherwise(col("Hardware_GM")))
+      .withColumn("Hardware_GM", when(col("Category Custom") === "A4 Enterprise" && col("Week_End_Date") >= "2017-11-01" && col("Week_End_Date") <= "2018-10-30", col("Hardware_GM") + 101.77).otherwise(col("Hardware_GM")))
+      .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2018-11-01" && col("Week_End_Date") <= "2019-10-30", col("Hardware_GM") + 49.35).otherwise(col("Hardware_GM")))
+      .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 Enterprise") && col("Week_End_Date") >= "2018-11-01" && col("Week_End_Date") <= "2019-10-30", col("Hardware_GM") + 150).otherwise(col("Hardware_GM")))
 
     // TODO : Ignore Flash.IR.dummy
     /*
@@ -248,9 +253,10 @@ object RetailPreRegressionPart21 {
 
     //retail_acc.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1884.csv")
 
-    retailWithCompCann3DF = retailWithCompCann3DF.drop("Street_Price")
+    retailWithCompCann3DF = retailWithCompCann3DF
       .withColumn("Week_End_Date", col("Week_End_Date"))
-      .join(retail_acc.withColumn("Week_End_Date", col("Week_End_Date")), Seq("SKU", "Week_End_Date"), "left")
+      .join(retail_acc.withColumn("Week_End_Date", col("Week_End_Date"))
+        .drop("Street_Price"), Seq("SKU", "Week_End_Date"), "left")
       .withColumn("Price_Min_Online", when(
         col("Account") === "Amazon-Proper", least(col("Price_Staples_com"), col("Price_Best_Buy_com"), col("Price_Office_Depot_Max_com")))
         .otherwise(
@@ -348,7 +354,7 @@ object RetailPreRegressionPart21 {
       "Pec_Street_Price_Changed", "AE_NP_IR", "AE_ASP_IR", "AE_Other_IR", "instore_labor", "Selling_Price", "Amazon-Proper0",
       "Price_Amazon_com", "Price_Best_Buy", "Price_Best_Buy_com", "Price_Office_Depot_Max", "Price_Office_Depot_Max_com",
       "Price_Staples", "Price_Staples_com", "Price_Min_Online", "Price_Min_Offline", "Delta_Price_Online", "Delta_Price_Offline",
-      "Price_Gap_Online", "Price_Gap_Offline", "Street_Price")
+      "Price_Gap_Online", "Price_Gap_Offline", "Street_Price", "Walmart_Price", "Delta_Price_Walmart")
 
     retailWithCompCann3DF
       .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_" + currentTS + ".csv")
