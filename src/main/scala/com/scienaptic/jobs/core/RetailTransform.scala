@@ -112,7 +112,7 @@ object RetailTransform {
     /* ODOOM ORCA */
     // Select01
     val odomOrcaselect01DF = SelectOperation.doSelect(odomOrcaDF, odomOrcaSource.selectOperation(SELECT01).cols,
-      odomOrcaSource.selectOperation(SELECT01).isUnknown).get
+      odomOrcaSource.selectOperation(SELECT01).isUnknown).get.distinct()
 
     // formula
     val odomOrcaSubsStrFormalaDF = odomOrcaselect01DF.withColumn("Base SKU", substring(col("Vendor Product Code"),
@@ -159,10 +159,10 @@ object RetailTransform {
     /* Orca Qry 2017 to date */
     // select
     val orcaQry2017ToDateSelect01 = orcaQry2017ToDateSource.selectOperation(SELECT01)
-    val orcaQry2017ToDateSelectDF = Utils.convertListToDFColumnWithRename(orcaQry2017ToDateSource.renameOperation(RENAME01), SelectOperation.doSelect(orcaQry2017ToDate, orcaQry2017ToDateSelect01.cols, orcaQry2017ToDateSelect01.isUnknown).get)
+    val orcaQry2017ToDateSelectDF = Utils.convertListToDFColumnWithRename(orcaQry2017ToDateSource.renameOperation(RENAME01), SelectOperation.doSelect(orcaQry2017ToDate, orcaQry2017ToDateSelect01.cols, orcaQry2017ToDateSelect01.isUnknown).get).distinct()
 
     // union
-    val unionOrca201617AndOrca2017QryToDate = UnionOperation.doUnion(orca201416ArchiveSelectDF, orcaQry2017ToDateSelectDF).get.distinct().cache()
+    val unionOrca201617AndOrca2017QryToDate = UnionOperation.doUnion(orca201416ArchiveSelectDF, orcaQry2017ToDateSelectDF).get.cache()
 
     // group
     val orca201617And2017QryGroup01 = orcaQry2017ToDateSource.groupOperation(GROUP01)
@@ -277,7 +277,7 @@ object RetailTransform {
     /* HP COM*/
     // select
 
-    val hpComSelect01DF = SelectOperation.doSelect(hpComDF, hpComSource.selectOperation(SELECT01).cols, hpComSource.selectOperation(SELECT01).isUnknown).get
+    val hpComSelect01DF = SelectOperation.doSelect(hpComDF, hpComSource.selectOperation(SELECT01).cols, hpComSource.selectOperation(SELECT01).isUnknown).get.distinct()
 
     // join
     val hpComJoin01 = hpComSource.joinOperation(JOIN01)
