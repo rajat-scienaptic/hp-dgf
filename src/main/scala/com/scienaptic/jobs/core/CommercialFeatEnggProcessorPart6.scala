@@ -11,7 +11,7 @@ import org.apache.spark.ml.feature.StringIndexer
 import com.scienaptic.jobs.bean.UnionOperation.doUnion
 import java.util.UUID
 import org.apache.spark.storage.StorageLevel
-
+import com.scienaptic.jobs.utility.CommercialUtility.writeDF
 import com.scienaptic.jobs.core.CommercialFeatEnggProcessor.stability_weeks
 import org.apache.spark.sql.functions.rank
 import com.scienaptic.jobs.utility.Utils.renameColumns
@@ -41,7 +41,7 @@ object CommercialFeatEnggProcessor6 {
 
     import spark.implicits._
 
-    //var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Testing\\Comercial_R_Intermediate\\commercialWithCompCannDF.csv")
+    //var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\commercialWithCompCannDF.csv")
     var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialWithCompCannDF.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
@@ -49,7 +49,7 @@ object CommercialFeatEnggProcessor6 {
       .withColumn("Valid_End_Date", to_date(col("Valid_End_Date")))
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
       .persist(StorageLevel.MEMORY_AND_DISK).cache()
-    commercial.printSchema()
+    //commercial.printSchema()
     val wind = Window.partitionBy("SKU_Name","Reseller_Cluster").orderBy("Qty")
     commercial.createOrReplaceTempView("commercial")
     //TODO: Combine 75 and 25 in one spark sql query.
@@ -75,7 +75,7 @@ object CommercialFeatEnggProcessor6 {
       .withColumn("Qty", col("Qty").cast("int"))//.repartition(1000).cache()
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_Spike")
     commercial = commercial.withColumn("Qty",col("Qty").cast("int"))
-    val commercialWithHolidayAndQtyFilter = commercial.withColumn("Qty",col("Qty").cast("int"))
+    val commercialWithHolidayAndQtyFilter = commercial//.withColumn("Qty",col("Qty").cast("int"))
       .where((col("Promo_Flag")===0) && (col("USThanksgivingDay")===0) && (col("USCyberMonday")===0) && (col("spike")===0))
       .where(col("Qty")>0).cache()
     //writeDF(commercialWithHolidayAndQtyFilter,"commercialWithHolidayAndQtyFilter_FILTER_FOR_NPBL")
@@ -102,7 +102,7 @@ object CommercialFeatEnggProcessor6 {
       .withColumn("low_volume", when(col("Qty")>0,0).otherwise(1))
       .withColumn("raw_bl_avg", col("no_promo_avg")*(col("seasonality_npd")+lit(1)))
       .withColumn("raw_bl_med", col("no_promo_med")*(col("seasonality_npd")+lit(1)))
-    //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_AFTER_NPBL")
+    //writeDF(commercial,"commercialBeforeEOL")
     commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeEOL.csv")
 
     /* ----- BREAK HERE -------- wants 'commercial' */

@@ -41,11 +41,11 @@ object CommercialFeatEnggProcessor2 {
 
     import spark.implicits._
     var commercial = spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeNPD.csv")
+    //var commercial = spark.read.option("header", "true").option("inferSchema", "true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\commercialBeforeNPD.csv")
       .withColumn("ES date", to_date(unix_timestamp(col("ES date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"), "yyyy-MM-dd").cast("timestamp")))
-    commercial.printSchema()
-    //var npdDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\NPD_weekly.csv")
+    //var npdDF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\April8Run_Inputs\\NPD_weekly.csv")
     var npdDF = spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv")
     var npd = renameColumns(npdDF)
     npd.columns.toList.foreach(x => {
@@ -67,7 +67,7 @@ object CommercialFeatEnggProcessor2 {
     var L1Comp = L1Competition //.withColumn("uuid",generateUUID())
       .groupBy("L1_Category", "Week_End_Date" /*,"uuid"*/)
       .pivot("Brand").agg(first("L1_competition")).drop("uuid")
-    ////writeDF(L1Comp,"L1Comp")
+    //writeDF(L1Comp,"L1Comp")
     val allBrands = List("Brother", "Canon", "Epson", "Lexmark", "Samsung")
     val L1CompColumns = L1Comp.columns
     allBrands.foreach(x => {
@@ -190,7 +190,7 @@ object CommercialFeatEnggProcessor2 {
       .withColumn("L1_competition_HP_ssmodel", when((col("L1_competition_HP_ssmodel").isNull) || (col("L1_competition_HP_ssmodel") < 0), 0).otherwise(col("L1_competition_HP_ssmodel")))
       .withColumn("L2_competition_HP_ssmodel", when((col("L2_competition_HP_ssmodel").isNull) || (col("L2_competition_HP_ssmodel") < 0), 0).otherwise(col("L2_competition_HP_ssmodel")))
       .na.fill(0, Seq("L1_competition_HP_ssmodel", "L2_competition_HP_ssmodel")).cache()
-    //writeDF(commercialWithCompetitionDF,"commercialWithCompetitionDF_L1_L2_Competition_SS_Feat")*/
+    //writeDF(commercial,"commercialBeforeCannibalisation")
 
     commercial.write.option("header", "true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeCannibalisation.csv")
   }

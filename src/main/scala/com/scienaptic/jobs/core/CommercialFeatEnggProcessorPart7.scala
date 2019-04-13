@@ -11,7 +11,7 @@ import org.apache.spark.ml.feature.StringIndexer
 import com.scienaptic.jobs.bean.UnionOperation.doUnion
 import java.util.UUID
 import org.apache.spark.storage.StorageLevel
-
+import com.scienaptic.jobs.utility.CommercialUtility.writeDF
 import com.scienaptic.jobs.core.CommercialFeatEnggProcessor.stability_weeks
 import org.apache.spark.sql.functions.rank
 import com.scienaptic.jobs.utility.Utils.renameColumns
@@ -42,13 +42,14 @@ object CommercialFeatEnggProcessor7 {
     import spark.implicits._
 
     var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeEOL.csv")
+    //var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\commercialBeforeEOL.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", to_date(col("Valid_End_Date")))
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
       .persist(StorageLevel.MEMORY_AND_DISK).cache()
-    commercial.printSchema()
+    //commercial.printSchema()
     val windForSKUAndReseller = Window.partitionBy("SKU&Reseller")
       .orderBy(/*"SKU_Name","Reseller_Cluster","Reseller_Cluster_LEVELS",*/"Week_End_Date")
 
@@ -69,7 +70,7 @@ object CommercialFeatEnggProcessor7 {
 
     EOLWithCriterion1 = EOLWithCriterion1
       .withColumn("QtyArray", when(col("QtyArray").isNull, null).otherwise(concatenateRank(col("QtyArray"))))
-    ////writeDF(EOLWithCriterion1,"EOLWithCriterion1_WITH_QTYARRAY")
+    //writeDF(EOLWithCriterion1,"EOLWithCriterion1_WITH_QTYARRAY")
 
     EOLcriterion = EOLcriterion.join(EOLWithCriterion1, Seq("SKU&Reseller"), "left")
       .withColumn("EOL_criterion", when(col("rank")<=stability_weeks || col("Qty")<col("no_promo_med"), 0).otherwise(checkPrevQtsGTBaseline(col("QtyArray"), col("rank"), col("no_promo_med"), lit(stability_weeks))))
@@ -106,8 +107,8 @@ object CommercialFeatEnggProcessor7 {
     commercial = commercial
       .withColumn("EOL", when(col("SKU").isin("G3Q47A","M9L75A","F8B04A","B5L24A","L2719A","D3Q19A","F2A70A","CF377A","L2747A","F0V69A","G3Q35A","C5F93A","CZ271A","CF379A","B5L25A","D3Q15A","B5L26A","L2741A","CF378A","L2749A","CF394A"),0).otherwise(col("EOL")))
       .withColumn("EOL", when((col("SKU")==="C5F94A") && (col("Season")=!="STS'17"), 0).otherwise(col("EOL")))//.repartition(500)
-    //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_WITH_EOL")
 
+    //writeDF(commercial,"commercialBeforeBOL")
     commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeBOL.csv")
   }
 

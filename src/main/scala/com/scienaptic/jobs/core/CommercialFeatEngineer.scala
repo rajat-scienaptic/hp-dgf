@@ -48,9 +48,9 @@ object CommercialFeatEnggProcessor {
     import spark.implicits._
 
     val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
-    //val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\posqty_output_commercial.csv")
+    //val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Outputs\\April8_Run\\April8_outputs\\posqty_output_commercial.csv")
     var commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
-//      .repartition(500).persist(StorageLevel.MEMORY_AND_DISK)
+      .repartition(500).persist(StorageLevel.MEMORY_AND_DISK)
     var commercial = renameColumns(commercialDF)
     commercial.columns.toList.foreach(x => {
       commercial = commercial.withColumn(x, when(col(x).cast("string") === "NA" || col(x).cast("string") === "", null).otherwise(col(x)))
@@ -63,7 +63,7 @@ object CommercialFeatEnggProcessor {
       .withColumn("GA date",to_date(unix_timestamp(col("GA date"),"YYYY-MM-dd").cast("timestamp")))
       //.repartition(500).persist(StorageLevel.MEMORY_AND_DISK)
     commercial.printSchema()
-    //val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\IFS2_most_recent.csv")
+    //val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\April8Run_Inputs\\IFS2_most_recent.csv")
     val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/IFS2/IFS2_most_recent.csv")
     var ifs2 = renameColumns(ifs2DF)
     ifs2.columns.toList.foreach(x => {
@@ -72,11 +72,13 @@ object CommercialFeatEnggProcessor {
     ifs2 = ifs2
       .withColumn("Valid_Start_Date", to_date(unix_timestamp(col("Valid_Start_Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("Valid_End_Date", to_date(unix_timestamp(col("Valid_End_Date"),"MM/dd/yyyy").cast("timestamp")))
+    //writeDF(ifs2, "ifs2")
     ifs2.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/ifs2.csv")
 
     commercial = commercial
       .withColumnRenamed("Reseller Cluster","Reseller_Cluster")
       .withColumnRenamed("Street Price","Street_Price_Org")
+      //TODO: Check for precision in Street_Price as joining based on that too!
       .join(ifs2.dropDuplicates("SKU","Street_Price").select("SKU","Changed_Street_Price","Street_Price", "Valid_Start_Date", "Valid_End_Date"), Seq("SKU"), "left")
       .withColumn("Valid_Start_Date", when(col("Valid_Start_Date").isNull,dat2000_01_01).otherwise(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull,dat9999_12_31).otherwise(col("Valid_End_Date")))
@@ -113,13 +115,13 @@ object CommercialFeatEnggProcessor {
       .withColumn("Reseller_Cluster", when(col("Reseller_Cluster").isin(stockpilerResellerList.toSeq: _*), lit("Stockpiler & Deal Chaser")).otherwise(col("Reseller_Cluster")))
       .withColumn("Reseller_Cluster", when(col("eTailer")===lit(1), concat(lit("eTailer"),col("Reseller_Cluster"))).otherwise(col("Reseller_Cluster")))
         .drop("eTailer")
-//      .withColumn("Reseller_Cluster_LEVELS", col("Reseller_Cluster"))
+    //  .withColumn("Reseller_Cluster_LEVELS", col("Reseller_Cluster"))
 
     val commercialResFacNotPL = commercial.where(!col("PL").isin("E4","E0","ED"))
       .withColumn("Brand",lit("HP"))
         .withColumn("GA date",to_date(col("GA date")))
         .withColumn("ES date",to_date(col("ES date"))).cache()
-    ////writeDF(commercialResFacNotPL,"commercialHPBeforeGroup")
+    //writeDF(commercialResFacNotPL,"commercialHPBeforeGroup")
     var commercialHPDF = commercialResFacNotPL
       .groupBy("SKU","SKU_Name","Reseller_Cluster","Week_End_Date","Season","Street_Price","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Category Custom","Line","PL","L1_Category","L2_Category","PLC Status","GA date","ES date","Inv_Qty","Special_Programs")
       .agg(sum("Qty").as("Qty"), max("IR").as("IR"), sum("Big_Deal_Qty").as("Big_Deal_Qty"), sum("Non_Big_Deal_Qty").as("Non_Big_Deal_Qty"))
@@ -133,7 +135,7 @@ object CommercialFeatEnggProcessor {
       .agg(sum("Qty").as("Qty"), sum("Inv_Qty").as("Inv_Qty"), max("IR").as("IR"), sum("Big_Deal_Qty").as("Big_Deal_Qty"), sum("Non_Big_Deal_Qty").as("Non_Big_Deal_Qty"))
     //writeDF(commercialSSDF,"commercialSSAfterGroup")*/
 
-    //val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("C:\\Users\\avika\\Downloads\\JarCode\\R Code Inputs\\AUX_sku_hierarchy.csv")
+    //val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\April8Run_Inputs\\Aux_sku_hierarchy.csv")
     val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/AUX/Aux_sku_hierarchy.csv")
     var auxTable = renameColumns(auxTableDF).cache()
     auxTable.columns.toList.foreach(x => {
@@ -176,7 +178,13 @@ object CommercialFeatEnggProcessor {
       .na.fill(0, Seq("log_Qty","price","Inv_Qty_log"))
     //writeDF(commercialHPandSSDF,"commercialHPandSSDF")
     //writeDF(doUnion(commercialSSFactorsDF, commercialHPDF.withColumnRenamed("Street_Price","Street Price")).get,"Commercial_HP_SS_Bind_Rows")
-    //TODO: Broadcast all these dataframes
+
+    /*Avik Aprl13 Change: 20190320 fixed cost udpated-update Scienaptic - Start*/
+    val IFS2FC = ifs2.where(col("Account")==="Commercial").groupBy("Account","SKU")
+      .agg(mean(col("Fixed_Cost")).as("Fixed_Cost")).drop("Account").distinct()
+    commercial = commercial.join(IFS2FC, Seq("SKU"), "left")
+    /*Avik Aprl13 Change: 20190320 fixed cost udpated-update Scienaptic - End*/
+
     val christmasDF = Seq(("2014-12-27",1),("2015-12-26",1),("2016-12-31",1),("2017-12-30",1),("2018-12-29",1),("2019-12-28",1)).toDF("Week_End_Date","USChristmasDay")
     val columbusDF = Seq(("2014-10-18",1),("2015-10-17",1),("2016-10-15",1),("2017-10-14",1),("2018-10-13",1),("2019-10-19",1)).toDF("Week_End_Date","USColumbusDay")
     val independenceDF = Seq(("2014-07-05",1),("2015-07-04",1),("2016-07-09",1),("2017-07-08",1),("2018-07-07",1),("2019-07-06",1)).toDF("Week_End_Date","USIndependenceDay")
@@ -209,7 +217,7 @@ object CommercialFeatEnggProcessor {
           commercial = commercial.withColumn(x, when(col(x).isNull, 0).otherwise(col(x)))
       })
       commercial.persist(StorageLevel.MEMORY_AND_DISK)
-    //writeDF(commercialwithHolidaysDF,"Commercial_With_Holidays")*/
+    //writeDF(commercial,"commercialBeforeNPD")
     commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeNPD.csv")
     /* ---------- BREAK HERE ---------- Wants 'commercial' dataframe only */
 

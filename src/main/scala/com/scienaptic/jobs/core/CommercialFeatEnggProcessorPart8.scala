@@ -11,7 +11,7 @@ import org.apache.spark.ml.feature.StringIndexer
 import com.scienaptic.jobs.bean.UnionOperation.doUnion
 import java.util.UUID
 import org.apache.spark.storage.StorageLevel
-
+import com.scienaptic.jobs.utility.CommercialUtility.writeDF
 import com.scienaptic.jobs.core.CommercialFeatEnggProcessor.stability_weeks
 import org.apache.spark.sql.functions.rank
 import com.scienaptic.jobs.utility.Utils.renameColumns
@@ -42,6 +42,7 @@ object CommercialFeatEnggProcessor8 {
     import spark.implicits._
     
     var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeBOL.csv")
+    //var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\commercialBeforeBOL.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
@@ -50,7 +51,7 @@ object CommercialFeatEnggProcessor8 {
       .persist(StorageLevel.MEMORY_AND_DISK).cache()
     
     var BOL = commercial.select("SKU","ES date","GA date")
-//      .withColumnRenamed("ES date_LEVELS","ES date").withColumnRenamed("GA date_LEVELS","GA date")
+      //.withColumnRenamed("ES date_LEVELS","ES date").withColumnRenamed("GA date_LEVELS","GA date")
       .dropDuplicates().cache()
     //writeDF(BOL,"BOL_WITH_DROP_DUPLICATES")
 
@@ -141,7 +142,7 @@ object CommercialFeatEnggProcessor8 {
     //writeDF(BOLCriterion, "BOLCriterion_FINAL_DF")
 
     commercial = commercial
-//      .drop("GA date").withColumn("GA date",col("GA date_LEVELS"))//TODO Remove this
+      //.drop("GA date").withColumn("GA date",col("GA date_LEVELS"))//TODO Remove this
       .withColumn("SKU",col("SKU")).withColumn("Reseller_Cluster",col("Reseller_Cluster")).withColumn("Week_End_Date",col("Week_End_Date"))
       .join(BOLCriterion.withColumn("SKU",col("SKU")).withColumn("Reseller_Cluster",col("Reseller_Cluster")).withColumn("Week_End_Date",col("Week_End_Date")), Seq("SKU","Reseller_Cluster","Week_End_Date"), "left")
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_WITH_BOL_JOINED_BEFORE_NULL_IMPUTATION")
@@ -149,10 +150,10 @@ object CommercialFeatEnggProcessor8 {
     commercial = commercial
       .withColumn("BOL", when(col("EOL")===1,0).otherwise(col("BOL_criterion")))
       .withColumn("BOL", when(datediff(col("Week_End_Date"),col("GA date"))<(7*6),1).otherwise(col("BOL")))
-      .withColumn("BOL", when(col("GA date").isNull, 0).otherwise(col("BOL")))
+      .withColumn("BOL", when(col("GA date").isNull, 0).otherwise(col("BOL"))) //Important: Dont comment this!
       .withColumn("BOL", when(col("BOL").isNull, 0).otherwise(col("BOL"))).cache()
-    //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_Join_BOLCRITERIA")
 
+    //writeDF(commercial,"commercialBeforeOpposite")
     commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeOpposite.csv")
   }
 
