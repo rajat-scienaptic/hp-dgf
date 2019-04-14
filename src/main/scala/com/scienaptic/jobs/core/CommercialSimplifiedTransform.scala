@@ -135,10 +135,14 @@ object CommercialSimplifiedTransform {
     val tidyHistInitialSelect = tidyHistSource.selectOperation(INITIAL_SELECT)
 
     val iecSelectDF = doSelect(iecDF, iecInitialSelect.cols,iecInitialSelect.isUnknown).get
-      .withColumn(COL_PARTNER_DATE,to_date(unix_timestamp(col(COL_PARTNER_DATE),"yyyy-MM-dd").cast("timestamp"))).cache()
+      //.withColumn(COL_PARTNER_DATE,to_date(unix_timestamp(col(COL_PARTNER_DATE),"yyyy-MM-dd").cast("timestamp"))).cache()
+      //TODO: Check in production which format it is read as
+      .withColumn(COL_PARTNER_DATE,to_date(col(COL_PARTNER_DATE))).cache()
     //writeDF(iecSelectDF,"IECSELECTDF")
     val xsClaimsSelectDF = doSelect(xsClaimsDF, xsInitialSelect.cols,xsInitialSelect.isUnknown).get
       .withColumn(COL_PARTNER_DATE, to_date(unix_timestamp(col(COL_PARTNER_DATE),"dd-MM-yyyy").cast("timestamp")))
+      //TODO: Check in production which format it is read as
+      .withColumn(COL_PARTNER_DATE,to_date(col(COL_PARTNER_DATE))).cache()
     //writeDF(xsClaimsSelectDF,"xsCLAIMS_SELECT_DF")
     val rawCalendarSelectDF = rawCalendarDF/*doSelect(rawCalendarDF, iecInitialSelect.cols,iecInitialSelect.isUnknown).get*/
       .withColumn("Start Date",to_date(unix_timestamp(col("Start Date"),"MM-dd-yy").cast("timestamp")))
@@ -158,8 +162,8 @@ object CommercialSimplifiedTransform {
     val skuHierarchy = doSelect(SKUHierDF, skuHierarchyInitialSelect.cols,skuHierarchyInitialSelect.isUnknown).get
     //writeDF(skuHierarchy,"skuHierarchy")
     val skuHierarchySelectDF = skuHierarchy
-      .withColumn("GA date2",to_date(unix_timestamp(col("GA date"),"dd-MM-yyyy").cast("timestamp")))
-      .withColumn("ES date2",to_date(unix_timestamp(col("ES date"),"dd-MM-yyyy").cast("timestamp"))).cache()
+      .withColumn("GA date",to_date(unix_timestamp(col("GA date"),"dd-MM-yyyy").cast("timestamp")))
+      .withColumn("ES date",to_date(unix_timestamp(col("ES date"),"dd-MM-yyyy").cast("timestamp"))).cache()
       //TODO: For production keep just to_date
       //.withColumn("GA date", to_date(col("GA date")))
       //.withColumn("ES date", to_date(col("ES date")))
@@ -695,9 +699,9 @@ object CommercialSimplifiedTransform {
     /*
     * Union 395 - Bring back eTailers
     */
-    val stOnyxETailersEqYFilterDF2 = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Testing\\Commercial_Alteryx\\spark-intermediate\\ETAILERS_EQ_Y.csv")
+    //val stOnyxETailersEqYFilterDF2 = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Testing\\Commercial_Alteryx\\spark-intermediate\\ETAILERS_EQ_Y.csv")
     val stOnyxUnionETailersOptionCDF = doUnion(stOnyxOptionCLeftJoinDF, doUnion(stOnyxOptionCInnerJoinWithOptionCQtyDealQty, stOnyxETailersEqYFilterDF).get).get
-    writeDF(stOnyxUnionETailersOptionCDF,"Bringing_Back_ETailers")
+    //writeDF(stOnyxUnionETailersOptionCDF,"Bringing_Back_ETailers")
     /*
     * Filter Option C Qty Adj > 0 - 388
     * */
@@ -725,7 +729,7 @@ object CommercialSimplifiedTransform {
     val stOnyxPromoJoinMap = doJoinAndSelect(stOnyxUnionETailersOptionCDF, claimsSKUWEDPromoCodeGroupRenamedDF, stOnyxPromoJoin)
     val stOnyxPromoLeftJoinDF = stOnyxPromoJoinMap(LEFT)
     val stOnyxPromoInnerJoinDF = stOnyxPromoJoinMap(INNER)
-    writeDF(stOnyxPromoInnerJoinDF,"PROMO_INNER_JOIN")
+    //writeDF(stOnyxPromoInnerJoinDF,"PROMO_INNER_JOIN")
     /*
     * Add Promo Flag = 0 to Left join - 372
     * AND Add Promo Flag = 1 to  Inner Join 371
@@ -737,7 +741,7 @@ object CommercialSimplifiedTransform {
     * Union St Onyx joins - Bring back Option C - 373
     * */
     val stOnyxPromoJoinsWithPromoFlagUnionDF = doUnion(doUnion(stOnyxPromoLeftJoinWithPromoFlagDF, stOnyxPromoInnerJoinWithPromoFlagDF).get,stOnyxOptionCWithResellerQtyIRPromoFlagDF).get
-    writeDF(stOnyxPromoJoinsWithPromoFlagUnionDF,"Bringing_Back_Option_C")
+    //writeDF(stOnyxPromoJoinsWithPromoFlagUnionDF,"Bringing_Back_Option_C")
     /*
     * Merge inventory Join - 412
     * */
@@ -749,7 +753,7 @@ object CommercialSimplifiedTransform {
     val stOnyxMergeInventoryJoinMap = doJoinAndSelect(stOnyxPromoJoinsWithPromoFlagUnionDF, sttOnyxResellerSKUWEDGroupRenamedDF, stOnyxMergeInventoryJoin)
     val stOnyxMergeInventoryInnerJoinDF = stOnyxMergeInventoryJoinMap(INNER)
     val stOnyxMergeInventoryLeftJoinDF = stOnyxMergeInventoryJoinMap(LEFT)
-    writeDF(stOnyxMergeInventoryInnerJoinDF,"Merge_Inevntory_INNER_Join")
+    //writeDF(stOnyxMergeInventoryInnerJoinDF,"Merge_Inevntory_INNER_Join")
     //writeDF(stOnyxMergeInventoryLeftJoinDF,"stOnyxMergeInventoryLeftJoinDF")
     /*
     * Union Inventory and S-Print Union - 413
@@ -764,7 +768,7 @@ object CommercialSimplifiedTransform {
     .withColumn("Promo Spend", col("IR")*col("Non_Big_Deal_Qty"))
     .withColumn("eTailer", when(col("eTailers")==="Y",1).otherwise(0))
     .withColumn("Reseller Cluster", when(col("Reseller Cluster")==="Other", "Other - Option B").otherwise(col("Reseller Cluster")))
-    writeDF(stOnyxWithPromoSpendETailerResellerClusterDF,"BEFORE_REPLACE_NULL_WITH_ZERO")
+    //writeDF(stOnyxWithPromoSpendETailerResellerClusterDF,"BEFORE_REPLACE_NULL_WITH_ZERO")
     /*
     * NULL Impute for numerical column with 0
     * */
@@ -780,8 +784,9 @@ object CommercialSimplifiedTransform {
     .drop("L1: Use Case").drop("L2: Key functionality")
         .withColumn("Spend",col("Promo Spend"))
         .select("Reseller Cluster","VPA","Street Price","SKU","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1_Category","L2_Category","PLC Status","GA date","ES date","Week_End_Date","Season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","SKU_Name","Big_Deal_Qty","Non_Big_Deal_Qty","Qty","IR","Promo Flag","Inv_Qty","eTailer","Promo Spend","Spend")
+      .withColumn("Street Price", regexp_replace(col("Street Price"),"\\$","").cast("int"))
     //writeDF(posqtyOutputCommercialDF,"POSQTY_OUTPUT_COMMERCIAL")
-    posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Testing\\Commercial_Alteryx\\spark-intermediate\\posqty_commercial_output.csv")
+    posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/April13/spark_outputs/posqty_commercial_output.csv")
     //posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
 
   }
