@@ -99,7 +99,7 @@ object CommercialSimplifiedTransform {
 
     val sourceMap = executionContext.configuration.sources
 
-    //val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
     val iecSource = sourceMap(IEC_SOURCE)
     val xsClaimsSource = sourceMap(XS_CLAIMS_SOURCE)
@@ -140,33 +140,33 @@ object CommercialSimplifiedTransform {
       .withColumn(COL_PARTNER_DATE,to_date(col(COL_PARTNER_DATE))).cache()
     //writeDF(iecSelectDF,"IECSELECTDF")
     val xsClaimsSelectDF = doSelect(xsClaimsDF, xsInitialSelect.cols,xsInitialSelect.isUnknown).get
-      .withColumn(COL_PARTNER_DATE, to_date(unix_timestamp(col(COL_PARTNER_DATE),"dd-MM-yyyy").cast("timestamp")))
+      //.withColumn(COL_PARTNER_DATE, to_date(unix_timestamp(col(COL_PARTNER_DATE),"dd-MM-yyyy").cast("timestamp")))
       //TODO: Check in production which format it is read as
       .withColumn(COL_PARTNER_DATE,to_date(col(COL_PARTNER_DATE))).cache()
     //writeDF(xsClaimsSelectDF,"xsCLAIMS_SELECT_DF")
     val rawCalendarSelectDF = rawCalendarDF/*doSelect(rawCalendarDF, iecInitialSelect.cols,iecInitialSelect.isUnknown).get*/
-      .withColumn("Start Date",to_date(unix_timestamp(col("Start Date"),"MM-dd-yy").cast("timestamp")))
-      .withColumn("End Date",to_date(unix_timestamp(col("End Date"),"MM-dd-yy").cast("timestamp"))).cache()
+      //.withColumn("Start Date",to_date(unix_timestamp(col("Start Date"),"MM-dd-yy").cast("timestamp")))
+      //.withColumn("End Date",to_date(unix_timestamp(col("End Date"),"MM-dd-yy").cast("timestamp"))).cache()
       //TODO: For production:- below code will go, as the fields are being read as timestamp directly
       /*   Avik Change: April 14: Dates being read as timestamp instead of string  */
-      //.withColumn("Start Date",to_date(col("Start Date")))
-      //.withColumn("End Date",to_date(col("End Date"))).cache()
+      .withColumn("Start Date",to_date(col("Start Date")))
+      .withColumn("End Date",to_date(col("End Date"))).cache()
 
     //writeDF(rawCalendarSelectDF,"rawCalendarSelectDF")
     val wedSelectDF = doSelect(WEDDF, wedInitialSelect.cols,wedInitialSelect.isUnknown).get
-      .withColumn("wed",to_date(unix_timestamp(col("wed"),"dd-MM-yyyy").cast("timestamp")))
+      //.withColumn("wed",to_date(unix_timestamp(col("wed"),"dd-MM-yyyy").cast("timestamp")))
       //TODO: For  production keep just 'to_date'
       /*  Avik Change April 14: wed is being read as timestamp not string. Keep this code in production  */
-      //.withColumn("wed",to_date(col("wed")))
+      .withColumn("wed",to_date(col("wed")))
     //writeDF(wedSelectDF,"wedSelectDF")
     val skuHierarchy = doSelect(SKUHierDF, skuHierarchyInitialSelect.cols,skuHierarchyInitialSelect.isUnknown).get
     //writeDF(skuHierarchy,"skuHierarchy")
     val skuHierarchySelectDF = skuHierarchy
-      .withColumn("GA date",to_date(unix_timestamp(col("GA date"),"dd-MM-yyyy").cast("timestamp")))
-      .withColumn("ES date",to_date(unix_timestamp(col("ES date"),"dd-MM-yyyy").cast("timestamp"))).cache()
+      //.withColumn("GA date",to_date(unix_timestamp(col("GA date"),"dd-MM-yyyy").cast("timestamp")))
+      //.withColumn("ES date",to_date(unix_timestamp(col("ES date"),"dd-MM-yyyy").cast("timestamp"))).cache()
       //TODO: For production keep just to_date
-      //.withColumn("GA date", to_date(col("GA date")))
-      //.withColumn("ES date", to_date(col("ES date")))
+      .withColumn("GA date", to_date(col("GA date")))
+      .withColumn("ES date", to_date(col("ES date")))
     //writeDF(skuHierarchySelectDF,"skuHierarchySelectDF")
     val commAccountsSelectDF = doSelect(commAccountDF, commAccountsInitialSelect.cols,commAccountsInitialSelect.isUnknown).get.cache()
     val stONYXSelectDF = doSelect(stONYXDF, stONYXInitialSelect.cols,stONYXInitialSelect.isUnknown).get.cache()
@@ -285,7 +285,7 @@ object CommercialSimplifiedTransform {
     /*
     * OUTPUT - claims_consolidated.csv
     * */
-    //claimsAndSKUJoinsUnionDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/claims_consolidated_"+currentTS+".csv")
+    claimsAndSKUJoinsUnionDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/claims_consolidated_"+currentTS+".csv")
     //claimsAndSKUJoinsUnionDF.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Testing\\Commercial_Alteryx\\spark-intermediate\\claims_consolidated.csv")
     /*Group - 365*/
     val claimsResellerWEDSKUProgramGroup = xsClaimsSource.groupOperation(RESELLER_WED_SKU_PROGRAM_AGG_CLAIM_REBATE_QUANTITY)
@@ -784,10 +784,13 @@ object CommercialSimplifiedTransform {
     .drop("L1: Use Case").drop("L2: Key functionality")
         .withColumn("Spend",col("Promo Spend"))
         .select("Reseller Cluster","VPA","Street Price","SKU","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1_Category","L2_Category","PLC Status","GA date","ES date","Week_End_Date","Season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","SKU_Name","Big_Deal_Qty","Non_Big_Deal_Qty","Qty","IR","Promo Flag","Inv_Qty","eTailer","Promo Spend","Spend")
-      .withColumn("Street Price", regexp_replace(col("Street Price"),"\\$","").cast("int"))
+      .withColumn("Street Price", regexp_replace(col("Street Price"),"\\$",""))
+      .withColumn("Street Price", regexp_replace(col("Street Price"),",","").cast("double"))
+      .withColumn("IR", regexp_replace(col("Street Price"),"\\$",""))
+      .withColumn("IR", regexp_replace(col("Street Price"),",","").cast("double"))
     //writeDF(posqtyOutputCommercialDF,"POSQTY_OUTPUT_COMMERCIAL")
-    posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/April13/spark_outputs/posqty_commercial_output.csv")
-    //posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
+    //posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/April13/spark_outputs/posqty_commercial_output.csv")
+    posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
 
   }
 }
