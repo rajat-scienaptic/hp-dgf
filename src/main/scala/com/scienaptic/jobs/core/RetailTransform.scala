@@ -107,12 +107,15 @@ object RetailTransform {
 
     /* AUX TABLES WEEKEND */
     val auxTablesWeekendselect01DF = SelectOperation.doSelect(auxTablesWeekend, auxTablesWeekendSource.selectOperation(SELECT01).cols, auxTablesWeekendSource.selectOperation(SELECT01).isUnknown).get
-      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
+      // local debugging date format
+//      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
+      // production date format
+      .withColumn("wed", to_date(col("wed")))
 
     /* ODOOM ORCA */
     // Select01
     val odomOrcaselect01DF = SelectOperation.doSelect(odomOrcaDF, odomOrcaSource.selectOperation(SELECT01).cols,
-      odomOrcaSource.selectOperation(SELECT01).isUnknown).get
+      odomOrcaSource.selectOperation(SELECT01).isUnknown).get.distinct()
 
     // formula
     val odomOrcaSubsStrFormalaDF = odomOrcaselect01DF.withColumn("Base SKU", substring(col("Vendor Product Code"),
@@ -143,7 +146,10 @@ object RetailTransform {
     // Select01
     val staplesComUnitsSelect01DF = Utils.convertListToDFColumnWithRename(staplesComUnitsSource.renameOperation(RENAME01),
       SelectOperation.doSelect(staplesDotComUnitsDF, staplesComUnitsSource.selectOperation(SELECT01).cols, staplesComUnitsSource.selectOperation(SELECT01).isUnknown).get)
-      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
+      // LOCAL format for testing
+//      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
+      // actual production format
+      .withColumn("wed", to_date(unix_timestamp(col("wed"), "dd-MM-yyyy").cast("timestamp")))
 
     // formula
     val staplesComUnitsFormula01DF = Utils.litColumn(staplesComUnitsSelect01DF, "Account Major", "Staples")
@@ -159,7 +165,7 @@ object RetailTransform {
     /* Orca Qry 2017 to date */
     // select
     val orcaQry2017ToDateSelect01 = orcaQry2017ToDateSource.selectOperation(SELECT01)
-    val orcaQry2017ToDateSelectDF = Utils.convertListToDFColumnWithRename(orcaQry2017ToDateSource.renameOperation(RENAME01), SelectOperation.doSelect(orcaQry2017ToDate, orcaQry2017ToDateSelect01.cols, orcaQry2017ToDateSelect01.isUnknown).get)
+    val orcaQry2017ToDateSelectDF = Utils.convertListToDFColumnWithRename(orcaQry2017ToDateSource.renameOperation(RENAME01), SelectOperation.doSelect(orcaQry2017ToDate, orcaQry2017ToDateSelect01.cols, orcaQry2017ToDateSelect01.isUnknown).get).distinct()
 
     // union
     val unionOrca201617AndOrca2017QryToDate = UnionOperation.doUnion(orca201416ArchiveSelectDF, orcaQry2017ToDateSelectDF).get.cache()
@@ -277,7 +283,7 @@ object RetailTransform {
     /* HP COM*/
     // select
 
-    val hpComSelect01DF = SelectOperation.doSelect(hpComDF, hpComSource.selectOperation(SELECT01).cols, hpComSource.selectOperation(SELECT01).isUnknown).get
+    val hpComSelect01DF = SelectOperation.doSelect(hpComDF, hpComSource.selectOperation(SELECT01).cols, hpComSource.selectOperation(SELECT01).isUnknown).get.distinct()
 
     // join
     val hpComJoin01 = hpComSource.joinOperation(JOIN01)

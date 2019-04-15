@@ -50,7 +50,7 @@ object RetailPreRegressionPart12 {
       case _: Exception => dateStr
     }
   })
-
+  val roundUDF = udf((col1: Double) => BigDecimal(col1).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble)
   val pmax = udf((col1: Double, col2: Double, col3: Double) => math.max(col1, math.max(col2, col3)))
   val pmax2 = udf((col1: Double, col2: Double) => math.max(col1, col2))
   val pmin = udf((col1: Double, col2: Double, col3: Double) => math.min(col1, math.min(col2, col3)))
@@ -147,7 +147,10 @@ object RetailPreRegressionPart12 {
       .join(seasonalityNPD, Seq("L1_Category", "Week"), "left").drop("Week")
       .withColumn("seasonality_npd2", when((col("USCyberMonday") === lit(1)) || (col("USThanksgivingDay") === lit(1)), 0).otherwise(col("seasonality_npd")))
       .withColumn("seasonality_npd2", when(col("PL") === "4X", lit(1)).otherwise(col("seasonality_npd2")))
+      .withColumn("Street_Price", roundUDF(col("Street_Price")))
 
+    IFS2 = IFS2
+      .withColumn("Street_Price", roundUDF(col("Street_Price")))
 
     retailWithCompCannDF = retailWithCompCannDF
       .join(IFS2.filter(col("Account").isin("Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples", "Costco", "Sam's Club", "HP Shopping", "Walmart"))
@@ -155,7 +158,7 @@ object RetailPreRegressionPart12 {
       .withColumn("Valid_Start_Date", when(col("Valid_Start_Date").isNull, dat2000_01_01).otherwise(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))
       //      .withColumn("Street_Price", when(col("Street_Price").isNull, col("Street_Price_Org")).otherwise(col("Street_Price")))
-      .where((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") < col("Valid_End_Date")))
+      .filter((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") < col("Valid_End_Date")))
 
     val aveGM = retailWithCompCannDF.dropDuplicates("SKU", "Account")
       .groupBy("SKU")
