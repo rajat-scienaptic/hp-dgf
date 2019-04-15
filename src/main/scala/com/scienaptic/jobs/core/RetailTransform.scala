@@ -187,7 +187,7 @@ object RetailTransform {
         .when(col("Account Major") === "Office Depot Inc (Contract Stationers)", "Office Depot-Max")
         .when(col("Account Major") === "Amazon.com, Inc.", "Amazon.Com")
         .when(col("Account Major") === "Frys Electronics Inc", "Fry's Electronics Inc")
-        .when(col("Account Major") === "Sams Club", "Fry's Electronics Inc")
+        .when(col("Account Major") === "Sams Club", "Sam's Club")
         .when(col("Account Major") === "Target Corporation", "Target Stores")
         .when(col("Account Major") === "Wal Mart Online", "Wal-Mart Online")
         .when(col("Account Major") === "Wal Mart", "Wal-Mart Online")
@@ -355,7 +355,8 @@ object RetailTransform {
 
     // filter
     val amazonArapFilter03 = amazonArapSource.filterOperation(FILTER03)
-    val amazonArapSKUNotNaFilter03DF = FilterOperation.doFilter(amazonArapSelect02DF, amazonArapFilter03, amazonArapFilter03.conditionTypes(NUMERAL0)).get
+//    val amazonArapSKUNotNaFilter03DF = FilterOperation.doFilter(amazonArapSelect02DF, amazonArapFilter03, amazonArapFilter03.conditionTypes(NUMERAL0)).get
+    val amazonArapSKUNotNaFilter03DF = amazonArapSelect02DF.filter(col("SKU") =!= null || col("SKU") =!= "")
 
     // group
     val amazonArapGroup03 = amazonArapSource.groupOperation(GROUP03)
