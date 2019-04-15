@@ -56,11 +56,11 @@ object CommercialFeatEnggProcessor {
       commercial = commercial.withColumn(x, when(col(x).cast("string") === "NA" || col(x).cast("string") === "", null).otherwise(col(x)))
     })
     commercial = commercial
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"YYYY-MM-dd").cast("timestamp")))
+      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"yyyy-MM-dd").cast("timestamp")))
       .where(col("Week_End_Date") >= lit("2014-01-01"))
       .where(col("Week_End_Date") <= lit("2018-12-29"))
-      .withColumn("ES date",to_date(unix_timestamp(col("ES date"),"YYYY-MM-dd").cast("timestamp")))
-      .withColumn("GA date",to_date(unix_timestamp(col("GA date"),"YYYY-MM-dd").cast("timestamp")))
+      .withColumn("ES date",to_date(unix_timestamp(col("ES date"),"yyyy-MM-dd").cast("timestamp")))
+      .withColumn("GA date",to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
       //.repartition(500).persist(StorageLevel.MEMORY_AND_DISK)
     commercial.printSchema()
     //val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\April8Run_Inputs\\IFS2_most_recent.csv")
@@ -138,9 +138,12 @@ object CommercialFeatEnggProcessor {
     //val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\April8Run_Inputs\\Aux_sku_hierarchy.csv")
     val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/AUX/Aux_sku_hierarchy.csv")
     var auxTable = renameColumns(auxTableDF).cache()
-    auxTable.columns.toList.foreach(x => {
+    auxTable.columns.toList.foreach(x => {n
       auxTable = auxTable.withColumn(x, when(col(x).cast("string") === "NA" || col(x).cast("string") === "", null).otherwise(col(x)))
     })
+    auxTable = auxTable
+      .withColumn("GA date",to_date(col("GA date")))
+      .withColumn("ES date",to_date(col("ES date")))
     auxTable.persist(StorageLevel.MEMORY_AND_DISK)
     val commercialSSJoinSKUDF = commercialSSDF.join(auxTable, Seq("SKU"), "left")
       .withColumnRenamed("HPS/OPS","HPS_OPS")
