@@ -790,7 +790,7 @@ object CommercialSimplifiedTransform {
       .withColumn("IR", regexp_replace(col("Street Price"),",","").cast("double"))
     //writeDF(posqtyOutputCommercialDF,"POSQTY_OUTPUT_COMMERCIAL")
     //posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/April13/spark_outputs/posqty_commercial_output.csv")
-    posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
+    posqtyOutputCommercialDF.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
 
   }
 }

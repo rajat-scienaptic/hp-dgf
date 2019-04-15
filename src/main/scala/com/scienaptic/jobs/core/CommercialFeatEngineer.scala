@@ -56,11 +56,16 @@ object CommercialFeatEnggProcessor {
       commercial = commercial.withColumn(x, when(col(x).cast("string") === "NA" || col(x).cast("string") === "", null).otherwise(col(x)))
     })
     commercial = commercial
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"yyyy-MM-dd").cast("timestamp")))
+      //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"yyyy-MM-dd").cast("timestamp")))
+      //TODO For production keep this
+      .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .where(col("Week_End_Date") >= lit("2014-01-01"))
       .where(col("Week_End_Date") <= lit("2020-12-29"))
-      .withColumn("ES date",to_date(unix_timestamp(col("ES date"),"yyyy-MM-dd").cast("timestamp")))
-      .withColumn("GA date",to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
+      //.withColumn("ES date",to_date(unix_timestamp(col("ES date"),"yyyy-MM-dd").cast("timestamp")))
+      //.withColumn("GA date",to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
+      //TODO: For production keep this
+      .withColumn("ES date",to_date(col("ES date")))
+      .withColumn("GA date",to_date(col("GA date")))
       //.repartition(500).persist(StorageLevel.MEMORY_AND_DISK)
     commercial.printSchema()
     //val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\April8Run_Inputs\\IFS2_most_recent.csv")
