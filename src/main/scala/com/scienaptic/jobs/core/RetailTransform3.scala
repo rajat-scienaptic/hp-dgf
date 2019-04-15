@@ -42,7 +42,7 @@ object RetailTransform3 {
     val sourceMap = executionContext.configuration.sources
 
     val walmartSource = sourceMap(WALMART)
-    val walmart = Utils.loadCSV(executionContext, walmartSource.filePath).get
+    val walmart = Utils.loadCSV(executionContext, walmartSource.filePath).get.distinct()
 
     val existingPOSSource = sourceMap(EXISTING_POS_SOURCE)
     val existingPOS = Utils.loadCSV(executionContext, existingPOSSource.filePath.format(currentTS)).get
