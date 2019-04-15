@@ -39,20 +39,22 @@ object CommercialFeatEnggProcessor5 {
 
     val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
     var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeIFS2Calc.csv")
+    //var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\commercialBeforeIFS2Calc.csv")
       .withColumn("ES date", to_date(unix_timestamp(col("ES date"),"yyyy-MM-dd").cast("timestamp")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
     val ifs2 = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/ifs2.csv")
+    //val ifs2 = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\ifs2.csv")
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", to_date(col("Valid_End_Date")))
     var seasonalityNPD = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/seasonalityNPD.csv")
-    commercial.printSchema()
+    //var seasonalityNPD = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\seasonalityNPD.csv")
     val seasonalityNPDScanner = seasonalityNPD.where(col("L1_Category")==="Office - Personal")
       .withColumn("L1_Category", when(col("L1_Category")==="Office - Personal", "Scanners").otherwise(col("L1_Category")))
     //writeDF(seasonalityNPDScanner,"seasonalityNPDScanner")
     seasonalityNPD = doUnion(seasonalityNPD, seasonalityNPDScanner).get
-    //writeDF(seasonalityNPD,"seasonalityNPD")
-      commercial = commercial.join(seasonalityNPD, Seq("L1_Category","Week"), "left")
+    //writeDF(seasonalityNPD,"Line566_Spark")
+    commercial = commercial.join(seasonalityNPD, Seq("L1_Category","Week"), "left")
         .drop("Week")
         .withColumn("seasonality_npd2", when((col("USCyberMonday")===lit(1)) || (col("USThanksgivingDay")===lit(1)),0).otherwise(col("seasonality_npd")))
         .join(ifs2.where(col("Account")==="Commercial").select("SKU","Hardware_GM","Supplies_GM","Hardware_Rev","Supplies_Rev", "Changed_Street_Price", "Valid_Start_Date", "Valid_End_Date"), Seq("SKU"), "left")
@@ -60,17 +62,17 @@ object CommercialFeatEnggProcessor5 {
         .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))
         .where((col("Week_End_Date")>=col("Valid_Start_Date")) && (col("Week_End_Date")<col("Valid_End_Date")))
         .withColumn("Changed_Street_Price", when(col("Changed_Street_Price").isNull, 0).otherwise(col("Changed_Street_Price")))
-    //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_Seasonality")
+    //writeDF(commercial,"Line573")
 
     val ifs2FilteredAccount = ifs2.where(col("Account").isin("Best Buy","Office Depot-Max","Staples")).cache()
     val ifs2RetailAvg = ifs2FilteredAccount
       .groupBy("SKU")
       .agg(mean("Hardware_GM").as("Hardware_GM_retail_avg"), mean("Hardware_Rev").as("Hardware_Rev_retail_avg"), mean("Supplies_GM").as("Supplies_GM_retail_avg"), mean("Supplies_Rev").as("Supplies_Rev_retail_avg")).cache()
     //writeDF(ifs2RetailAvg,"ifs2RetailAvg_WITH_HARDWARE_SUPPLIES")
-      commercial = commercial.drop("Hardware_GM_retail_avg","Supplies_GM_retail_avg","Hardware_Rev_retail_avg","Supplies_Rev_retail_avg")
+    commercial = commercial.drop("Hardware_GM_retail_avg","Supplies_GM_retail_avg","Hardware_Rev_retail_avg","Supplies_Rev_retail_avg")
       .join(ifs2RetailAvg.select("SKU","Hardware_GM_retail_avg","Supplies_GM_retail_avg","Hardware_Rev_retail_avg","Supplies_Rev_retail_avg"), Seq("SKU"), "left")
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_BEFORE_IFS2_JOIN")
-      commercial = commercial
+    commercial = commercial
       .withColumn("Hardware_GM_type", when(col("Hardware_GM").isNotNull, "Commercial").otherwise(when((col("Hardware_GM").isNull) && (col("Hardware_GM_retail_avg").isNotNull), "Retail").otherwise(lit(null))))
       .withColumn("Hardware_Rev_type", when(col("Hardware_Rev").isNotNull, "Commercial").otherwise(when((col("Hardware_Rev").isNull) && (col("Hardware_Rev_retail_avg").isNotNull), "Retail").otherwise(lit(null))))
       .withColumn("Supplies_GM_type", when(col("Supplies_GM").isNotNull, "Commercial").otherwise(when((col("Supplies_GM").isNull) && (col("Supplies_GM_retail_avg").isNotNull), "Retail").otherwise(lit(null))))
@@ -112,7 +114,7 @@ object CommercialFeatEnggProcessor5 {
         .withColumn("L2_competition_log", when(col("L2_competition_log").isNull, 0).otherwise(col("L2_competition_log")))
         .withColumn("Big_Deal", when(col("Big_Deal_Qty")>0, 1).otherwise(lit(0)))
         .withColumn("Big_Deal_Qty_log", log(when(col("Big_Deal_Qty")<1,1).otherwise(col("Big_Deal_Qty"))))
-    //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_WITH_LOGS")*/
+    //writeDF(commercial,"commercialWithCompCannDF")
     commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialWithCompCannDF.csv")
 
   }

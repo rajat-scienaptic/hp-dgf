@@ -6,12 +6,10 @@ import com.scienaptic.jobs.ExecutionContext
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.sql.functions._
-import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.feature.StringIndexer
 import com.scienaptic.jobs.bean.UnionOperation.doUnion
 import java.util.UUID
 import org.apache.spark.storage.StorageLevel
-
+import com.scienaptic.jobs.utility.CommercialUtility.writeDF
 import com.scienaptic.jobs.core.CommercialFeatEnggProcessor.stability_weeks
 import org.apache.spark.sql.functions.rank
 import com.scienaptic.jobs.utility.Utils.renameColumns
@@ -42,13 +40,13 @@ object CommercialFeatEnggProcessor9 {
     import spark.implicits._
 
     var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeOpposite.csv")
+    //var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\commercialBeforeOpposite.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", to_date(col("Valid_End_Date")))
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
       .persist(StorageLevel.MEMORY_AND_DISK).cache()
-    commercial.printSchema()
     val commercialEOLSpikeFilter = commercial.where((col("EOL")===0) && (col("spike")===0))
     var opposite = commercialEOLSpikeFilter
       .groupBy("SKU_Name","Reseller_Cluster")
@@ -94,6 +92,7 @@ object CommercialFeatEnggProcessor9 {
         when(col("SKU_Name")==="LJ Pro M402dn", 0).otherwise(col("EOL"))).otherwise(col("EOL")))
     //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_WITH_LAST_EOL_MODIFICATION")
     commercial.persist(StorageLevel.MEMORY_AND_DISK)
+    //writeDF(commercial, "commercialBeforeCannGroups")
     commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeCannGroups.csv")
   }
 

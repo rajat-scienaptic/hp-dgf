@@ -39,12 +39,15 @@ object CommercialFeatEnggProcessor3 {
 
     val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
 
+    /* Avik Change Apr 13: This code was commented out.
+     * Comment from HP in R Code: Consider this as an improvement, but difficult to represent given the noise in the data */
     var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeCannibalisation.csv")
+    //var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\commercialBeforeCannibalisation.csv")
       .withColumn("ES date", to_date(unix_timestamp(col("ES date"),"yyyy-MM-dd").cast("timestamp")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
-    commercial.printSchema()
-    //TODO: See what all dates present
+    //commercial.printSchema()
+    /*
     commercial = commercial
       .withColumn("wed_cat", concat_ws(".",col("Week_End_Date"), col("L1_Category")))
     
@@ -64,7 +67,8 @@ object CommercialFeatEnggProcessor3 {
       commercial = commercial.join(commercialWithCompetitionDFTemp2, Seq("wed_cat"), "left")
         .withColumn("L2_cannibalization", (col("z")-(col("Promo_Pct")*col("Qty")))/(col("w")-col("Qty")))
         .drop("z","w","wed_cat")
-//    var commercialWithCompCannDF = commercialWithCompetitionDF
+        */
+    //var commercialWithCompCannDF = commercialWithCompetitionDF
 
     val commercialWithAdj = commercial.withColumn("Adj_Qty", when(col("Qty")<=0,0).otherwise(col("Qty")))
     val commercialGroupWEDSKU = commercialWithAdj.groupBy("Week_End_Date","SKU")
@@ -86,14 +90,15 @@ object CommercialFeatEnggProcessor3 {
       .agg(sum(col("Promo_Pct")*col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
     //writeDF(commercialGroupWEDL1Temp2,"commercialGroupWEDL1Temp2")
 
-      commercial = commercialGroupWEDL1.withColumn("L2_Category",col("L2_Category")).join(commercialGroupWEDL1Temp2.withColumn("L2_Category",col("L2_Category")), Seq("Week_End_Date","Brand", "L2_Category"), "left")
+      commercial = commercialGroupWEDL1.withColumn("L2_Category",col("L2_Category"))
+        .join(commercialGroupWEDL1Temp2.withColumn("L2_Category",col("L2_Category")), Seq("Week_End_Date","Brand", "L2_Category"), "left")
       .withColumn("L2_cannibalization", (col("sum1")-col("sumSKU1"))/(col("sum2")-col("sumSKU2")))
       .drop("sum1","sum2","sumSKU1","sumSKU2","Adj_Qty")
       .withColumn("L1_cannibalization", when(col("L1_cannibalization").isNull, 0).otherwise(col("L1_cannibalization")))
       .withColumn("L2_cannibalization", when(col("L2_cannibalization").isNull, 0).otherwise(col("L2_cannibalization")))
       .na.fill(0, Seq("L2_cannibalization","L1_cannibalization"))
       .withColumn("Sale_Price", col("Street Price")-col("IR")).persist(StorageLevel.MEMORY_AND_DISK)
-    //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_CANNABILIZATION")
+    //writeDF(commercial,"commercialBeforeNPDCalc")
 
     commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeNPDCalc.csv")
 
