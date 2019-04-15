@@ -114,7 +114,7 @@ object RetailTransform3 {
 
     // AUX TABLES WEEKEND
     val auxTablesWeekendselect01DF = doSelect(auxTablesWeekend, auxTablesWeekendSource.selectOperation(SELECT01).cols, auxTablesWeekendSource.selectOperation(SELECT01).isUnknown).get
-      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("wed", to_date(col("wed")))
 
     // join
     val joinWalmartLastSelectWithAuxTables = walmartSource.joinOperation(JOIN_WALMART_LASTSELECT_AND_AUXTABLES)
