@@ -1,6 +1,8 @@
 package com.scienaptic.jobs.core
 
 import com.scienaptic.jobs.ExecutionContext
+import com.scienaptic.jobs.core.npd.print._
+
 object HPDataProcessor {
   def execute(executionContext: ExecutionContext): Unit = {
     executionContext.configuration.config match {
@@ -45,6 +47,7 @@ object HPDataProcessor {
       case "gap-4" => GAPTransform4.execute(executionContext)
       case "gap-5" => GAPTransform5.execute(executionContext)
       case "amz" => AmazonTransform.execute(executionContext)
+      case "Load-print-files" => LoadRawPrintTables.execute(executionContext)
       //case "preregression-retail" => RetailFeatEnggProcessor.execute(executionContext)
     }
   }
