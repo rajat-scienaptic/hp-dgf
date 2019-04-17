@@ -15,6 +15,8 @@ object NPDUtility {
 
     val esc="[ ,-]"
     df=df.toDF(df.columns.map(x=>x.replaceAll(esc,"_")):_*)
+    df=df.toDF(df.columns.map(x=>x.replace("(","\\(")):_*)
+    df=df.toDF(df.columns.map(x=>x.replace(")","\\)")):_*)
     df.write.mode(org.apache.spark.sql.SaveMode.Overwrite).saveAsTable("ams_datamart_print.stgtbl_"+s"$tablename")
 
   }
