@@ -1,13 +1,12 @@
 package com.scienaptic.jobs.core.npd.print.transformations
 
-import org.apache.spark.sql.functions._
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.utility.NPDUtility.exportToHive
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.{expr, udf, when}
+import org.apache.spark.sql.functions.{col, lit, when}
 import org.apache.spark.sql.types.IntegerType
 
-class Proc_Update_stgtable_ASP {
+class Proc_Update_FactTable_ASP_CA {
 
 
   def execute(executionContext: ExecutionContext): Unit = {
@@ -15,22 +14,20 @@ class Proc_Update_stgtable_ASP {
 
     val sourceMap = executionContext.configuration.sources
 
-    var stgtable =spark.sql("select * from ams_datamart_print.stgtable")
+    var facttable =spark.sql("select * from ams_datamart_print.facttable")
 
-
-    stgtable=stgtable.withColumn("AMS_Temp_Units",
+    facttable=facttable.withColumn("AMS_Temp_Units",
       when((col("Units")>0) && (col("Dollars")>0),col("Units")).otherwise(lit(0).cast(IntegerType)))
 
 
-    stgtable=stgtable.withColumn("AMS_Temp_Dollars",
+    facttable=facttable.withColumn("AMS_Temp_DollarsCA",
       when((col("Units")>0) && (col("Dollars")>0),col("Dollars")).otherwise(lit(0).cast(IntegerType)))
 
-    stgtable=stgtable.withColumn("AMS_ASP",
-      when(col("AMS_Temp_Units")===0 ,lit(0).cast(IntegerType)).otherwise(col("AMS_Temp_Dollars")/col("AMS_Temp_Units")))
+    facttable=facttable.withColumn("AMS_ASP_CA",
+      when(col("AMS_Temp_Units")===0 ,lit(0).cast(IntegerType)).otherwise(col("AMS_Temp_DollarsCA")/col("AMS_Temp_Units")))
 
-    //exportToHive(stgtable,"",stgtablename,"ams_datamart_print",executionContext)
-    exportToHive(stgtable,"","stgtable_temp","ams_datamart_print",executionContext)
+    //exportToHive(facttable,"",facttablename,"ams_datamart_print",executionContext)
+    exportToHive(facttable,"","stgtable","ams_datamart_print",executionContext)
 
   }
-
 }

@@ -1,6 +1,7 @@
-package com.scienaptic.jobs.core.Print_jobs
+package com.scienaptic.jobs.core.npd.print.transformations
 
 import com.scienaptic.jobs.ExecutionContext
+import com.scienaptic.jobs.utility.NPDUtility.exportToHive
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StringType
@@ -24,13 +25,11 @@ class Proc_Monthly_Update_FactTbl_ExchangeRateCA {
 
 
 
-    TmpFctTable=TmpFctTable.withColumn("AMS_Exchange_Rate_US",when(TmpFctTable("CA_Exchange_Rate").isNotNull,
-      TmpFctTable("CA_Exchange_Rate")).otherwise(lit(null).cast(StringType)))
+    TmpFctTable=TmpFctTable.withColumn("AMS_Exchange_Rate_US",when(TmpFctTable("CA_Exchange_Rate").isNotNull,TmpFctTable("CA_Exchange_Rate")).otherwise(lit(null).cast(StringType)))
 
     TmpFctTable=TmpFctTable.drop("timeperiod","CA_Exchange_Rate")
 
-    //exportToHive(TmpFctTable,"","stgtable_temp","ams_datamart_print",executionContext)
+    exportToHive(TmpFctTable,"","stgtable_temp","ams_datamart_print",executionContext)
 
   }
-
 }

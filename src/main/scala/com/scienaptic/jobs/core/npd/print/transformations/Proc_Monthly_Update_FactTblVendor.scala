@@ -1,6 +1,7 @@
-package com.scienaptic.jobs.core.Print_jobs
+package com.scienaptic.jobs.core.npd.print.transformations
 
 import com.scienaptic.jobs.ExecutionContext
+import com.scienaptic.jobs.utility.NPDUtility.exportToHive
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.{lit, when}
 import org.apache.spark.sql.types.StringType
@@ -43,7 +44,7 @@ class Proc_Monthly_Update_FactTblVendor {
 
 
     //exportToHive(stgtable,"",stgtablename,"ams_datamart_print",executionContext)
-    //exportToHive(stgtable,"","stgtable_temp","ams_datamart_print",executionContext)
+    exportToHive(stgtable,"","stgtable_temp","ams_datamart_print",executionContext)
 
   }
 

@@ -1,11 +1,13 @@
-package com.scienaptic.jobs.core.Print_jobs
+package com.scienaptic.jobs.core.npd.print.transformations
 
 import com.scienaptic.jobs.ExecutionContext
+import com.scienaptic.jobs.utility.NPDUtility.exportToHive
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StringType
 
 class Proc_Monthly_Update_FactTbl_NPDTech {
+
 
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
@@ -32,7 +34,7 @@ class Proc_Monthly_Update_FactTbl_NPDTech {
 
     TmpFctTable=TmpFctTable.drop("SubCategory","CustomGroupedMaxPageWidth","NPDTech")
 
-    //exportToHive(TmpFctTable,"","stgtable_temp","ams_datamart_print",executionContext)
+    exportToHive(TmpFctTable,"","stgtable_temp","ams_datamart_print",executionContext)
 
 
 
@@ -48,7 +50,12 @@ class Proc_Monthly_Update_FactTbl_NPDTech {
 
     var TmpFctTable2=stgtable.withColumn("AMS_Commercial_Retail",AMS_Commercial_Retail_udf(stgtable("channel")))
 
-    //exportToHive(TmpFctTable2,"","stgtable_temp","ams_datamart_print",executionContext)
+    exportToHive(TmpFctTable2,"","stgtable_temp","ams_datamart_print",executionContext)
+
+
+
+
+
 
   }
 }

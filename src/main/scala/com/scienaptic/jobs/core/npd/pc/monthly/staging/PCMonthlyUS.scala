@@ -1,4 +1,4 @@
-package com.scienaptic.jobs.core.npd.pc.monthly.stagging
+package com.scienaptic.jobs.core.npd.pc.monthly.staging
 
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.utility.NPDUtility.load_csv_to_table

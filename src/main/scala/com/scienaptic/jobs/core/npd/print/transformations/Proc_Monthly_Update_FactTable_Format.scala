@@ -1,4 +1,5 @@
-package com.scienaptic.jobs.core.Print_jobs
+package com.scienaptic.jobs.core.npd.print.transformations
+
 import org.apache.spark.sql.functions._
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.utility.NPDUtility._
@@ -30,7 +31,7 @@ class Proc_Monthly_Update_stgtable_Format {
 
     stgtable=stgtable.withColumn("AMS_Format",AMS_Format_udf(expr("substring(Maximum_Page_Width, 1, 1")))
 
-    //exportToHive(stgtable,"","stgtable_temp","ams_datamart_print",executionContext)
+    exportToHive(stgtable,"","stgtable_temp","ams_datamart_print",executionContext)
 
   }
 
