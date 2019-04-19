@@ -1,8 +1,8 @@
 {
-  "config" : "retail",
+  "config" : "retail-3",
   "sparkConfig": {
     "master": "yarn-client",
-    "appName": "hp-retail"
+    "appName": "hp-retail-part3"
   },
   "sources": {
     "ODOM_ONLINE_ORCA": {

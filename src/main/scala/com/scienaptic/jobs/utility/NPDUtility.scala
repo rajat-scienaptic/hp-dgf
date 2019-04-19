@@ -17,7 +17,6 @@ object NPDUtility {
       .option("inferSchema", true)
       .option("ignoreLeadingWhiteSpace","false").option("ignoreTrailingWhiteSpace","false")
       .option("header", "true").csv(path)
-
     df
       .transform(withCleanHeaders)
       .write.mode(org.apache.spark.sql.SaveMode.Overwrite)
