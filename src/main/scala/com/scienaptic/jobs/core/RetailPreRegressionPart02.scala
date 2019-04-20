@@ -96,12 +96,14 @@ object RetailPreRegressionPart02 {
 
     var retailJoinAdPositionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoinAdPositionDF-PART01.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+      //.withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
 
 
     var GAP1JoinSKUMappingDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-GAP1JoinSKUMappingDF-PART01.csv")
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+      .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
+      //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
 
 
     //GAP_1$SKU <- as.character(GAP_1$SKU)
@@ -241,7 +243,7 @@ object RetailPreRegressionPart02 {
         .when(col("Ad_Office Depot-Max") === 1 && col("Ad_Location") === "No_Ad", "No_Info")
         .when(col("Ad_Staples") === 1 && col("Ad_Location") === "No_Ad", "No_Info")
         .otherwise(col("Ad_Location").cast("string")))
-      .dropDuplicates()
+      .dropDuplicates() //All Ad variables match till here
 
     retailJoincompAdTotalDFDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoincompAdTotalDFDF-PART02.csv")
     // Part 1 Ends here

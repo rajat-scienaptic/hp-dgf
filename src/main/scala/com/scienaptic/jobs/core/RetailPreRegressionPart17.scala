@@ -123,7 +123,7 @@ object RetailPreRegressionPart17 {
       .withColumn("L1_Innercannibalization_OnOffline_Min", when(col("L1_Innercannibalization_OnOffline_Min").isNull, 0).otherwise(col("L1_Innercannibalization_OnOffline_Min")))
       .withColumn("L2_Innercannibalization_OnOffline_Min", when(col("L2_Innercannibalization_OnOffline_Min").isNull, 0).otherwise(col("L2_Innercannibalization_OnOffline_Min")))
       .na.fill(0, Seq("L1_Innercannibalization_OnOffline_Min", "L2_Innercannibalization_OnOffline_Min"))
-      // TODO done: retail$PriceBand<-cut(retail$Street.Price,   #TODO: binning  *quantile
+      // done: retail$PriceBand<-cut(retail$Street.Price,   #TODO: binning  *quantile
       //                        breaks=c(0,100,150,200,300,500,10000),
       //                        labels=c("<100","100-150","150-200","200-300","300-500","500+"))// check : https://rpubs.com/pierrelafortune/cutdocumentation
       .withColumn("PriceBand", when(col("Street_Price").between(0, 100), lit("<100"))
