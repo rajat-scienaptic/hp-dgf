@@ -4,6 +4,7 @@ import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.MonthlyUSTransformations._
 import com.scienaptic.jobs.core.npd.common.CommonTransformations._
 import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.apache.spark.sql.functions._
 
 object USMonthlyTransformer {
 
@@ -47,24 +48,31 @@ object USMonthlyTransformer {
 
 
     val USMthReseller_int = USMthReseller_stg.transform(withUSMonthly)
-    USMthReseller_int
-      .write.mode(SaveMode.Overwrite)
-      .saveAsTable(DATAMART+"."+TABLE_NAME)
-
     val USMthResellerBTO_int = USMthResellerBTO_stg.transform(withUSMonthly)
-      .write.mode(SaveMode.Overwrite)
-      .saveAsTable(DATAMART+"."+TABLE_NAME)
-
     val USMthDist_int = USMthDist_stg.transform(withUSMonthly)
     val USMthDistBTO_int = USMthDistBTO_stg.transform(withUSMonthly)
     val USMthRetail_int = USMthRetail_stg.transform(withUSMonthly)
 
 
-    val finalUSMonthlyDf =  USMthReseller_int
-      .union(USMthResellerBTO_int)
-      .union(USMthDist_int)
-      .union(USMthDistBTO_int)
-      .union(USMthRetail_int)
+    val cols1 = USMthReseller_int.columns.toSet
+    val cols2 = USMthResellerBTO_int.columns.toSet
+    val cols3 = USMthDist_int.columns.toSet
+    val cols4 = USMthDistBTO_int.columns.toSet
+    val cols5 = USMthRetail_int.columns.toSet
+    val total = cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5 // union
+
+    def missingToNull(myCols: Set[String], allCols: Set[String]) = {
+      allCols.toList.map(x => x match {
+        case x if myCols.contains(x) => col(x)
+        case _ => lit(null).as(x)
+      })
+    }
+
+    val finalUSMonthlyDf =  USMthReseller_int.select(missingToNull(cols1,total):_*)
+      .union(USMthResellerBTO_int.select(missingToNull(cols2,total):_*))
+      .union(USMthDist_int.select(missingToNull(cols3,total):_*))
+      .union(USMthDistBTO_int.select(missingToNull(cols4,total):_*))
+      .union(USMthRetail_int.select(missingToNull(cols5,total):_*))
       .write.mode(SaveMode.Overwrite)
       .saveAsTable(DATAMART+"."+TABLE_NAME);
 
