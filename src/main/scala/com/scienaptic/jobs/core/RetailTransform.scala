@@ -5,7 +5,7 @@ import java.text.SimpleDateFormat
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.bean._
 import com.scienaptic.jobs.utility.Utils
-import org.apache.spark.sql.{Encoders, SaveMode}
+import org.apache.spark.sql.{DataFrame, Encoders, SaveMode}
 import org.apache.spark.sql.functions._
 
 // TODO : FileNotFound Exception
@@ -71,6 +71,9 @@ object RetailTransform {
   val BBY_BUNDLE_INFO_SOURCE = "BBY_BUNDLE_INFO"
   val EXISTING_POS_SOURCE = "EXISTING_POS"
 
+  def writeRetailDF(df: DataFrame, name: String) = {
+    df.coalesce(1).write.option("header","true").csv("/etherData/retailTemp/retailAlteryx/test/"+name+".csv")
+  }
 
   def execute(executionContext: ExecutionContext): Unit = {
     /* Source Map with all sources' information */
@@ -89,7 +92,7 @@ object RetailTransform {
     val auxTablesOnlineSource = sourceMap(AUX_TABLES_ONLINE_SOURCE)
     val auxTablesSKUHierarchySource = sourceMap(AUX_TABLES_SKU_HIERARCHY_SOURCE)
     val bbyBundleInfoSource = sourceMap(BBY_BUNDLE_INFO_SOURCE)
-//    val existingPOSSource = sourceMap(EXISTING_POS_SOURCE)
+    //    val existingPOSSource = sourceMap(EXISTING_POS_SOURCE)
 
 
     val odomOrcaDF = Utils.loadCSV(executionContext, odomOrcaSource.filePath).get
@@ -108,7 +111,8 @@ object RetailTransform {
     /* AUX TABLES WEEKEND */
     val auxTablesWeekendselect01DF = SelectOperation.doSelect(auxTablesWeekend, auxTablesWeekendSource.selectOperation(SELECT01).cols, auxTablesWeekendSource.selectOperation(SELECT01).isUnknown).get
       // local debugging date format
-//      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
+      //.withColumn("wed", to_date(unix_timestamp(col("wed"), "dd/MM/yyyy").cast("timestamp")))
+      //.withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
       // production date format
       .withColumn("wed", to_date(col("wed")))
 
@@ -118,8 +122,7 @@ object RetailTransform {
       odomOrcaSource.selectOperation(SELECT01).isUnknown).get.distinct()
 
     // formula
-    val odomOrcaSubsStrFormalaDF = odomOrcaselect01DF.withColumn("Base SKU", substring(col("Vendor Product Code"),
-      0, 6)).withColumn("Account Major", lit("Office Depot-Max"))
+    val odomOrcaSubsStrFormalaDF = odomOrcaselect01DF.withColumn("Base SKU", substring(col("Vendor Product Code"),0, 6)).withColumn("Account Major", lit("Office Depot-Max"))
 
     // group
     val odomOrcaGroup01 = odomOrcaSource.groupOperation(GROUP01)
@@ -129,7 +132,7 @@ object RetailTransform {
     val odomOrcaJoin01 = odomOrcaSource.joinOperation(JOIN01)
     val odomOrcaJoin01Map = JoinAndSelectOperation.doJoinAndSelect(odomOrcaGroup01DF, auxTablesWeekendselect01DF, odomOrcaJoin01)
     val odomOrcaJoin01InnerDF = odomOrcaJoin01Map(INNER_JOIN).cache()
-
+    ///(odomOrcaJoin01InnerDF,"odomOrcaJoin01InnerDF")
     // group
     val odomOrcaGroup02 = odomOrcaSource.groupOperation(GROUP02)
     val odomOrcaGroup02DF = GroupOperation.doGroup(odomOrcaJoin01InnerDF, odomOrcaGroup02).get
@@ -147,16 +150,17 @@ object RetailTransform {
     val staplesComUnitsSelect01DF = Utils.convertListToDFColumnWithRename(staplesComUnitsSource.renameOperation(RENAME01),
       SelectOperation.doSelect(staplesDotComUnitsDF, staplesComUnitsSource.selectOperation(SELECT01).cols, staplesComUnitsSource.selectOperation(SELECT01).isUnknown).get)
       // LOCAL format for testing
-//      .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
+      //.withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
       // actual production format
       .withColumn("wed", to_date(unix_timestamp(col("wed"), "dd-MM-yyyy").cast("timestamp")))
+    //.withColumn("wed", to_date(unix_timestamp(col("wed"), "dd/MM/yyyy").cast("timestamp")))
 
     // formula
     val staplesComUnitsFormula01DF = Utils.litColumn(staplesComUnitsSelect01DF, "Account Major", "Staples")
 
-    // union
+    // unionwriteDF
     val staplesComUnitsUnionDF = UnionOperation.doUnion(odomOrcaJoin01InnerDF, staplesComUnitsFormula01DF).get
-
+    //writeRetailDF(staplesComUnitsUnionDF,"staplesComUnitsUnionDF")
     /* Orca 2014 16 Archive */
     // select
     val orca201416ArchiveSelect01 = orca201416ArchiveSource.selectOperation(SELECT01)
@@ -187,43 +191,44 @@ object RetailTransform {
         .when(col("Account Major") === "Office Depot Inc (Contract Stationers)", "Office Depot-Max")
         .when(col("Account Major") === "Amazon.com, Inc.", "Amazon.Com")
         .when(col("Account Major") === "Frys Electronics Inc", "Fry's Electronics Inc")
-        .when(col("Account Major") === "Sams Club", "Fry's Electronics Inc")
+        .when(col("Account Major") === "Sams Club", "Sam's Club")
         .when(col("Account Major") === "Target Corporation", "Target Stores")
         .when(col("Account Major") === "Wal Mart Online", "Wal-Mart Online")
         .when(col("Account Major") === "Wal Mart", "Wal-Mart Online")
         .otherwise(col("Account Major")))
-
+    //writeRetailDF(orca201617And2017QryFormulaDF,"orca201617And2017QryFormulaDFscienapt")
 
     // join
     val orca201617And2017QryAndAuxTablesJoin01 = orcaQry2017ToDateSource.joinOperation(JOIN01)
     val orca201617And2017QryAndAuxTablesJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryFormulaDF, auxTablesWeekendselect01DF, orca201617And2017QryAndAuxTablesJoin01)
     val orca201617And2017QryAndAuxTablesInnerJoin01 = orca201617And2017QryAndAuxTablesJoin01Map(INNER_JOIN)
-
+    //orca201617And2017QryAndAuxTablesInnerJoin01.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/orca201617And2017QryAndAuxTablesInnerJoin01.csv")
     // browse here
 
     // filter
     val orca201617And2017QryFilter01IfFalse = orcaQry2017ToDateSource.filterOperation(FILTER01)
     val oorca201617And2017QryFilter01IfFalseDF = FilterOperation.doFilter(orca201617And2017QryAndAuxTablesInnerJoin01, orca201617And2017QryFilter01IfFalse, orca201617And2017QryFilter01IfFalse.conditionTypes(NUMERAL1)).get
-
+    //oorca201617And2017QryFilter01IfFalseDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/oorca201617And2017QryFilter01IfFalseDF.csv")
     // filter
     val orca201617And2017QryFilter02IfTrue = orcaQry2017ToDateSource.filterOperation(FILTER02)
     val orca201617And2017QryFilter02IfTrueDF = FilterOperation.doFilter(oorca201617And2017QryFilter01IfFalseDF, orca201617And2017QryFilter02IfTrue, orca201617And2017QryFilter02IfTrue.conditionTypes(NUMERAL0)).get
-
+    //orca201617And2017QryFilter02IfTrueDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/orca201617And2017QryFilter02IfTrueDF.csv")
     // formula
     val orca201617And2017Qry7DaysLessFormula = orca201617And2017QryFilter02IfTrueDF.withColumn("wed", date_sub(to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")), 7))
+    //orca201617And2017Qry7DaysLessFormula.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/orca201617And2017Qry7DaysLessFormula.csv")
 
     // filter
     val orca201617And2017QryFilter03IfFalse = orcaQry2017ToDateSource.filterOperation(FILTER03)
     val orca201617And2017QryFilter03IfFalseDF = FilterOperation.doFilter(oorca201617And2017QryFilter01IfFalseDF, orca201617And2017QryFilter03IfFalse, orca201617And2017QryFilter03IfFalse.conditionTypes(NUMERAL0)).get
-
+    //orca201617And2017QryFilter03IfFalseDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/orca201617And2017QryFilter03IfFalseDF.csv")
     // union
     val orca201617And2017QryUnion01DF = UnionOperation.doUnion(orca201617And2017Qry7DaysLessFormula, orca201617And2017QryFilter03IfFalseDF).get
-
+    //orca201617And2017QryUnion01DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/orca201617And2017QryUnion01DF.csv")
     // join
     val orca201617And2017QryAndAuxTablesJoin02 = orcaQry2017ToDateSource.joinOperation(JOIN02)
     val orca201617And2017QryAndAuxTablesJoin02Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryUnion01DF, auxTablesWeekendselect01DF.withColumnRenamed("wed", "Right_wed"), orca201617And2017QryAndAuxTablesJoin02)
     val orca201617And2017QryAndAuxTablesInnerJoin02 = orca201617And2017QryAndAuxTablesJoin02Map(INNER_JOIN)
-
+    //orca201617And2017QryAndAuxTablesInnerJoin02.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/orca201617And2017QryAndAuxTablesInnerJoin02.csv")
     /* Aux Tables Online */
     // select
     val auxTablesOnlineSelect01 = auxTablesOnlineSource.selectOperation(SELECT01)
@@ -234,12 +239,12 @@ object RetailTransform {
     val auxTablesOnlineAndOrcaJoin01Map = JoinAndSelectOperation.doJoinAndSelect(orca201617And2017QryAndAuxTablesInnerJoin02, auxTablesOnlineSelect01DF.withColumnRenamed("Entity ID", "Right_Entity ID"), auxTablesOnlineAndOrcaJoin01)
     val auxTablesOnlineAndOrcaJoin01leftJoin01 = auxTablesOnlineAndOrcaJoin01Map(LEFT_JOIN)
     val auxTablesOnlineAndOrcaJoin01InnerJoin01 = auxTablesOnlineAndOrcaJoin01Map(INNER_JOIN)
-
+    //auxTablesOnlineAndOrcaJoin01InnerJoin01.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/auxTablesOnlineAndOrcaJoin01InnerJoin01.csv")
     // browse here
 
     // union
     val auxTablesOnlineLeftAndInnerJoinUnion01 = UnionOperation.doUnion(auxTablesOnlineAndOrcaJoin01leftJoin01, auxTablesOnlineAndOrcaJoin01InnerJoin01).get
-
+    //writeRetailDF(auxTablesOnlineLeftAndInnerJoinUnion01,"auxTablesOnlineLeftAndInnerJoinUnion01")
     // browse
 
     // filter
@@ -253,19 +258,19 @@ object RetailTransform {
         .otherwise(0))
       .withColumn("Max_wed", lit(maxWed))
       .cache()
-
-    auxTablesOnlineFormula01DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/auxTablesOnlineFormula01DF.csv")
+    //auxTablesOnlineFormula01DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/auxTablesOnlineFormula01DF.csv")
 
     // group
     val auxTablesOnlineGroup01 = auxTablesOnlineSource.groupOperation(GROUP01)
     val auxTablesOnlineGroup01DF = GroupOperation.doGroup(auxTablesOnlineFormula01DF, auxTablesOnlineGroup01).get
-
+    //writeRetailDF(auxTablesOnlineGroup01DF,"auxTablesOnlineGroup01DF")  //auxTablesOnlineGroup01DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/auxTablesOnlineGroup01DF.csv")
     // join Staples continued..
     val staplesComUnitsJoin01 = staplesComUnitsSource.joinOperation(JOIN01)
     val staplesComUnitsJoin01Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineGroup01DF, staplesComUnitsUnionDF.withColumnRenamed("wed", "Right_wed"), staplesComUnitsJoin01)
     val staplesComUnitsJoin01LefttDF = staplesComUnitsJoin01Map(LEFT_JOIN)
     val staplesComUnitsJoin01InnerDF = staplesComUnitsJoin01Map(INNER_JOIN).cache()
-
+    //writeRetailDF(staplesComUnitsJoin01LefttDF,"staplesComUnitsJoin01LefttDF")
+    //staplesComUnitsJoin01InnerDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/staplesComUnitsJoin01InnerDF.csv")
 
     // select
     val staplesComUnitsSelect02DF = SelectOperation.doSelect(staplesComUnitsJoin01InnerDF, staplesComUnitsSource.selectOperation(SELECT02).cols, staplesComUnitsSource.selectOperation(SELECT02).isUnknown).get
@@ -282,14 +287,15 @@ object RetailTransform {
 
     /* HP COM*/
     // select
-
-    val hpComSelect01DF = SelectOperation.doSelect(hpComDF, hpComSource.selectOperation(SELECT01).cols, hpComSource.selectOperation(SELECT01).isUnknown).get.distinct()
+    //AVIK Change: Comment distinct function.
+    val hpComSelect01DF = SelectOperation.doSelect(hpComDF, hpComSource.selectOperation(SELECT01).cols, hpComSource.selectOperation(SELECT01).isUnknown).get//.distinct()
 
     // join
     val hpComJoin01 = hpComSource.joinOperation(JOIN01)
     val hpComJoin01Map = JoinAndSelectOperation.doJoinAndSelect(hpComSelect01DF, auxTablesWeekendselect01DF, hpComJoin01)
     val hpComJoin01InnerDF = hpComJoin01Map(INNER_JOIN)
 
+    //writeRetailDF(hpComJoin01InnerDF,"hpComJoin01InnerDF")//hpComJoin01InnerDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/hpComJoin01InnerDF.csv")
     // formula
     val hpComSubsStrFormalaDF = hpComJoin01InnerDF
       .withColumn("Product Number", substring(col("Product Number"), 0, 6))
@@ -308,7 +314,7 @@ object RetailTransform {
 
     // filter
     val amazonArapFilterDF = FilterOperation.doFilter(amazonArapSelectDF, amazonArapSource.filterOperation(FILTER01), amazonArapSource.filterOperation(FILTER01).conditionTypes(NUMERAL0)).get
-
+    //writeRetailDF(amazonArapFilterDF,"amazonArapFilterDF")//amazonArapFilterDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/amazonArapFilterDF.csv")
     // convert to Date (MM/dd/yyyy)
     val amazonArapConvertDateDF = amazonArapFilterDF.withColumn("Week Beginning Conv", to_date(unix_timestamp(col("Week Beginning"), "MM/dd/yyyy").cast("timestamp"), "yyyy-mm-dd"))
     //      .drop("Week Beginning")
@@ -316,7 +322,7 @@ object RetailTransform {
     // group
     val amazonArapGroup01 = amazonArapSource.groupOperation(GROUP01)
     val amazonArapGroup01DF = GroupOperation.doGroup(amazonArapConvertDateDF, amazonArapGroup01).get.withColumnRenamed("Week Beginning Conv", "Week Beginning")
-
+    //writeRetailDF(amazonArapGroup01DF,"amazonArapGroup01DF")//amazonArapGroup01DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/amazonArapGroup01DF.csv")
     /* Amazon Asin Map*/
     // select
     val amazonAsinMapSelect01 = amazonAsinMapSource.selectOperation(SELECT01)
@@ -328,7 +334,7 @@ object RetailTransform {
     val amazonArapJoin01Map = JoinAndSelectOperation.doJoinAndSelect(amazonArapGroup01DF, amazonAsinMapSelectDF.withColumnRenamed("ASIN", "Right_ASIN"), amazonArapJoin01)
     val amazonArapJoin01LefttDF = amazonArapJoin01Map(LEFT_JOIN)
     val amazonArapJoin01InnerDF = amazonArapJoin01Map(INNER_JOIN)
-
+    //writeRetailDF(amazonArapJoin01LefttDF,"amazonArapGroup02DF")//amazonArapJoin01InnerDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/amazonArapJoin01InnerDF.csv")
     // group
     val amazonArapGroup02 = amazonArapSource.groupOperation(GROUP02)
     val amazonArapGroup02DF = GroupOperation.doGroup(amazonArapJoin01LefttDF, amazonArapGroup02).get
@@ -355,18 +361,27 @@ object RetailTransform {
 
     // filter
     val amazonArapFilter03 = amazonArapSource.filterOperation(FILTER03)
-    val amazonArapSKUNotNaFilter03DF = FilterOperation.doFilter(amazonArapSelect02DF, amazonArapFilter03, amazonArapFilter03.conditionTypes(NUMERAL0)).get
+//    val amazonArapSKUNotNaFilter03DF = FilterOperation.doFilter(amazonArapSelect02DF, amazonArapFilter03, amazonArapFilter03.conditionTypes(NUMERAL0)).get
+    val amazonArapSKUNotNaFilter03DF = amazonArapSelect02DF.filter(col("SKU") =!= null || col("SKU") =!= "")
+
+    // remove this
+    amazonArapSKUNotNaFilter03DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/amazonArapSKUNotNaFilter03DF.csv")
+
+    val amazonArapSKUNotNaFilter03DFWithNAString = FilterOperation.doFilter(amazonArapSelect02DF, amazonArapFilter03, amazonArapFilter03.conditionTypes(NUMERAL0)).get
+
+    // remove this
+    amazonArapSKUNotNaFilter03DFWithNAString.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/amazonArapSKUNotNaFilter03DFWithNAString.csv")
 
     // group
     val amazonArapGroup03 = amazonArapSource.groupOperation(GROUP03)
     val amazonArapGroup03DF = GroupOperation.doGroup(amazonArapSKUNotNaFilter03DF, amazonArapGroup03).get
 
-    // join
+    // join - 248
     val amazonArapJoin02 = amazonArapSource.joinOperation(JOIN02)
     val amazonArapJoin02Map = JoinAndSelectOperation.doJoinAndSelect(amazonArapGroup03DF, auxTablesWeekendselect01DF, amazonArapJoin02)
     val amazonArapJoin02InnerDF = amazonArapJoin02Map(INNER_JOIN)
-
-    // select
+    //amazonArapJoin02InnerDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/amazonArapJoin02InnerDF.csv")
+    // selectoorca201617And2017QryFilter01IfFalseDF
     val amazonArapSelect03 = amazonArapSource.selectOperation(SELECT03)
     val amazonArapSelect03DF = SelectOperation.doSelect(amazonArapJoin02InnerDF, amazonArapSelect03.cols, amazonArapSelect03.isUnknown).get
 
@@ -381,7 +396,7 @@ object RetailTransform {
     // filter
     val sPrintsHistoricalUnitsChannelRetailFilter01 = sPrintHistoricalUnitsSource.filterOperation(FILTER01)
     val sPrintsHistoricalUnitsChannelRetailFilter01DF = FilterOperation.doFilter(sPrintsHistoricalUnitsSelect01DF, sPrintsHistoricalUnitsChannelRetailFilter01, sPrintsHistoricalUnitsChannelRetailFilter01.conditionTypes(NUMERAL0)).get.withColumnRenamed("Week_End_Date", "wed")
-
+    //sPrintsHistoricalUnitsChannelRetailFilter01DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/sPrintsHistoricalUnitsChannelRetailFilter01DF.csv")
     // group
     val sPrintsHistoricalUnitsGroup01 = sPrintHistoricalUnitsSource.groupOperation(GROUP01)
     val sPrintsHistoricalUnitsGroup01DF = GroupOperation.doGroup(sPrintsHistoricalUnitsChannelRetailFilter01DF, sPrintsHistoricalUnitsGroup01).get
@@ -393,6 +408,12 @@ object RetailTransform {
         .otherwise(0))
 
     // Union
+    //staplesComUnitsJoin01LefttDF.coalesce(1).write.option("header","true").csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/staplesComUnitsJoin01LefttDF.csv") //difference should be 187367 is 197986
+    //staplesComUnitsSelect03DF.coalesce(1).write.option("header","true").csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/staplesComUnitsSelect03DF.csv") //correct
+    //staplesComUnitsSetOnline1FormalaDF.coalesce(1).write.option("header","true").csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/staplesComUnitsSetOnline1FormalaDF.csv") //correct
+    //hpComSubsStrFormalaDF.coalesce(1).write.option("header","true").csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/hpComSubsStrFormalaDF.csv") //difference. Shoud be 24190 is 24011 - fixed
+    //amazonArapSelect03DF.coalesce(1).write.option("header","true").csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/amazonArapSelect03DF.csv") //correct
+    //sPrintsHistoricalFormula01DF.coalesce(1).write.option("header","true").csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/sPrintsHistoricalFormula01DF.csv") //correct
     val mainUnion01StaplesLeftAndStaplesSelect = UnionOperation.doUnion(staplesComUnitsJoin01LefttDF, staplesComUnitsSelect03DF.withColumnRenamed("Offline Units", "Sum_POS Qty")).get
     val mainUnion02Union01AndStaplesFormula = UnionOperation.doUnion(mainUnion01StaplesLeftAndStaplesSelect, staplesComUnitsSetOnline1FormalaDF.withColumnRenamed("Online Units", "Sum_POS Qty")).get
     val mainUnion03Union02AndHPQryFormula = UnionOperation.doUnion(mainUnion02Union01AndStaplesFormula, hpComSubsStrFormalaDF
@@ -409,8 +430,8 @@ object RetailTransform {
       .withColumnRenamed("SKU", "Product Base ID")
       .withColumnRenamed("Sum_Sales : Net Qty", "Sum_POS Qty")
     ).get
-
-    mainUnion05Union04AndSPrintFormula.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/mainUnion05Union04AndSPrintFormula.csv")
+   // mainUnion05Union04AndSPrintFormula.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/mainUnion05Union04AndSPrintFormula.csv")
+   mainUnion05Union04AndSPrintFormula.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/mainUnion05Union04AndSPrintFormula.csv")
   }
 
 }

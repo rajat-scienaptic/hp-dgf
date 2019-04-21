@@ -25,7 +25,7 @@ object RetailPreRegressionPart12 {
   val dateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
   val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
   val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
-  val maximumRegressionDate = "2019-03-09"
+  val maximumRegressionDate = "2050-01-01"
   val minimumRegressionDate = "2014-01-01"
   val monthDateFormat = new SimpleDateFormat("MMM", Locale.ENGLISH)
 
@@ -133,7 +133,8 @@ object RetailPreRegressionPart12 {
 
     val seasonalityNPDSum = seasonalityNPD
       .groupBy("L1_Category")
-      .agg(count("UNITS_average").as("number_weeks"), sum("UNITS_average").as("UNITS_average"))
+      //AVIK Change: Count on L1_Category instead of Units_average
+      .agg(count("L1_Category").as("number_weeks"), sum("UNITS_average").as("UNITS_average"))
       .withColumn("average", col("UNITS_average") / col("number_weeks"))
       .drop("UNITS_average", "number_weeks")
 
@@ -151,6 +152,9 @@ object RetailPreRegressionPart12 {
 
     IFS2 = IFS2
       .withColumn("Street_Price", roundUDF(col("Street_Price")))
+      //AVIK change: Code was missing
+        .withColumn("Account", when(col("Account")==="Amazon", "Amazon-Proper").otherwise(col("Account")))
+        .withColumn("Account", when(col("Account")==="hpshopping.com", "HP Shopping").otherwise(col("Account")))
 
     retailWithCompCannDF = retailWithCompCannDF
       .join(IFS2.filter(col("Account").isin("Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples", "Costco", "Sam's Club", "HP Shopping", "Walmart"))
@@ -159,8 +163,15 @@ object RetailPreRegressionPart12 {
       .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))
       //      .withColumn("Street_Price", when(col("Street_Price").isNull, col("Street_Price_Org")).otherwise(col("Street_Price")))
       .filter((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") < col("Valid_End_Date")))
-
-    val aveGM = retailWithCompCannDF.dropDuplicates("SKU", "Account")
+    //AVIK Change: Order based on Hardware_GM and Supplies_GM
+    val windForSKUnAccount = Window.partitionBy("SKU","Account").orderBy("Hardware_GM","Supplies_GM")
+    //val windForSKUnAccountSupplies = Window.partitionBy("SKU","Account").orderBy("Supplies_GM")
+    var aveGM = retailWithCompCannDF/*.drop("Supplies_GM")*/.withColumn("row_num", row_number().over(windForSKUnAccount))
+      .where(col("row_num")===1).drop("row_num")
+    /*val aveGMSupplies = retailWithCompCannDF.select("SKU","Account","Supplies_GM").withColumn("row_num", row_number().over(windForSKUnAccountSupplies))
+      .where(col("row_num")===1).drop("row_num")
+    aveGM = aveGM.join(aveGMSupplies, Seq("SKU","Account"), "left")*/
+    aveGM = aveGM //retailWithCompCannDF.dropDuplicates("SKU", "Account")
       .groupBy("SKU")
       .agg(mean(col("Hardware_GM")).as("aveHWGM"),
         mean(col("Supplies_GM")).as("aveSuppliesGM"))

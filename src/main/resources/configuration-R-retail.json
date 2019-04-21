@@ -1,7 +1,7 @@
 {
-  "config": "R-retail",
+  "config": "preregression-retail-21",
   "sparkConfig": {
-    "master": "yarn",
+    "master": "local[*]",
     "appName": "hp-R-retail"
   }
 }

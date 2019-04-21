@@ -24,7 +24,7 @@ object RetailPreRegressionPart21 {
   val dateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
   val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
   val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
-  val maximumRegressionDate = "2019-03-09"
+  val maximumRegressionDate = "2050-01-01"
   val minimumRegressionDate = "2014-01-01"
   val monthDateFormat = new SimpleDateFormat("MMM", Locale.ENGLISH)
 
@@ -97,6 +97,7 @@ object RetailPreRegressionPart21 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
+    //var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/Intermediate/retail-DirectCann-PART20.csv")
     var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART20.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -188,6 +189,7 @@ object RetailPreRegressionPart21 {
     //      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
     //      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
     // TODO : Check ether HDFS path for the following
+    //var inStore = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/instore_labor_final.csv"))
     var inStore = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/Instore/instore_labor_final.csv"))
     inStore.columns.toList.foreach(x => {
       inStore = inStore.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
@@ -195,6 +197,7 @@ object RetailPreRegressionPart21 {
     inStore = inStore.cache()
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp"))) // check date format
 
+    //var extraPol = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/instore_labor_proxy.csv"))
     var extraPol = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/Instore/instore_labor_proxy.csv"))
     extraPol.columns.toList.foreach(x => {
       extraPol = extraPol.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
@@ -207,7 +210,7 @@ object RetailPreRegressionPart21 {
 
     retailWithCompCann3DF = retailWithCompCann3DF
       .join(extraPol, Seq("Account", "mnth"), "left")
-      .withColumn("instore_labor", when(col("Week_End_date") <= "2015-12-05", col("proxy_labor")).otherwise(col("instore_labor")))
+      .withColumn("instore_labor", when(col("Week_End_date") <= to_date(unix_timestamp(lit("2015-12-05"), "yyyy-MM-dd").cast("timestamp")), col("proxy_labor")).otherwise(col("instore_labor")))
       //      .withColumn("instore_labor", when(col("proxy_labor").isNull || col("proxy_labor") === "", null).otherwise(col("instore_labor")))
       .withColumn("instore_labor", when(col("Account").isin("Best Buy", "Office Depot-Max", "Staples"), col("instore_labor")).otherwise(lit(0)))
       .withColumn("instore_labor", when(col("Online") === 1, 0).otherwise(col("instore_labor")))
@@ -282,6 +285,7 @@ object RetailPreRegressionPart21 {
     //      .drop("Street_Price_x", "Street_Price_y")
 
     // walmart
+    //val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/walmart_link.csv")
     val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Walmart/walmart_link.csv")
       .withColumnRenamed("retail_sku", "SKU")
       .withColumnRenamed("retail_sku_desc", "SKU_Name")
@@ -289,6 +293,7 @@ object RetailPreRegressionPart21 {
     retailWithCompCann3DF = retailWithCompCann3DF
       .join(skuWalmart.select("SKU", "walmart_sku"), Seq("SKU"), "left")
 
+    //var walmart = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/wmt_prereg_w_dropins_1_30_19.csv"))
     var walmart = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Walmart/wmt_prereg_w_dropins_1_30_19.csv"))
     walmart.columns.toList.foreach(x => {
       walmart = walmart.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
@@ -356,8 +361,8 @@ object RetailPreRegressionPart21 {
       "Price_Staples", "Price_Staples_com", "Price_Min_Online", "Price_Min_Offline", "Delta_Price_Online", "Delta_Price_Offline",
       "Price_Gap_Online", "Price_Gap_Offline", "Street_Price", "Walmart_Price", "Delta_Price_Walmart")
 
-    retailWithCompCann3DF
-      .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_" + currentTS + ".csv")
+    retailWithCompCann3DF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_" + currentTS + ".csv")
+    //retailWithCompCann3DF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/Intermediate/preregression_output_retail.csv")
 
 //    var retailFinalDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv(TEMP_OUTPUT_DIR)
 //      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))

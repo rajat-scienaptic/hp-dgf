@@ -1,13 +1,13 @@
 {
   "config" : "retail",
   "sparkConfig": {
-    "master": "yarn-client",
+    "master": "local[*]",
     "appName": "hp-retail"
   },
   "sources": {
     "ODOM_ONLINE_ORCA": {
       "name": "ODOM_ONLINE_ORCA",
-      "filePath": "/etherData/ORCA/ODOM/odom-combined/",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/odom.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -62,7 +62,7 @@
     },
     "STAPLES_COM_UNITS":  {
       "name": "STAPLES_COM_UNITS",
-      "filePath": "/etherData/managedSources/Staples.com/Staples.com Units.csv",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Staples.com Units.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -118,7 +118,7 @@
     },
     "HP_COM": {
       "name": "HP_COM",
-      "filePath": "/etherData/ORCA/HP.com/hp-combined/",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/hpshopping.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -158,7 +158,7 @@
     },
     "AMAZON_ARAP": {
       "name": "AMAZON_ARAP",
-      "filePath": "/etherData/managedSources/Amazon/ARAP/amazon_arap_data.csv",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/amazon_arap.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -266,7 +266,7 @@
     },
     "AMAZON_ASIN_MAP": {
       "name": "AMAZON_ASIN_MAP",
-      "filePath": "/etherData/managedSources/Amazon/ASIN/amazon_asin_sku_mapping.csv",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/amazon_asin_sku_mapping.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -276,7 +276,7 @@
     },
     "S_PRINT_HISTORICAL_UNITS": {
       "name": "S_PRINT_HISTORICAL_UNITS",
-      "filePath": "/etherData/managedSources/TIDY_Historical_POS/Tidy HPS prt 2016-2017_v2 (historical pos units).csv",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Tidy HPS prt 2016-2017_v2 (historical pos units).csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -304,7 +304,7 @@
     },
     "ORCA_2014_16_ARCHIVE": {
       "name": "ORCA_2014_16_ARCHIVE",
-      "filePath": "/etherData/ORCA/2014_16_archive/2014-16_Filtered.csv",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/2014-16_Filtered.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -314,7 +314,7 @@
     },
     "ORCA_QRY_2017_TO_DATE": {
       "name": "ORCA_QRY_2017_TO_DATE",
-      "filePath": "/etherData/ORCA/2017-present/2017-present-combined/",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/2017-present.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -403,7 +403,7 @@
     },
     "AUX_TABLES_WEEKEND": {
       "name": "AUX_TABLES_WEEKEND",
-      "filePath": "/etherData/managedSources/AUX/Aux_week_end_date.csv",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Aux_week_end_date.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -432,7 +432,7 @@
     },
     "AUX_TABLES_ONLINE": {
       "name": "AUX_TABLES_ONLINE",
-      "filePath": "/etherData/managedSources/AUX/Aux_online.csv",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Aux_online.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -585,7 +585,7 @@
     },
     "AUX_TABLES_SKU_HIERARCHY": {
       "name": "AUX_TABLES_SKU_HIERARCHY",
-      "filePath": "/etherData/managedSources/AUX/Aux_sku_hierarchy.csv",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Aux_sku_hierarchy.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -652,7 +652,7 @@
     },
     "BBY_BUNDLE_INFO": {
       "name": "BBY_BUNDLE_INFO",
-      "filePath": "/etherData/managedSources/Best_Buy_Bundle/BestBuyBundle_Summary.csv",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/BestBuyBundle_Summary.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -853,7 +853,7 @@
     },
     "WALMART": {
       "name": "WALMART",
-      "filePath": "/etherData/managedSources/Walmart/historic_and_tillDate/",
+      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/walmart_combined.csv",
       "select": {
         "select01": {
           "isUnknown": "Y",
