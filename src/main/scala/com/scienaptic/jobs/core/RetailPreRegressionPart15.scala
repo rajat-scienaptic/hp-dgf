@@ -98,7 +98,8 @@ object RetailPreRegressionPart15 {
       .withColumn("Promo_Pct_Min", lit(lit(1) - col("ImpMin") / col("Street_Price")))
       .withColumn("wed_cat", concat_ws(".", col("Week_End_Date"), col("L1_Category")))
 
-    var retailWithCompCannDFtmep1 = retailWithCompCannDF
+    //AVIK Change: Code commented in R
+    /*var retailWithCompCannDFtmep1 = retailWithCompCannDF
       .groupBy("wed_cat")
       .agg(sum(col("Promo_Pct") * col("POS_Qty")).as("z"), sum(col("POS_Qty")).as("w"))
 
@@ -114,7 +115,7 @@ object RetailPreRegressionPart15 {
 
     retailWithCompCannDF = retailWithCompCannDF.join(retailWithCompetitionDFtmep2, Seq("wed_cat"), "left")
       .withColumn("L2_cannibalization_OnOffline_Min", (col("z") - (col("Promo_Pct") * col("POS_Qty"))) / (col("w") - col("POS_Qty")))
-      .drop("z", "w", "wed_cat")
+      .drop("z", "w", "wed_cat")*/
 
 
     retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-Season-L1L2CannOfflineOnline-PART15.csv")

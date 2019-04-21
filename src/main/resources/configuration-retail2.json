@@ -1,8 +1,8 @@
 {
-  "config" : "retail",
+  "config" : "retail-2",
   "sparkConfig": {
     "master": "local[*]",
-    "appName": "hp-retail"
+    "appName": "hp-retail-part2"
   },
   "sources": {
     "ODOM_ONLINE_ORCA": {

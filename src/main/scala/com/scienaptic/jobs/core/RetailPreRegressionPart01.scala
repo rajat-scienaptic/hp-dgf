@@ -155,6 +155,8 @@ object RetailPreRegressionPart01 {
       .withColumn("SKU", when(col("SKU") === "J9V91A", "J9V90A").otherwise(col("SKU")))
       .withColumn("SKU", when(col("SKU") === "J9V92A", "J9V90A").otherwise(col("SKU")))
       .withColumn("SKU", when(col("SKU") === "M9L74A", "M9L75A").otherwise(col("SKU")))
+      //AVIK Change: To make sure precision matches
+      .withColumn("Distribution_Inv", round(col("Distribution_Inv").cast("double"),9))
       .drop("Raw_POS_Qty")
 
     val retailAggregatePOSDF = retailMergeIFS2DF
@@ -182,6 +184,7 @@ object RetailPreRegressionPart01 {
       GAP1 = GAP1.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     GAP1 = GAP1.cache()
+      //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("Total_IR", when(col("Account") === "Best Buy" && col("SKU") === "V1N08A", 0).otherwise(col("Total_IR")))
       .withColumn("Total_IR", when(col("Account") === "Office Depot-Max" && col("SKU") === "V1N07A", 0).otherwise(col("Total_IR")))
@@ -207,7 +210,8 @@ object RetailPreRegressionPart01 {
       .distinct()
 
 
-
+    //retailJoinAdPositionDF.coalesce(1).write.option("header","true").csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/Intermediate/retail-r-retailJoinAdPositionDF-PART01.csv")
+    //GAP1JoinSKUMappingDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/Intermediate/retail-r-GAP1JoinSKUMappingDF-PART01.csv")
     retailJoinAdPositionDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoinAdPositionDF-PART01.csv")
     GAP1JoinSKUMappingDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-GAP1JoinSKUMappingDF-PART01.csv")
     // Part 1 Ends here
