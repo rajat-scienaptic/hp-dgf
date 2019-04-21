@@ -279,7 +279,10 @@ object RetailTransform2 {
     // join
     val bbyBundleInfoJoin03 = bbyBundleInfoSource.joinOperation(JOIN03)
     val bbyBundleInfoFormula05RenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME04), bbyBundleInfoFormula05DF)
-    val bbyBundleInfoJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFormula01, bbyBundleInfoFormula05RenamedDF, bbyBundleInfoJoin03)
+    val bbyBundleInfoJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFormula01
+      .withColumnRenamed("Raw POS Qty", "Raw POS Qty_org")
+      .withColumnRenamed("POS Qty", "Raw POS Qty"),
+      bbyBundleInfoFormula05RenamedDF, bbyBundleInfoJoin03)
     val bbyBundleInfoJoin03LeftDF = bbyBundleInfoJoin03Map(LEFT_JOIN)
     val bbyBundleInfoJoin03InnerDF = bbyBundleInfoJoin03Map(INNER_JOIN)
 
