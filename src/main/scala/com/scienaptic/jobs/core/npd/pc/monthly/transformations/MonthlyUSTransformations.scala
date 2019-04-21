@@ -76,9 +76,8 @@ object MonthlyUSTransformations {
 
   }
 
-
   /*
-  This procedure updates AMS_Temp_Units,AMS_Temp_Dollars,AMS_ASP
+  This procedure updates AMS_Temp_Units,AMS_Temp_Dollars,AMS_ASP,AMS_AUP
   */
   def withASP(df: DataFrame): DataFrame = {
 
@@ -94,7 +93,9 @@ object MonthlyUSTransformations {
     val withASPDf =withTempDollers.withColumn("AMS_ASP",
       when(col("AMS_Temp_Units")===0 ,lit(0).cast(IntegerType)).otherwise(col("AMS_Temp_Dollars")/col("AMS_Temp_Units")))
 
-    withASPDf
+    val withAUPDf = withASPDf.withColumn("ams_aup",col("ams_asp"))
+
+    withAUPDf
 
   }
 
@@ -102,26 +103,138 @@ object MonthlyUSTransformations {
   This procedure updates "AMS_VendorFamily"
   Stored PROC : Proc_Update_Master_Vendor.txt
   */
-  //TODO
   def withVendorFamily(df: DataFrame): DataFrame = {
 
     val spark = df.sparkSession
 
     val masterBrandDf = spark.sql("select * from ams_datamart_pc.tbl_master_brand")
 
-    df.join(masterBrandDf,col("brand") === col("ams_vendorFamily")
+    val vendorFamilyDf = df.join(masterBrandDf,df("brand") === masterBrandDf("ams_vendorFamily")
       , "inner")
+      .drop("ams_vendorFamily")
+        .withColumnRenamed("ams_brand","ams_vendorFamily")
 
+    vendorFamilyDf
   }
+
+
+  /*
+  This procedure updates AMS_Smart_Buys
+  Stored PROC : Proc_Update_Master_SmartBuy
+  */
+
+  def withSmartBuy(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val withSmartBuysDf = df.withColumn("ams_smart_buys",
+      smartBuysUDF(col("brand"),col("model")))
+
+    withSmartBuysDf
+  }
+
+
+  /*
+  This procedure updates AMS_Top_Sellers,AMS_SmartBuy_TopSeller,
+  AMS_SKU_DATE,AMS_TRANSACTIONAL-NONTRANSACTIONAL-SKUS
+
+  Stored PROC : Proc_MONTHLY_Update_Master_TopSeller
+  */
 
   def withTopSellers(df: DataFrame): DataFrame = {
 
     val spark = df.sparkSession
 
-    df.withColumn("AMS_Top_Sellers",lit("Non Top Seller"))
+    val Tbl_Master_LenovoTopSellers = spark.sql("select * from ams_datamart_pc.tbl_master_lenovotopsellers limit 10");
 
+    val masterWithSkuDate = Tbl_Master_LenovoTopSellers.withColumn("ams_sku_date_temp",
+      skuDateUDF(col("sku"),col("ams_month")))
+      .select("top_seller","ams_sku_date_temp")
+      .withColumnRenamed("ams_sku_date_temp","ams_sku_date")
+
+    val dfWithSKUDate = df.withColumn("ams_sku_date",
+      skuDateUDF(col("model"),col("time_periods")))
+
+    val withTopSellers = dfWithSKUDate.join(masterWithSkuDate,
+      dfWithSKUDate("ams_sku_date")===masterWithSkuDate("ams_sku_date"),"inner")
+      .withColumn("ams_top_sellers",
+          topSellersUDF(col("top_sellers")))
+      .withColumn("ams_smartbuy_topseller",
+          smartBuyTopSellersUDF(
+            col("ams_smart_buys"),
+            col("ams_top_sellers")))
+      .withColumn("ams_smartbuy_lenovotopseller",
+        LenovoSmartBuyTopSellersUDF(
+          col("ams_smart_buys"),
+          col("ams_top_sellers"),
+          col("brand"),
+          col("model")))
+      .withColumn("ams_transactional-nontransactional-skus",
+        transactionalNontransactionalSkusUDF(
+          col("ams_smart_buys"),
+          col("ams_top_sellers"),
+          col("brand"),
+          col("model")))
+
+    withTopSellers
 
   }
 
+
+  /*
+  This procedure updates AMS_Top_Sellers,AMS_SmartBuy_TopSeller,
+  AMS_SKU_DATE,AMS_TRANSACTIONAL-NONTRANSACTIONAL-SKUS
+
+  Stored PROC : Proc_MONTHLY_Update_Master_TopSeller
+  */
+
+  def withCategory(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val masterCategoryDf = spark.sql("select * from ams_datamart_pc.tbl_master_category")
+
+    val withCategory = df.join(masterCategoryDf,
+      df("sub_category")===masterCategoryDf("subcat"),"inner")
+
+    val finalCategoryDf = withCategory
+      .drop("ams_sub_category")
+      .drop("subcat")
+      .drop("catgrp")
+      .withColumnRenamed("catgory","ams_catgrp")
+      .withColumnRenamed("npd_category","ams_npd_category")
+      .withColumn("ams_sub_category",
+        subCategoryUDF(col("mobile_workstation"),col("sub_category")))
+      .withColumn("ams_sub_category_temp",
+        subCategoryTempUDF(col("mobile_workstation"),col("sub_category")))
+
+    finalCategoryDf
+
+  }
+
+
+  /*
+  This procedure updates AMS_CDW_OS,AMS_CDW_PRICE
+
+  Stored PROC : Proc_Update_Master_ParsehUB_CDW
+  */
+
+  def withCDW(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val masterParsehubCDW = spark.sql("select sku,windows,price from ams_datamart_pc.tbl_master_parsehub_cdw")
+
+    val withCDW= df.join(masterParsehubCDW,
+      df("model")===masterParsehubCDW("sku"),"inner")
+
+    val finalDf = withCDW
+      .drop(masterParsehubCDW("sku"))
+      .withColumnRenamed("windows","ams_cdw_os")
+      .withColumnRenamed("price","ams_cdw_price")
+
+    finalDf
+
+  }
 
 }
