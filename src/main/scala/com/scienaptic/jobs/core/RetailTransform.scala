@@ -364,14 +364,6 @@ object RetailTransform {
 //    val amazonArapSKUNotNaFilter03DF = FilterOperation.doFilter(amazonArapSelect02DF, amazonArapFilter03, amazonArapFilter03.conditionTypes(NUMERAL0)).get
     val amazonArapSKUNotNaFilter03DF = amazonArapSelect02DF.filter(col("SKU") =!= null || col("SKU") =!= "")
 
-    // remove this
-    amazonArapSKUNotNaFilter03DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/amazonArapSKUNotNaFilter03DF.csv")
-
-    val amazonArapSKUNotNaFilter03DFWithNAString = FilterOperation.doFilter(amazonArapSelect02DF, amazonArapFilter03, amazonArapFilter03.conditionTypes(NUMERAL0)).get
-
-    // remove this
-    amazonArapSKUNotNaFilter03DFWithNAString.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/amazonArapSKUNotNaFilter03DFWithNAString.csv")
-
     // group
     val amazonArapGroup03 = amazonArapSource.groupOperation(GROUP03)
     val amazonArapGroup03DF = GroupOperation.doGroup(amazonArapSKUNotNaFilter03DF, amazonArapGroup03).get
