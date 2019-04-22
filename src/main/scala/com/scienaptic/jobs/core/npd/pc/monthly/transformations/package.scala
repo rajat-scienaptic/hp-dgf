@@ -124,6 +124,16 @@ package object transformations {
     }
   }
 
+  val lenovoFocus = (focus : String)  => {
+    if(focus.equals("Yes") || focus.equals("Yes/STF")){
+      "Yes"
+    }else if(focus.equals("No")) {
+      "No"
+    }else{
+      "NA"
+    }
+  }
+
   def skuDateUDF = udf(skuDate)
 
   def currentPriorUDF = udf(currentPrior)
@@ -135,6 +145,7 @@ package object transformations {
   def smartBuyTopSellersUDF = udf(smartBuyTopSellers)
   def LenovoSmartBuyTopSellersUDF = udf(lenovoSmartBuyTopSellers)
   def transactionalNontransactionalSkusUDF = udf(transactionalNontransactionalSkus)
+  def lenovoFocusUDF = udf(lenovoFocus)
 
 
 
