@@ -156,14 +156,15 @@ object RetailTransform2 {
     val auxTablesOnlineJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineGroup05DF, auxTablesOnlineGroup04RenamedDF, auxTablesOnlineJoin03)
     val auxTablesOnlineJoin03InnerDF = auxTablesOnlineJoin03Map(INNER_JOIN)
 
+
     // formula
     val auxTablesOnlineFormula05DF = auxTablesOnlineJoin03InnerDF.withColumn("SKU ACV POS",
-      when(col("Sum_Sum_POS Sales NDP") < 1, 0)
-        .when((col("Sum_Store POS") / col("Sum_Sum_POS Sales NDP")) > 1, 1)
-        .otherwise(col("Sum_Store POS") / col("Sum_Sum_POS Sales NDP")))
+        when(col("Sum_Sum_POS Sales NDP") < 1, 0)
+      .when((col("Sum_Store POS") / col("Sum_Sum_POS Sales NDP")) > 1, 1)
+      .otherwise(col("Sum_Store POS") / col("Sum_Sum_POS Sales NDP")))
       .withColumn("SKU ACV Inv", when(col("Sum_Sum_POS Sales NDP") < 1, 0)
-        .when(col("Sum_Sum_POS Sales NDP") > 1, 1)
-        .otherwise(col("Sum_Sum_POS Sales NDP")))
+      .when((col("Sum_Store Inv") / col("Sum_Sum_POS Sales NDP")) > 1, 1)
+      .otherwise(col("Sum_Store Inv") / col("Sum_Sum_POS Sales NDP")))
 
     // select with rename
     val auxTablesOnlineSelect02 = auxTablesOnlineSource.selectOperation(SELECT02)
@@ -280,10 +281,11 @@ object RetailTransform2 {
     val bbyBundleInfoJoin03 = bbyBundleInfoSource.joinOperation(JOIN03)
     val bbyBundleInfoFormula05RenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME04), bbyBundleInfoFormula05DF)
     val bbyBundleInfoJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFormula01
-      .withColumnRenamed("Raw POS Qty", "Raw POS Qty_org")
-      .withColumnRenamed("POS Qty", "Raw POS Qty"),
-      bbyBundleInfoFormula05RenamedDF, bbyBundleInfoJoin03)
+        .withColumnRenamed("Raw POS Qty", "Raw POS Qty_org")
+        .withColumnRenamed("POS Qty", "Raw POS Qty")
+      ,bbyBundleInfoFormula05RenamedDF, bbyBundleInfoJoin03)
     val bbyBundleInfoJoin03LeftDF = bbyBundleInfoJoin03Map(LEFT_JOIN)
+      .withColumn("POS Qty", col("Raw POS Qty"))
     val bbyBundleInfoJoin03InnerDF = bbyBundleInfoJoin03Map(INNER_JOIN)
 
     // union
@@ -299,10 +301,12 @@ object RetailTransform2 {
     val bbyBundleInfoJoin04InnerDF = bbyBundleInfoJoin04Map(INNER_JOIN)
     val bbyBundleInfoJoin04RightDF = bbyBundleInfoJoin04Map(RIGHT_JOIN)
 
+
     // formula
     val bbyBundleInfoFormula06DF = bbyBundleInfoJoin04LeftDF.withColumn("Distribution_Inv",
       when(col("POS_Qty") > 0, 1)
         otherwise (0))
+
 
     // union with append max weekend date
     val unionFormulaAndInnerJoinDF = UnionOperation.doUnion(bbyBundleInfoJoin04InnerDF, bbyBundleInfoFormula06DF).get
