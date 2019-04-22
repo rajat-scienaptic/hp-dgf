@@ -183,6 +183,8 @@ object RetailPreRegressionPart03 {
 
     val retailJoinAggUpstreamWithNATreatmentDF = aggUpstream
       .join(retailJoinMasterSprintCalendarDF, Seq("SKU", "Account", "Week_End_Date", "Online"), "right")
+      //Avik Change: When Total IR is null, it should give Street price as sale price
+      .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
       .withColumn("GAP_Price", col("Street_Price") - col("Total_IR"))
       .withColumn("ImpAve", when((col("Ave").isNull) && (col("GAP_Price").isNotNull), col("GAP_Price")).otherwise(col("Ave")))
       .withColumn("ImpMin", when((col("Min").isNull) && (col("GAP_Price").isNotNull), col("GAP_Price")).otherwise(col("Min")))

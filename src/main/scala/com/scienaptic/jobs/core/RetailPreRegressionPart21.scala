@@ -210,6 +210,7 @@ object RetailPreRegressionPart21 {
 
     retailWithCompCann3DF = retailWithCompCann3DF
       .join(extraPol, Seq("Account", "mnth"), "left")
+    retailWithCompCann3DF = retailWithCompCann3DF
       .withColumn("instore_labor", when(col("Week_End_date") <= to_date(unix_timestamp(lit("2015-12-05"), "yyyy-MM-dd").cast("timestamp")), col("proxy_labor")).otherwise(col("instore_labor")))
       //      .withColumn("instore_labor", when(col("proxy_labor").isNull || col("proxy_labor") === "", null).otherwise(col("instore_labor")))
       .withColumn("instore_labor", when(col("Account").isin("Best Buy", "Office Depot-Max", "Staples"), col("instore_labor")).otherwise(lit(0)))
@@ -217,6 +218,8 @@ object RetailPreRegressionPart21 {
       .withColumn("instore_labor", when(col("instore_labor").isNull || col("instore_labor") === "", 0).otherwise(col("instore_labor")))
       .drop("proxy_labor")
       .withColumn("GC_SKU_Name", when(col("GC_SKU_Name").isNull, "NA").otherwise(col("GC_SKU_Name")))
+      //AVIK Change: When total ir is null, it gives Selling price as null too instead of Street Price
+      .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
       .withColumn("Selling_Price", col("Street_Price") - col("Total_IR"))
 
 
@@ -232,7 +235,8 @@ object RetailPreRegressionPart21 {
       .groupBy("SKU", "Street_Price", "Week_End_Date")
       .pivot("Account")
       .agg(first(col("Selling_Price")).as("Selling_Price"))
-      .na.fill(0, Seq("Staples0", "Staples1", "Best Buy0", "Amazon-Proper1", "Office Depot-Max0", "Office Depot-Max1"))
+      //AVIK Change: Best Buy1 and Amazon-Proper0 were not present
+      .na.fill(0, Seq("Staples0", "Staples1", "Best Buy0", "Best Buy1", "Amazon-Proper0", "Amazon-Proper1", "Office Depot-Max0", "Office Depot-Max1"))
     retail_acc = spreadAccount
 
 
@@ -243,6 +247,8 @@ object RetailPreRegressionPart21 {
       .withColumnRenamed("Staples1", "Price_Staples_com")
       .withColumnRenamed("Best Buy0", "Price_Best_Buy")
       .withColumnRenamed("Best Buy1", "Price_Best_Buy_com")
+      //AVIK Change: Rename of Amazon-Proper0 not present
+      //.withColumnRenamed("Amazon-Proper0", "Price_Amazon")
       .withColumnRenamed("Amazon-Proper1", "Price_Amazon_com")
       .withColumnRenamed("Office Depot-Max0", "Price_Office_Depot_Max")
       .withColumnRenamed("Office Depot-Max1", "Price_Office_Depot_Max_com")
@@ -265,14 +271,16 @@ object RetailPreRegressionPart21 {
         .otherwise(
           when(col("Account") === "Best Buy" && col("Online") === 1, least(col("Price_Amazon_com"), col("Price_Staples_com"), col("Price_Office_Depot_Max_com")))
             .otherwise(when(col("Account") === "Office Depot-Max" && col("Online") === 1, least(col("Price_Amazon_com"), col("Price_Best_Buy_com"), col("Price_Staples_com")))
-              .otherwise(when(col("Account") === "Staples", least(col("Price_Amazon_com"), col("Price_Best_Buy_com"), col("Price_Office_Depot_Max_com")))
+              //AVIK Change: Online filter missing
+              .otherwise(when(col("Account") === "Staples" && col("Online") === 1, least(col("Price_Amazon_com"), col("Price_Best_Buy_com"), col("Price_Office_Depot_Max_com")))
                 .otherwise(least(col("Price_Best_Buy_com"), col("Price_Office_Depot_Max_com"), col("Price_Amazon_com"), col("Price_Staples_com")))))
         ))
       .withColumn("Price_Min_Offline", when(
         col("Account") === "Best Buy" && col("Online") === 0, least(col("Price_Staples"), col("Price_Office_Depot_Max")))
         .otherwise(
           when(col("Account") === "Office Depot-Max" && col("Online") === 0, least(col("Price_Best_Buy"), col("Price_Staples")))
-            .otherwise(when(col("Account") === "Staples", least(col("Price_Best_Buy"), col("Price_Office_Depot_Max")))
+            //AVIK Change: Online filter missing
+            .otherwise(when(col("Account") === "Staples" && col("Online") === 0, least(col("Price_Best_Buy"), col("Price_Office_Depot_Max")))
               .otherwise(least(col("Price_Best_Buy"), col("Price_Office_Depot_Max"), col("Price_Staples"))))
         ))
       .withColumn("Delta_Price_Online", log("Selling_Price") - log("Price_Min_Online"))

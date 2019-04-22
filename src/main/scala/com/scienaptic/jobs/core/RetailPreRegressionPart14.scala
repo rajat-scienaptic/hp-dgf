@@ -150,7 +150,8 @@ object RetailPreRegressionPart14 {
       .join(retailLowConfidence, Seq("Account", "SKU_Name"), "left")
       .withColumn("low_confidence", when(col("low_confidence").isNull, lit(0)).otherwise(col("low_confidence")))
       .withColumn("NP_Flag", when((col("Account") === "Costco" || col("Account") === "Sam's Club") && col("Promo_Flag") === 1, lit(1)).otherwise(col("NP_Flag")))
-      .withColumn("high_disc_Flag", when(col("Promo_Pct") <= 0.55, 0).otherwise(lit(1)))
+      //AVIK change: For null values spark returns 1 expected 0
+      .withColumn("high_disc_Flag", when(col("Promo_Pct") <= 0.55 || col("Promo_Pct").isNull, 0).otherwise(lit(1)))
 
     // CHECK  -> always_promo <- ave(retail$Promo.Flag, retail$Account, retail$SKU, retail$Season, FUN=mean)
     //  retail$always_promo.Flag <- ifelse(always_promo==1,1,0)

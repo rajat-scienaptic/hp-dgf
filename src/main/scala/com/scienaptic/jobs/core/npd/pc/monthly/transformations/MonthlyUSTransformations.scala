@@ -237,4 +237,34 @@ object MonthlyUSTransformations {
 
   }
 
+
+  /*
+  This procedure updates AMS_Focus,AMS_Lenovo_Focus,AMS_Lenovo_System_Type
+  ,AMS_Lenovo_Form_Factor,AMS_Lenovo_List_Price
+
+  Stored PROC : Proc_Update_Master_TopSeller_LenovoFocus_MONTHLY
+  */
+
+  def withLenovoFocus(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val masterLenovoTopSellers = spark
+      .sql("select ams_sku_date,focus,system_type,form_factor,pricing_list_price from ams_datamart_pc.tbl_master_lenovotopsellers")
+
+    val withLenovoFocus= df.join(masterLenovoTopSellers,
+      df("ams_sku_date")===masterLenovoTopSellers("ams_sku_date"),"inner")
+
+    val finalDf = withLenovoFocus
+      .withColumnRenamed("focus","ams_focus")
+      .withColumnRenamed("system_type","ams_lenovo_system_type")
+      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
+      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
+      .withColumn("ams_lenovo_focus",
+        lenovoFocusUDF(col("ams_focus")))
+
+    finalDf
+
+  }
+
 }
