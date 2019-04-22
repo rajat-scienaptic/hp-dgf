@@ -162,8 +162,8 @@ object RetailTransform2 {
         .when((col("Sum_Store POS") / col("Sum_Sum_POS Sales NDP")) > 1, 1)
         .otherwise(col("Sum_Store POS") / col("Sum_Sum_POS Sales NDP")))
       .withColumn("SKU ACV Inv", when(col("Sum_Sum_POS Sales NDP") < 1, 0)
-        .when(col("Sum_Sum_POS Sales NDP") > 1, 1)
-        .otherwise(col("Sum_Sum_POS Sales NDP")))
+        .when((col("Sum_Store Inv") / col("Sum_Sum_POS Sales NDP")) > 1, 1)
+        .otherwise(col("Sum_Store Inv") / col("Sum_Sum_POS Sales NDP")))
 
     // select with rename
     val auxTablesOnlineSelect02 = auxTablesOnlineSource.selectOperation(SELECT02)
@@ -280,9 +280,9 @@ object RetailTransform2 {
     val bbyBundleInfoJoin03 = bbyBundleInfoSource.joinOperation(JOIN03)
     val bbyBundleInfoFormula05RenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME04), bbyBundleInfoFormula05DF)
     val bbyBundleInfoJoin03Map = JoinAndSelectOperation.doJoinAndSelect(auxTablesSKUHierarchyFormula01
-      .withColumnRenamed("Raw POS Qty", "Raw POS Qty_org")
-      .withColumnRenamed("POS Qty", "Raw POS Qty"),
-      bbyBundleInfoFormula05RenamedDF, bbyBundleInfoJoin03)
+        .withColumnRenamed("Raw POS Qty", "Raw POS Qty_org")
+        .withColumnRenamed("POS Qty", "Raw POS Qty")
+      ,bbyBundleInfoFormula05RenamedDF, bbyBundleInfoJoin03)
     val bbyBundleInfoJoin03LeftDF = bbyBundleInfoJoin03Map(LEFT_JOIN)
     val bbyBundleInfoJoin03InnerDF = bbyBundleInfoJoin03Map(INNER_JOIN)
 
