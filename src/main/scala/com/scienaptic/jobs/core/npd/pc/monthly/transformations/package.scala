@@ -1,5 +1,7 @@
 package com.scienaptic.jobs.core.npd.pc.monthly
 
+import java.sql.Date
+
 import org.apache.spark.sql.functions.udf
 
 package object transformations {
@@ -32,8 +34,120 @@ package object transformations {
 
   }
 
+  val subCategory = (mobileWorkstation : String,subCategory : String)  => {
+
+    mobileWorkstation match {
+      case "Mobile Workstation" => "Mobile Workstation"
+      case _ => subCategory
+    }
+
+  }
+
+  val subCategoryTemp = (mobileWorkstation : String,subCategory : String)  => {
+
+    val categories = Set("Workstations","Workstation","BTO Workstations","BTO Workstation")
+
+    if(mobileWorkstation.equals("Mobile Workstation") || categories.contains(subCategory)){
+      "Mobile Workstation"
+    }
+    else {
+      "Non Mobile Workstation"
+    }
+
+  }
+
+  val smartBuys = (brand : String,model : String)  => {
+
+    if(brand.equals("HP") && ( model.contains("UT") || model.contains("AT"))){
+      "Smartbuy"
+    }
+    else {
+      "Non Smart Buy"
+    }
+
+  }
+
+  def dateToISO (date : String) = {
+    val split = date.split(" ")
+    val iso = split(0).replace("-","")
+    iso
+  }
+
+  val skuDate = (sku : String,ams_month : String)  => {
+    val iso = dateToISO(ams_month);
+    sku+iso
+  }
+
+  val topSellers = (ts : String)  => {
+    if(ts.equals("Yes")){
+      "Top Seller"
+    }else{
+      "Non Top Seller"
+    }
+  }
+
+  val smartBuyTopSellers = (smartBuys : String,topSellers:String)  => {
+    if(smartBuys.equals("Smartbuy")){
+      "Smartbuy"
+    }else if(topSellers.equals("Top Seller")) {
+      "Lenovo Top Seller"
+    }else{
+      "Non SB/Non LTS"
+    }
+  }
+
+  val lenovoSmartBuyTopSellers =  (smartBuys : String,topSellers:String,brand : String, model : String)  => {
+    if(smartBuys.equals("Smartbuy")){
+      "Transactional"
+    }else if(topSellers.equals("Top Seller")) {
+      "Transactional"
+    }else{
+      if(brand.equals("Dell") && (model.length() == 5)){
+        "Transactional"
+      }else{
+        "Non Transactional"
+      }
+    }
+  }
+
+  val transactionalNontransactionalSkus = (smartBuys : String,topSellers:String, brand : String, model : String)  => {
+    if(smartBuys.equals("Smartbuy")){
+      "Transactional"
+    }else if(topSellers.equals("Top Seller")) {
+      "Transactional"
+    }else{
+      if(brand.equals("Dell") && (model.length() == 5)){
+        "Transactional"
+      }else{
+        "Non Transactional"
+      }
+    }
+  }
+
+  val lenovoFocus = (focus : String)  => {
+    if(focus.equals("Yes") || focus.equals("Yes/STF")){
+      "Yes"
+    }else if(focus.equals("No")) {
+      "No"
+    }else{
+      "NA"
+    }
+  }
+
+  def skuDateUDF = udf(skuDate)
+
   def currentPriorUDF = udf(currentPrior)
   def qtdCurrentPriorUDF = udf(qtdCurrentPrior)
+  def subCategoryUDF = udf(subCategory)
+  def subCategoryTempUDF = udf(subCategoryTemp)
+  def smartBuysUDF = udf(smartBuys)
+  def topSellersUDF = udf(topSellers)
+  def smartBuyTopSellersUDF = udf(smartBuyTopSellers)
+  def LenovoSmartBuyTopSellersUDF = udf(lenovoSmartBuyTopSellers)
+  def transactionalNontransactionalSkusUDF = udf(transactionalNontransactionalSkus)
+  def lenovoFocusUDF = udf(lenovoFocus)
+
+
 
 
 }
