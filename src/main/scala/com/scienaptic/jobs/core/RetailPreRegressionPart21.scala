@@ -210,6 +210,7 @@ object RetailPreRegressionPart21 {
 
     retailWithCompCann3DF = retailWithCompCann3DF
       .join(extraPol, Seq("Account", "mnth"), "left")
+    retailWithCompCann3DF = retailWithCompCann3DF
       .withColumn("instore_labor", when(col("Week_End_date") <= to_date(unix_timestamp(lit("2015-12-05"), "yyyy-MM-dd").cast("timestamp")), col("proxy_labor")).otherwise(col("instore_labor")))
       //      .withColumn("instore_labor", when(col("proxy_labor").isNull || col("proxy_labor") === "", null).otherwise(col("instore_labor")))
       .withColumn("instore_labor", when(col("Account").isin("Best Buy", "Office Depot-Max", "Staples"), col("instore_labor")).otherwise(lit(0)))
@@ -217,6 +218,8 @@ object RetailPreRegressionPart21 {
       .withColumn("instore_labor", when(col("instore_labor").isNull || col("instore_labor") === "", 0).otherwise(col("instore_labor")))
       .drop("proxy_labor")
       .withColumn("GC_SKU_Name", when(col("GC_SKU_Name").isNull, "NA").otherwise(col("GC_SKU_Name")))
+      //AVIK Change: When total ir is null, it gives Selling price as null too instead of Street Price
+      .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
       .withColumn("Selling_Price", col("Street_Price") - col("Total_IR"))
 
 

@@ -133,9 +133,12 @@ object RetailPreRegressionPart11 {
       .withColumn("L1_cannibalization", when(col("L1_cannibalization").isNull || col("L1_cannibalization") === "", 0).otherwise(col("L1_cannibalization")))
       .withColumn("L2_cannibalization", when(col("L2_cannibalization").isNull || col("L2_cannibalization") === "", 0).otherwise(col("L2_cannibalization")))
       .na.fill(0, Seq("L2_cannibalization", "L1_cannibalization"))
+
+    retailWithCompCannDF = retailWithCompCannDF
+      //Avik Change: When Total IR is null, it should give Street price as sale price
+      .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
       .withColumn("Sale_Price", col("Street_Price") - col("Total_IR"))
       .withColumn("Price_Range_20_Perc_high", lit(1.2) * col("Sale_Price"))
-
     retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART11.csv")
 
   }
