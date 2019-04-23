@@ -74,7 +74,7 @@ object RetailTransform3 {
     val walmartGroupStoreNbrAndAggPOSQTYAndPOSSalesDF = doGroup(walmartInitialGroupDF, walmartGroupStoreNbrAndAggPOSQTYAndPOSSales).get
 
     val sumSumPOSQty = walmartGroupStoreNbrAndAggPOSQTYAndPOSSalesDF.agg(sum("Sum_Sum_POS QTY")).head().getLong(NUMERAL0)
-    val sumSumPOSSales = walmartGroupStoreNbrAndAggPOSQTYAndPOSSalesDF.agg(max("Sum_Sum_POS Sales")).head().getDouble(NUMERAL0)
+    val sumSumPOSSales = walmartGroupStoreNbrAndAggPOSQTYAndPOSSalesDF.agg(sum("Sum_Sum_POS Sales")).head().getDouble(NUMERAL0)
 
     // formula
     val walmartTotalPOSSales = walmartGroupStoreNbrAndAggPOSQTYAndPOSSalesDF

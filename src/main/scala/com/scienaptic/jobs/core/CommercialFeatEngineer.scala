@@ -60,7 +60,7 @@ object CommercialFeatEnggProcessor {
       //TODO For production keep this
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .where(col("Week_End_Date") >= lit("2014-01-01"))
-      .where(col("Week_End_Date") <= lit("2020-12-29"))
+      .where(col("Week_End_Date") <= lit("2019-03-30"))
       //.withColumn("ES date",to_date(unix_timestamp(col("ES date"),"yyyy-MM-dd").cast("timestamp")))
       //.withColumn("GA date",to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
       //TODO: For production keep this

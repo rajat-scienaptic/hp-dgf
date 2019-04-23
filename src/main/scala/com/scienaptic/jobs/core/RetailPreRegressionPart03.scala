@@ -25,7 +25,7 @@ object RetailPreRegressionPart03 {
   val dateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
   val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
   val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
-  val maximumRegressionDate = "2050-01-01"
+  val maximumRegressionDate = "2019-03-30"
   val minimumRegressionDate = "2014-01-01"
   val monthDateFormat = new SimpleDateFormat("MMM", Locale.ENGLISH)
 
@@ -112,7 +112,7 @@ object RetailPreRegressionPart03 {
       //      .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", null).otherwise(to_date(unix_timestamp(convertFaultyDateFormat(col("Week_End_Date")), "yyyy-MM-dd").cast("timestamp"))))
       //      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
       .withColumn("NP_IR_original", col("NP_IR"))
-      .withColumn("ASP_IR_original", col("ASP_IR"))
+      .withColumn("ASP_IR_original", col("ASP_IR").cast(DoubleType))
       .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", lit(null)).otherwise(
         when(col("Week_End_Date").contains("-"), to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
           .otherwise(to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
@@ -183,6 +183,8 @@ object RetailPreRegressionPart03 {
 
     val retailJoinAggUpstreamWithNATreatmentDF = aggUpstream
       .join(retailJoinMasterSprintCalendarDF, Seq("SKU", "Account", "Week_End_Date", "Online"), "right")
+      //Avik Change: When Total IR is null, it should give Street price as sale price
+      .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
       .withColumn("GAP_Price", col("Street_Price") - col("Total_IR"))
       .withColumn("ImpAve", when((col("Ave").isNull) && (col("GAP_Price").isNotNull), col("GAP_Price")).otherwise(col("Ave")))
       .withColumn("ImpMin", when((col("Min").isNull) && (col("GAP_Price").isNotNull), col("GAP_Price")).otherwise(col("Min")))
