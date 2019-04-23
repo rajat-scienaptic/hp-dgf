@@ -1,26 +1,26 @@
 package com.scienaptic.jobs.core.npd.pc.monthly.transformations
 
 import com.scienaptic.jobs.ExecutionContext
-import com.scienaptic.jobs.core.npd.pc.monthly.transformations.MonthlyUSTransformations._
 import com.scienaptic.jobs.core.npd.common.CommonTransformations._
-import org.apache.spark.sql.{DataFrame, SaveMode}
+import com.scienaptic.jobs.core.npd.pc.monthly.transformations.CommonTransformations._
+import com.scienaptic.jobs.core.npd.pc.monthly.transformations.CATransformations._
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, SaveMode}
 
-object USMonthlyTransformer {
+object CATransformer {
 
-  def withUSMonthly(df : DataFrame) = {
+  def withAllTransformations(df : DataFrame) = {
 
     val finalDF = df
       .transform(timePeriodsToDate)
       .transform(cleanDollars)
+      .transform(withExchangeRates)
+      .transform(withCAASP)
       .transform(withCalenderDetails)
-      .transform(withASP)
+      .transform(withCACategory)
       .transform(withSmartBuy)
-      .transform(withTopSellers)
-      .transform(withVendorFamily)
-      .transform(withCategory)
-      .transform(withCDW)
-      .transform(withLenovoFocus)
+      .transform(withCATopSellers)
+      .transform(withCAPriceBand)
 
     finalDF
 
@@ -47,11 +47,11 @@ object USMonthlyTransformer {
     val USMthRetail_stg  = spark.sql("select * from "+DM_US_PC_Monthly_Retail_STG)
 
 
-    val USMthReseller_int = USMthReseller_stg.transform(withUSMonthly)
-    val USMthResellerBTO_int = USMthResellerBTO_stg.transform(withUSMonthly)
-    val USMthDist_int = USMthDist_stg.transform(withUSMonthly)
-    val USMthDistBTO_int = USMthDistBTO_stg.transform(withUSMonthly)
-    val USMthRetail_int = USMthRetail_stg.transform(withUSMonthly)
+    val USMthReseller_int = USMthReseller_stg.transform(withAllTransformations)
+    val USMthResellerBTO_int = USMthResellerBTO_stg.transform(withAllTransformations)
+    val USMthDist_int = USMthDist_stg.transform(withAllTransformations)
+    val USMthDistBTO_int = USMthDistBTO_stg.transform(withAllTransformations)
+    val USMthRetail_int = USMthRetail_stg.transform(withAllTransformations)
 
 
     val cols1 = USMthReseller_int.columns.toSet

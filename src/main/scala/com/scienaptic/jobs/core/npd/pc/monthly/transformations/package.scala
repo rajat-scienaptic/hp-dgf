@@ -1,7 +1,5 @@
 package com.scienaptic.jobs.core.npd.pc.monthly
 
-import java.sql.Date
-
 import org.apache.spark.sql.functions.udf
 
 package object transformations {
