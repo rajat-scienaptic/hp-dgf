@@ -56,7 +56,7 @@ object AmazonTransform {
       rawfile = rawfile.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     rawfile = rawfile.cache()
-    rawfile=rawfile.where(col("SKU")=!= lit("(blank)") or col("SKU").isNotNull)
+    rawfile=rawfile.where(col("SKU")=!= lit("(blank)") /*or col("SKU").isNotNull*/)
       .drop("Sum of 04 - HP Commit","Sum of 01 - AMZ Sales")
       .withColumnRenamed("nDate","Week_beginning_day")
       .withColumnRenamed("08 - AMZ Sales Price","AMZ Sales Price")
