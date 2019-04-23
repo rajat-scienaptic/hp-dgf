@@ -112,7 +112,7 @@ object RetailPreRegressionPart03 {
       //      .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", null).otherwise(to_date(unix_timestamp(convertFaultyDateFormat(col("Week_End_Date")), "yyyy-MM-dd").cast("timestamp"))))
       //      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
       .withColumn("NP_IR_original", col("NP_IR"))
-      .withColumn("ASP_IR_original", col("ASP_IR"))
+      .withColumn("ASP_IR_original", col("ASP_IR").cast(DoubleType))
       .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", lit(null)).otherwise(
         when(col("Week_End_Date").contains("-"), to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
           .otherwise(to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
