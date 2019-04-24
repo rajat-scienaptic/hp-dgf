@@ -60,11 +60,21 @@ object USTransformer {
       })
     }
 
-    USMthReseller_stg.select(missingToNull(cols1,total):_*)
-      .union(USMthResellerBTO_stg.select(missingToNull(cols2,total):_*))
-      .union(USMthDist_stg.select(missingToNull(cols3,total):_*))
-      .union(USMthDistBTO_stg.select(missingToNull(cols4,total):_*))
-      .union(USMthRetail_stg.select(missingToNull(cols5,total):_*))
+    USMthReseller_stg
+      .withColumn("ams_source",lit("Reseller"))
+      .select(missingToNull(cols1,total):_*)
+      .union(USMthResellerBTO_stg
+        .withColumn("ams_source",lit("ResellerBTO"))
+        .select(missingToNull(cols2,total):_*))
+      .union(USMthDist_stg
+        .withColumn("ams_source",lit("Dist"))
+        .select(missingToNull(cols3,total):_*))
+      .union(USMthDistBTO_stg
+        .withColumn("ams_source",lit("DistBTO"))
+        .select(missingToNull(cols4,total):_*))
+      .union(USMthRetail_stg
+        .withColumn("ams_source",lit("Retail"))
+        .select(missingToNull(cols5,total):_*))
       //.transform(withAllTransformations)
       .write.mode(SaveMode.Overwrite)
       .saveAsTable(DATAMART+"."+TABLE_NAME);
