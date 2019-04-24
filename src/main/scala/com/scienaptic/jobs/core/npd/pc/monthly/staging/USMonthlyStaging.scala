@@ -3,7 +3,7 @@ package com.scienaptic.jobs.core.npd.pc.monthly.staging
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.utility.NPDUtility.load_csv_to_table
 
-object PCMonthlyUS {
+object USMonthlyStaging {
 
   val DM_PC_US_Mth_Reseller_SOURCE = "DM_PC_US_Mth_Reseller"
   val DM_PC_US_Mth_Reseller_BTO_SOURCE = "DM_PC_US_Mth_Reseller_BTO"
