@@ -1,6 +1,8 @@
 package com.scienaptic.jobs.core
 
 import com.scienaptic.jobs.ExecutionContext
+import com.scienaptic.jobs.core.npd.pc.monthly.staging.USMonthlyStaging
+import com.scienaptic.jobs.core.npd.pc.monthly.transformations.USTransformer
 import com.scienaptic.jobs.core.npd.print._
 
 object HPDataProcessor {
@@ -48,6 +50,8 @@ object HPDataProcessor {
       case "gap-5" => GAPTransform5.execute(executionContext)
       case "amz" => AmazonTransform.execute(executionContext)
       case "Load-print-files" => LoadRawPrintTables.execute(executionContext)
+      case "npd-pc-monthly-us-stg" => USMonthlyStaging.execute(executionContext)
+      case "npd-pc-monthly-us-fact" => USTransformer.execute(executionContext)
       //case "preregression-retail" => RetailFeatEnggProcessor.execute(executionContext)
     }
   }
