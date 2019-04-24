@@ -75,7 +75,7 @@ object USTransformer {
         .select(missingToNull(cols4,total):_*))
       .union(USMthRetail_stg
         .select(missingToNull(cols5,total):_*))
-      //.transform(withAllTransformations)
+      .transform(withAllTransformations)
       .write.mode(SaveMode.Overwrite)
       .saveAsTable(DATAMART+"."+TABLE_NAME);
 

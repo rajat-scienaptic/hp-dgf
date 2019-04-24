@@ -28,15 +28,13 @@ object CommonTransformations {
   }
 
 
-
-  val cleanUpDollers = (str : String) => {
-    str.replace("$","").replace(",","").toInt
-  }
-
-  def cleanDollersUDF = udf(cleanUpDollers)
-
-
   def cleanDollars(df: DataFrame): DataFrame = {
+
+    val cleanUpDollers = (str : String) => {
+      str.replace("$","").replace(",","").toInt
+    }
+
+    def cleanDollersUDF = udf(cleanUpDollers)
 
     df.withColumn("tmp_dollars",
       cleanDollersUDF(col("dollars")))
