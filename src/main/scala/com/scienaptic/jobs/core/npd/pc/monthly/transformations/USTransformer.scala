@@ -41,10 +41,15 @@ object USTransformer {
     val DM_US_PC_Monthly_Retail_STG = "Stg_DM_US_PC_Monthly_Retail"
 
     val USMthReseller_stg  = spark.sql("select * from "+DATAMART+"."+DM_PC_US_Mth_Reseller_STG)
+      .withColumn("ams_source",lit("Reseller"))
     val USMthResellerBTO_stg  = spark.sql("select * from "+DATAMART+"."+DM_PC_US_Mth_Reseller_BTO_STG)
+      .withColumn("ams_source",lit("ResellerBTO"))
     val USMthDist_stg  = spark.sql("select * from "+DATAMART+"."+DM_US_PC_Monthly_Dist_STG)
+      .withColumn("ams_source",lit("Dist"))
     val USMthDistBTO_stg  = spark.sql("select * from "+DATAMART+"."+DM_US_PC_Monthly_Dist_BTO_STG)
+      .withColumn("ams_source",lit("DistBTO"))
     val USMthRetail_stg  = spark.sql("select * from "+DATAMART+"."+DM_US_PC_Monthly_Retail_STG)
+      .withColumn("ams_source",lit("Retail"))
 
     val cols1 = USMthReseller_stg.columns.toSet
     val cols2 = USMthResellerBTO_stg.columns.toSet
@@ -61,19 +66,14 @@ object USTransformer {
     }
 
     USMthReseller_stg
-      .withColumn("ams_source",lit("Reseller"))
       .select(missingToNull(cols1,total):_*)
       .union(USMthResellerBTO_stg
-        .withColumn("ams_source",lit("ResellerBTO"))
         .select(missingToNull(cols2,total):_*))
       .union(USMthDist_stg
-        .withColumn("ams_source",lit("Dist"))
         .select(missingToNull(cols3,total):_*))
       .union(USMthDistBTO_stg
-        .withColumn("ams_source",lit("DistBTO"))
         .select(missingToNull(cols4,total):_*))
       .union(USMthRetail_stg
-        .withColumn("ams_source",lit("Retail"))
         .select(missingToNull(cols5,total):_*))
       //.transform(withAllTransformations)
       .write.mode(SaveMode.Overwrite)
