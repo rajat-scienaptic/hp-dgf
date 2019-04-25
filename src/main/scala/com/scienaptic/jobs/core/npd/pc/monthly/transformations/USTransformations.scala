@@ -101,7 +101,6 @@ object USTransformations {
 
   /*
   This procedure updates ams_catgrp,ams_npd_category,ams_sub_category,ams_sub_category_temp
-  AMS_SKU_DATE,AMS_TRANSACTIONAL-NONTRANSACTIONAL-SKUS
 
   Stored PROC : Proc_Update_Master_Category
   */
@@ -110,17 +109,18 @@ object USTransformations {
 
     val spark = df.sparkSession
 
-    val masterCategoryDf = spark.sql("select * from ams_datamart_pc.tbl_master_category")
+    val masterCategoryDf = spark.sql("select subcat,catgory,npd_category from ams_datamart_pc.tbl_master_category")
 
     val withCategory = df.join(masterCategoryDf,
       df("sub_category")===masterCategoryDf("subcat"),"left")
 
     val finalCategoryDf = withCategory
-      .drop("ams_sub_category")
       .drop("subcat")
-      .drop("catgrp")
       .withColumnRenamed("catgory","ams_catgrp")
-      .withColumnRenamed("npd_category","ams_npd_category")
+      .withColumn("ams_npd_category",
+        when(col("npd_category").isNull, lit("Workstation"))
+          .otherwise(col("npd_category"))
+      ).drop("npd_category")
       .withColumn("ams_sub_category",
         subCategoryUDF(col("mobile_workstation"),col("sub_category")))
       .withColumn("ams_sub_category_temp",
