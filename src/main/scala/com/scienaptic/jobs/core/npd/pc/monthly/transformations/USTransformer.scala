@@ -62,11 +62,45 @@ object USTransformer {
     val USMthRetail_stg  = spark.sql("select * from "+DATAMART+"."+DM_US_PC_Monthly_Retail_STG)
       .withColumn("ams_source",lit("Retail"))
 
-    val cols1 = USMthReseller_stg.columns.toSet
-    val cols2 = USMthResellerBTO_stg.columns.toSet
-    val cols3 = USMthDist_stg.columns.toSet
-    val cols4 = USMthDistBTO_stg.columns.toSet
-    val cols5 = USMthRetail_stg.columns.toSet
+
+    val USMthReseller_int  = USMthReseller_stg.transform(withAllTransformations)
+      .withColumn("ams_source",lit("Reseller"))
+
+    USMthReseller_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_PC_US_Mth_Reseller");
+
+    val USMthResellerBTO_int  = USMthResellerBTO_stg.transform(withAllTransformations)
+      .withColumn("ams_source",lit("ResellerBTO"))
+
+    USMthResellerBTO_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_PC_US_Mth_Reseller_BTO");
+
+    val USMthDist_int  = USMthDist_stg.transform(withAllTransformations)
+      .withColumn("ams_source",lit("Dist"))
+
+    USMthDist_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Dist");
+
+
+    val USMthDistBTO_int  = USMthDistBTO_stg.transform(withAllTransformations)
+      .withColumn("ams_source",lit("DistBTO"))
+
+    USMthDistBTO_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Dist_BTO");
+
+
+    val USMthRetail_int = USMthRetail_stg.transform(withAllTransformations)
+      .withColumn("ams_source",lit("Retail"))
+
+    USMthRetail_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Retail");
+
+
+    val cols1 = USMthReseller_int.columns.toSet
+    val cols2 = USMthResellerBTO_int.columns.toSet
+    val cols3 = USMthDist_int.columns.toSet
+    val cols4 = USMthDistBTO_int.columns.toSet
+    val cols5 = USMthRetail_int.columns.toSet
     val total = cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5 // union
 
     def missingToNull(myCols: Set[String], allCols: Set[String]) = {
@@ -76,17 +110,17 @@ object USTransformer {
       })
     }
 
-    USMthReseller_stg
+
+    USMthReseller_int
       .select(missingToNull(cols1,total):_*)
-      .union(USMthResellerBTO_stg
+      .union(USMthResellerBTO_int
         .select(missingToNull(cols2,total):_*))
-      .union(USMthDist_stg
+      .union(USMthDist_int
         .select(missingToNull(cols3,total):_*))
-      .union(USMthDistBTO_stg
+      .union(USMthDistBTO_int
         .select(missingToNull(cols4,total):_*))
-      .union(USMthRetail_stg
+      .union(USMthRetail_int
         .select(missingToNull(cols5,total):_*))
-      .transform(withAllTransformations)
       .write.mode(SaveMode.Overwrite)
       .partitionBy("ams_year")
       .saveAsTable(DATAMART+"."+TABLE_NAME);
