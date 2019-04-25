@@ -1,7 +1,9 @@
 package com.scienaptic.jobs.core.npd.pc.monthly.transformations
 
 import com.scienaptic.jobs.ExecutionContext
+import com.scienaptic.jobs.core.npd.common.CommonTransformations._
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.USTransformations._
+import com.scienaptic.jobs.core.npd.pc.monthly.transformations.CommonTransformations._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
@@ -16,8 +18,8 @@ object USTransformer {
     def cleanDollersUDF = udf(cleanUpDollers)
 
     val finalDF = df
-      //.transform(timePeriodsToDate)
-      //.transform(withCalenderDetails)
+      .transform(timePeriodsToDate)
+      .transform(withCalenderDetails)
       .withColumn("tmp_dollars",
       cleanDollersUDF(col("dollars")))
       .drop("dollars")
@@ -26,11 +28,11 @@ object USTransformer {
       //.transform(withSmartBuy)
       //.transform(withTopSellers)
       //.transform(withLenovoFocus)
-      .transform(withVendorFamily)
-      .transform(withCategory)
-      .transform(withCDW)
-      .transform(withOSGroup)
-      .transform(withPriceBand)
+      //.transform(withVendorFamily)
+      //.transform(withCategory)
+      //.transform(withCDW)
+      //.transform(withOSGroup)
+      //.transform(withPriceBand)
 
     finalDF
 
