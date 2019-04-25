@@ -69,6 +69,7 @@ object CommonTransformations {
       ,"ams_promo_season")
 
     val finalDf = df.join(onlyAMS,df("time_periods")===onlyAMS("time_periods"),"inner")
+      .drop(onlyAMS("time_periods"))
 
     finalDf
 
