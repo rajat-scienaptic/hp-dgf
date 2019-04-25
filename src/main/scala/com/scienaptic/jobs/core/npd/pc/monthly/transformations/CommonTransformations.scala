@@ -38,7 +38,7 @@ object CommonTransformations {
     val tbl_Master_L3M_L12M_L13M = spark.sql("select * from ams_datamart_pc.tbl_master_l3m_l12m_l13m")
 
     val withLValues =  masterMonthNumRawData.join(tbl_Master_L3M_L12M_L13M,
-      masterMonthNumRawData("rowmonthnum")===tbl_Master_L3M_L12M_L13M("monthnum"),"inner")
+      masterMonthNumRawData("rowmonthnum")===tbl_Master_L3M_L12M_L13M("monthnum"),"left")
       .drop(tbl_Master_L3M_L12M_L13M("monthnum"))
       .drop(tbl_Master_L3M_L12M_L13M("qtd"))
 
@@ -50,7 +50,7 @@ object CommonTransformations {
     val tbl_Master_Month = spark.sql("select * from ams_datamart_pc.tbl_master_month_pc")
 
     val withMasterMonth = withqtd.join(tbl_Master_Month,
-      withqtd("monthnum")===tbl_Master_Month("month_number"),"inner")
+      withqtd("monthnum")===tbl_Master_Month("month_number"),"left")
       .drop(tbl_Master_Month("month_number"))
       .drop(tbl_Master_Month("month_name"))
       .drop(tbl_Master_Month("calendar_quarter"))
@@ -75,7 +75,7 @@ object CommonTransformations {
     onlyAMS.write.mode(SaveMode.Overwrite)
       .saveAsTable("npd_sandbox"+"."+"masterMonthNumRawData_withAMS");
 
-    val finalDf = df.join(onlyAMS,df("time_periods")===onlyAMS("time_periods"),"inner")
+    val finalDf = df.join(onlyAMS,df("time_periods")===onlyAMS("time_periods"),"left")
       .drop(onlyAMS("time_periods"))
 
     finalDf
