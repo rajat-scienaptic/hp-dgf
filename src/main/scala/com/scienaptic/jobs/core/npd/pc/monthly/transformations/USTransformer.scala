@@ -28,11 +28,11 @@ object USTransformer {
       //.transform(withSmartBuy)
       //.transform(withTopSellers)
       //.transform(withLenovoFocus)
-      //.transform(withVendorFamily)
-      //.transform(withCategory)
-      //.transform(withCDW)
-      //.transform(withOSGroup)
-      //.transform(withPriceBand)
+      .transform(withVendorFamily)
+      .transform(withCategory)
+      .transform(withCDW)
+      .transform(withOSGroup)
+      .transform(withPriceBand)
 
     finalDF
 
