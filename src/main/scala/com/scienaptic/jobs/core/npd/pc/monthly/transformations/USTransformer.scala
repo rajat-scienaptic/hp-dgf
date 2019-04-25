@@ -2,19 +2,26 @@ package com.scienaptic.jobs.core.npd.pc.monthly.transformations
 
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.USTransformations._
-import com.scienaptic.jobs.core.npd.pc.monthly.transformations.CommonTransformations._
-import com.scienaptic.jobs.core.npd.common.CommonTransformations._
-import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, SaveMode}
 
 object USTransformer {
 
   def withAllTransformations(df : DataFrame) = {
 
+    val cleanUpDollers = (str : String) => {
+      str.replace("$","").replace(",","").toInt
+    }
+
+    def cleanDollersUDF = udf(cleanUpDollers)
+
     val finalDF = df
       //.transform(timePeriodsToDate)
       //.transform(withCalenderDetails)
-      .transform(cleanDollars)
+      .withColumn("tmp_dollars",
+      cleanDollersUDF(col("dollars")))
+      .drop("dollars")
+      .withColumnRenamed("tmp_dollars","dollars")
       .transform(withASP)
       //.transform(withSmartBuy)
       //.transform(withTopSellers)

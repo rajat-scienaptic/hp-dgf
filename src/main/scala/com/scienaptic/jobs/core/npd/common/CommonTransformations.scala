@@ -28,7 +28,7 @@ object CommonTransformations {
   }
 
 
-  def cleanDollars(df: DataFrame): DataFrame = {
+  /*def cleanDollars(df: DataFrame): DataFrame = {
 
     val cleanUpDollers = (str : String) => {
       str.replace("$","").replace(",","").toInt
@@ -42,7 +42,7 @@ object CommonTransformations {
       .withColumnRenamed("tmp_dollars","dollars")
 
     df
-  }
+  }*/
 
 
 
