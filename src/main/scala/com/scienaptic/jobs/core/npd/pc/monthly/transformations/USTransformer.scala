@@ -88,6 +88,7 @@ object USTransformer {
         .select(missingToNull(cols5,total):_*))
       .transform(withAllTransformations)
       .write.mode(SaveMode.Overwrite)
+      .partitionBy("ams_year")
       .saveAsTable(DATAMART+"."+TABLE_NAME);
 
   }

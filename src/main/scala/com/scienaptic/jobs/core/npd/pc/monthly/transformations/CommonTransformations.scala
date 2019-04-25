@@ -1,9 +1,8 @@
 package com.scienaptic.jobs.core.npd.pc.monthly.transformations
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.IntegerType
 
 object CommonTransformations {
   /*
@@ -30,6 +29,11 @@ object CommonTransformations {
       .withColumn("monthnum",month(col("time_periods")))
       .withColumn("fiscalquarter",
         concat(col("year"),col("quarter")))
+
+    masterMonthNumRawData.write.mode(SaveMode.Overwrite)
+      .saveAsTable("npd_sandbox"+"."+"masterMonthNumRawData");
+
+
 
     val tbl_Master_L3M_L12M_L13M = spark.sql("select * from ams_datamart_pc.tbl_master_l3m_l12m_l13m")
 
@@ -67,6 +71,9 @@ object CommonTransformations {
       "ams_year","ams_quarter","ams_l3m","ams_l6m","ams_l12m","ams_l13m",
       "ams_qtd_current/prior","ams_year_quarter","ams_year_quarter_fiscal"
       ,"ams_promo_season")
+
+    onlyAMS.write.mode(SaveMode.Overwrite)
+      .saveAsTable("npd_sandbox"+"."+"masterMonthNumRawData_withAMS");
 
     val finalDf = df.join(onlyAMS,df("time_periods")===onlyAMS("time_periods"),"inner")
       .drop(onlyAMS("time_periods"))
