@@ -12,11 +12,11 @@ object USTransformer {
   def withAllTransformations(df : DataFrame) = {
 
     val finalDF = df
-      .transform(timePeriodsToDate)
-      .transform(withCalenderDetails)
+      //.transform(timePeriodsToDate)
+      //.transform(withCalenderDetails)
       .transform(cleanDollars)
       .transform(withASP)
-      .transform(withSmartBuy)
+      //.transform(withSmartBuy)
       //.transform(withTopSellers)
       //.transform(withLenovoFocus)
       .transform(withVendorFamily)
