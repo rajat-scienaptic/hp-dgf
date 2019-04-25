@@ -13,7 +13,7 @@ object CATransformer {
 
     val finalDF = df
       .transform(timePeriodsToDate)
-      .transform(cleanDollars)
+      //.transform(cleanDollars)
       .transform(withExchangeRates)
       .transform(withCAASP)
       .transform(withCalenderDetails)
