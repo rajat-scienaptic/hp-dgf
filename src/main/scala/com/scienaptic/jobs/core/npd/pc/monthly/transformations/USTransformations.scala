@@ -45,7 +45,9 @@ object USTransformations {
     val vendorFamilyDf = df.join(masterBrandDf,df("brand") === masterBrandDf("ams_vendorFamily")
       , "left")
       .drop("ams_vendorFamily")
-        .withColumnRenamed("ams_brand","ams_vendorFamily")
+        .withColumn("ams_vendorFamily",
+          when(col("ams_brand").isNull,col("brand"))
+            .otherwise(col("ams_brand")))
 
     vendorFamilyDf
   }
