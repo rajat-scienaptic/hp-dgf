@@ -13,7 +13,7 @@ object CATransformations {
     val masterExchangeRates = spark.sql("select time_periods,ca_exchange_rate from ams_datamart_pc.tbl_master_exchange_rates")
 
     val withExchangeRates= df.join(masterExchangeRates,
-      df("time_periods") === masterExchangeRates("time_periods"),"inner")
+      df("time_periods") === masterExchangeRates("time_periods"),"left")
 
     withExchangeRates
       .withColumnRenamed("ca_exchange_rate","ams_exchange_rate")
@@ -63,7 +63,7 @@ object CATransformations {
     val masterBrandDf = spark.sql("select * from ams_datamart_pc.tbl_master_brand")
 
     val vendorFamilyDf = df.join(masterBrandDf,df("brand") === masterBrandDf("ams_vendorFamily")
-      , "inner")
+      , "left")
       .drop("ams_vendorFamily")
         .withColumnRenamed("ams_brand","ams_vendorFamily")
 
@@ -85,7 +85,7 @@ object CATransformations {
     val tbl_Master_LenovoTopSellers = spark.sql("select sku,top_sellers from ams_datamart_pc.tbl_master_top_sellers_ca");
 
     val withTopSellers = df.join(tbl_Master_LenovoTopSellers,
-      df("model")===tbl_Master_LenovoTopSellers("sku"),"inner")
+      df("model")===tbl_Master_LenovoTopSellers("sku"),"left")
       .withColumn("ams_top_sellers",
           topSellersUDF(col("top_sellers")))
       .withColumn("ams_smartbuy_topseller",
@@ -124,7 +124,7 @@ object CATransformations {
     val masterCategoryDf = spark.sql("select * from ams_datamart_pc.tbl_master_category")
 
     val withCategory = df.join(masterCategoryDf,
-      df("subcat")===masterCategoryDf("subcat"),"inner")
+      df("subcat")===masterCategoryDf("subcat"),"left")
 
     val finalCategoryDf = withCategory
       .drop("ams_sub_category")
@@ -155,7 +155,7 @@ object CATransformations {
     val masterParsehubCDW = spark.sql("select sku,windows,price from ams_datamart_pc.tbl_master_parsehub_cdw")
 
     val withCDW= df.join(masterParsehubCDW,
-      df("model")===masterParsehubCDW("sku"),"inner")
+      df("model")===masterParsehubCDW("sku"),"left")
 
     val finalDf = withCDW
       .drop(masterParsehubCDW("sku"))
@@ -182,7 +182,7 @@ object CATransformations {
       .sql("select ams_sku_date,focus,system_type,form_factor,pricing_list_price from ams_datamart_pc.tbl_master_lenovotopsellers")
 
     val withLenovoFocus= df.join(masterLenovoTopSellers,
-      df("ams_sku_date")===masterLenovoTopSellers("ams_sku_date"),"inner")
+      df("ams_sku_date")===masterLenovoTopSellers("ams_sku_date"),"left")
 
     val finalDf = withLenovoFocus
       .withColumnRenamed("focus","ams_focus")
@@ -204,7 +204,7 @@ object CATransformations {
       .sql("select ams_os_detail,ams_os_name_chrome_win_mac from ams_datamart_pc.tbl_master_os")
 
     val withOSGroup= df.join(masterOS,
-      df("op_sys")===masterOS("ams_os_detail"),"inner")
+      df("op_sys")===masterOS("ams_os_detail"),"left")
 
     val finalDf = withOSGroup
       .withColumnRenamed("ams_os_name_chrome_win_mac","ams_os_group")
@@ -221,7 +221,7 @@ object CATransformations {
 
     val withPriceBand= df.join(masterPriceBand,
       df("AMS_ASP_CA") >= masterPriceBand("PB_LESS") && df("AMS_ASP_CA") < masterPriceBand("PB_HIGH")
-      ,"inner")
+      ,"left")
 
     withPriceBand
         .drop("pb_less")

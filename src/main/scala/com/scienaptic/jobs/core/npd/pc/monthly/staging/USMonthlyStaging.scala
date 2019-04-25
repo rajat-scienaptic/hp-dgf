@@ -11,7 +11,7 @@ object USMonthlyStaging {
   val DM_US_PC_Monthly_Dist_BTO_SOURCE = "DM_US_PC_Monthly_Dist_BTO"
   val DM_US_PC_Monthly_Retail_SOURCE = "DM_US_PC_Monthly_Retail"
 
-  val DATAMART = "ams_datamart_pc"
+  val DATAMART = "npd_sandbox"
 
     def execute(executionContext: ExecutionContext): Unit = {
     //val spark: SparkSession = executionContext.spark
