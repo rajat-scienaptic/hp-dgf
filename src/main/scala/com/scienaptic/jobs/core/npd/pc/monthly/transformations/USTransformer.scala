@@ -32,7 +32,7 @@ object USTransformer {
       .transform(withCategory)
       //.transform(withCDW)
       .transform(withOSGroup)
-      //.transform(withPriceBand)
+      .transform(withPriceBand)
 
     finalDF
 
