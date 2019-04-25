@@ -16,12 +16,14 @@ object USTransformer {
       .transform(withCalenderDetails)
       .transform(cleanDollars)
       .transform(withASP)
-      //.transform(withSmartBuy)
+      .transform(withSmartBuy)
       //.transform(withTopSellers)
+      //.transform(withLenovoFocus)
       .transform(withVendorFamily)
       .transform(withCategory)
       .transform(withCDW)
-      .transform(withLenovoFocus)
+      .transform(withOSGroup)
+      .transform(withPriceBand)
 
     finalDF
 
