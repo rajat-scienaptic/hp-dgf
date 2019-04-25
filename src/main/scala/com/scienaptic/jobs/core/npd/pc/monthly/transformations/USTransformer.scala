@@ -13,11 +13,11 @@ object USTransformer {
 
     val finalDF = df
       .transform(timePeriodsToDate)
-      .transform(cleanDollars)
       .transform(withCalenderDetails)
+      .transform(cleanDollars)
       .transform(withASP)
-      .transform(withSmartBuy)
-      .transform(withTopSellers)
+      //.transform(withSmartBuy)
+      //.transform(withTopSellers)
       .transform(withVendorFamily)
       .transform(withCategory)
       .transform(withCDW)
