@@ -11,15 +11,24 @@ object CATransformer {
 
   def withAllTransformations(df : DataFrame) = {
 
+    val cleanUpDollers = (str : String) => {
+      str.replace("$","").replace(",","").toInt
+    }
+
+    def cleanDollersUDF = udf(cleanUpDollers)
+
     val finalDF = df
       .transform(timePeriodsToDate)
-      //.transform(cleanDollars)
+      .withColumn("tmp_dollars",
+        cleanDollersUDF(col("dollars")))
+      .drop("dollars")
+      .withColumnRenamed("tmp_dollars","dollars")
       .transform(withExchangeRates)
       .transform(withCAASP)
       .transform(withCalenderDetails)
       .transform(withCACategory)
       .transform(withSmartBuy)
-      .transform(withCATopSellers)
+      //.transform(withCATopSellers)
       .transform(withCAPriceBand)
 
     finalDF
@@ -31,35 +40,25 @@ object CATransformer {
     val spark = executionContext.spark
 
     val DATAMART = "npd_sandbox"
-    val TABLE_NAME = "fct_tbl_us_monthly_pc"
+    val TABLE_NAME = "fct_tbl_ca_monthly_pc"
 
-    val DM_PC_US_Mth_Reseller_STG = "Stg_DM_PC_US_Mth_Reseller"
-    val DM_PC_US_Mth_Reseller_BTO_STG = "Stg_DM_PC_US_Mth_Reseller_BTO"
-    val DM_US_PC_Monthly_Dist_STG = "Stg_DM_US_PC_Monthly_Dist"
-    val DM_US_PC_Monthly_Dist_BTO_STG = "Stg_DM_US_PC_Monthly_Dist_BTO"
-    val DM_US_PC_Monthly_Retail_STG = "Stg_DM_US_PC_Monthly_Retail"
+    val DM_CA_PC_Monthly_Dist_STG = "Stg_DM_CA_PC_Monthly_Dist"
+    val DM_CA_PC_Monthly_Retail_STG = "Stg_DM_CA_PC_Monthly_Retail"
 
 
-    val USMthReseller_stg  = spark.sql("select * from "+DM_PC_US_Mth_Reseller_STG)
-    val USMthResellerBTO_stg  = spark.sql("select * from "+DM_PC_US_Mth_Reseller_BTO_STG)
-    val USMthDist_stg  = spark.sql("select * from "+DM_US_PC_Monthly_Dist_STG)
-    val USMthDistBTO_stg  = spark.sql("select * from "+DM_US_PC_Monthly_Dist_BTO_STG)
-    val USMthRetail_stg  = spark.sql("select * from "+DM_US_PC_Monthly_Retail_STG)
+    val CAMthDist_stg  = spark.sql("select * from "+DM_CA_PC_Monthly_Dist_STG)
+    val CAMthRetail_stg  = spark.sql("select * from "+DM_CA_PC_Monthly_Retail_STG)
 
 
-    val USMthReseller_int = USMthReseller_stg.transform(withAllTransformations)
-    val USMthResellerBTO_int = USMthResellerBTO_stg.transform(withAllTransformations)
-    val USMthDist_int = USMthDist_stg.transform(withAllTransformations)
-    val USMthDistBTO_int = USMthDistBTO_stg.transform(withAllTransformations)
-    val USMthRetail_int = USMthRetail_stg.transform(withAllTransformations)
+
+    val CAMthDist_int = CAMthDist_stg.transform(withAllTransformations)
+    val CAMthRetail_int = CAMthRetail_stg.transform(withAllTransformations)
 
 
-    val cols1 = USMthReseller_int.columns.toSet
-    val cols2 = USMthResellerBTO_int.columns.toSet
-    val cols3 = USMthDist_int.columns.toSet
-    val cols4 = USMthDistBTO_int.columns.toSet
-    val cols5 = USMthRetail_int.columns.toSet
-    val total = cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5 // union
+    val cols1 = CAMthDist_int.columns.toSet
+
+    val cols2 = CAMthRetail_int.columns.toSet
+    val total = cols1 ++ cols2 // union
 
     def missingToNull(myCols: Set[String], allCols: Set[String]) = {
       allCols.toList.map(x => x match {
@@ -68,15 +67,12 @@ object CATransformer {
       })
     }
 
-    val finalUSMonthlyDf =  USMthReseller_int.select(missingToNull(cols1,total):_*)
-      .union(USMthResellerBTO_int.select(missingToNull(cols2,total):_*))
-      .union(USMthDist_int.select(missingToNull(cols3,total):_*))
-      .union(USMthDistBTO_int.select(missingToNull(cols4,total):_*))
-      .union(USMthRetail_int.select(missingToNull(cols5,total):_*))
+    val finalCAMonthlyDf =
+      CAMthDist_int.select(missingToNull(cols1,total):_*)
+      .union(CAMthRetail_int.select(missingToNull(cols2,total):_*))
       .write.mode(SaveMode.Overwrite)
       .saveAsTable(DATAMART+"."+TABLE_NAME);
 
   }
-
 
 }

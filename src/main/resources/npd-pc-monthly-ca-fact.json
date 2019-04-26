@@ -1,0 +1,15 @@
+{
+  "config": "npd-pc-monthly-ca-fact",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "npd-pc-monthly-ca-fact"
+  },
+  "sources": {
+    "DM_CA_PC_Monthly_Dist": {
+      "name": "Stg_DM_CA_PC_Monthly_Dist"
+    },
+    "DM_CA_PC_Monthly_Retail": {
+      "name": "Stg_DM_CA_PC_Monthly_Retail"
+    }
+  }
+}
