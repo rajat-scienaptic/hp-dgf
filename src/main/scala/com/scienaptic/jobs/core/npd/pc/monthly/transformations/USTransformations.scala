@@ -28,7 +28,7 @@ object USTransformations {
 
     val withAUPDf = withASPDf.withColumn("ams_aup",col("ams_asp"))
 
-    withASPDf
+    withAUPDf
 
   }
 
@@ -213,7 +213,7 @@ object USTransformations {
 
     val withPriceBand= df.join(masterPriceBand,
       df("AMS_ASP") >= masterPriceBand("PB_LESS") && df("AMS_ASP") < masterPriceBand("PB_HIGH")
-      ,"left")
+      ,"inner")
 
     withPriceBand
         .drop("pb_less")

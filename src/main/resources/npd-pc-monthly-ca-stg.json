@@ -1,0 +1,17 @@
+{
+  "config": "npd-pc-monthly-ca-stg",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "npd-pc-monthly-ca-stg"
+  },
+  "sources": {
+    "DM_CA_PC_Monthly_Dist": {
+      "name": "Stg_DM_CA_PC_Monthly_Dist",
+      "filePath": "/NPD_DATA/raw/pc/monthly/ca/latest/Distributor_PCs_Flatfile_March2019_HP.csv"
+    },
+    "DM_CA_PC_Monthly_Retail": {
+      "name": "Stg_DM_CA_PC_Monthly_Retail",
+      "filePath": "/NPD_DATA/raw/pc/monthly/ca/latest/CA_Retail_PCs_Flat_File_March2019.csv"
+    }
+  }
+}
