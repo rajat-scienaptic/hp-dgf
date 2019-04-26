@@ -165,7 +165,9 @@ object RetailPreRegressionPart01 {
 
     retailMergeIFS2DF = retailMergeIFS2DF.drop("POS_Qty")
     val wind = Window.partitionBy("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
-      .orderBy(col("Distribution_Inv").asc)
+      .orderBy(col("Distribution_Inv").asc,
+        col("Street_Price").asc,
+        col("POS_Qty").asc)
     val retailJoinRetailTreatmentAndAggregatePOSDF = retailMergeIFS2DF
       .join(retailAggregatePOSDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
       .withColumn("rank", row_number().over(wind))
