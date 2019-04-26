@@ -157,9 +157,6 @@ object USTransformer {
 
     val spark = executionContext.spark
 
-    spark.conf.set("hive.exec.dynamic.partition", "true")
-    spark.conf.set("hive.exec.dynamic.partition.mode", "nonstrict")
-
     val DATAMART = "npd_sandbox"
     val TABLE_NAME = "fct_tbl_us_monthly_pc"
 
@@ -227,7 +224,7 @@ object USTransformer {
       })
     }
 
-    USMthReseller_int
+    val final_fact_tbl = USMthReseller_int
       .select(missingToNull(cols1):_*)
       .union(USMthResellerBTO_int
         .select(missingToNull(cols2):_*))
@@ -237,9 +234,15 @@ object USTransformer {
         .select(missingToNull(cols4):_*))
       .union(USMthRetail_int
         .select(missingToNull(cols5):_*))
-      .write.mode(SaveMode.Overwrite)
-      .partitionBy("ams_year")
-      .saveAsTable(DATAMART+"."+TABLE_NAME);
+
+    final_fact_tbl.createOrReplaceTempView("final_fact")
+
+    spark.sql(s"""
+                 |INSERT OVERWRITE TABLE npd.sandbox.fct_tbl_us_monthly_pc
+                 |PARTITION(ams_year)
+                 |SELECT *
+                 |FROM final_fact
+    """.stripMargin)
 
   }
 
