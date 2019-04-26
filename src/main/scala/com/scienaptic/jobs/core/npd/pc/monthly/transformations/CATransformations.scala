@@ -128,7 +128,7 @@ object CATransformations {
 
     val finalCategoryDf = withCategory
       .drop(masterCategoryDf("subcat"))
-      .withColumnRenamed("catgory","ams_catgrp")
+      //.withColumnRenamed("catgory","ams_catgrp")
       .withColumn("ams_npd_category",
         when(col("npd_category").isNull,"Workstation").otherwise(col("npd_category")))
       .drop("npd_category")
