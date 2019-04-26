@@ -45,18 +45,13 @@ object CATransformer {
     val DM_CA_PC_Monthly_Dist_STG = "Stg_DM_CA_PC_Monthly_Dist"
     val DM_CA_PC_Monthly_Retail_STG = "Stg_DM_CA_PC_Monthly_Retail"
 
-
-    val CAMthDist_stg  = spark.sql("select * from "+DM_CA_PC_Monthly_Dist_STG)
-    val CAMthRetail_stg  = spark.sql("select * from "+DM_CA_PC_Monthly_Retail_STG)
-
-
+    val CAMthDist_stg  = spark.sql("select * from "+DATAMART+"."+DM_CA_PC_Monthly_Dist_STG)
+    val CAMthRetail_stg  = spark.sql("select * from "+DATAMART+"."+DM_CA_PC_Monthly_Retail_STG)
 
     val CAMthDist_int = CAMthDist_stg.transform(withAllTransformations)
     val CAMthRetail_int = CAMthRetail_stg.transform(withAllTransformations)
 
-
     val cols1 = CAMthDist_int.columns.toSet
-
     val cols2 = CAMthRetail_int.columns.toSet
     val total = cols1 ++ cols2 // union
 
