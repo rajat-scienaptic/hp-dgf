@@ -28,11 +28,11 @@ object CATransformer {
       .withColumnRenamed("tmp_dollars","dollars")
       .transform(withExchangeRates)
       .transform(withCAASP)
-      .transform(withCACategory)
+      //.transform(withCACategory)
       .withColumnRenamed("MODELA","MODEL")
       .transform(withSmartBuy)
       //.transform(withCATopSellers)
-      .transform(withCAPriceBand)
+      //.transform(withCAPriceBand)
 
     finalDF
 
