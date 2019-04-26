@@ -18,16 +18,16 @@ object CATransformer {
     def cleanDollersUDF = udf(cleanUpDollers)
 
     val finalDF = df
-      //.transform(timePeriodsToDate)
       .withColumn("tmp_date",to_date(col("timeper"), "MMM yyyy"))
-      .drop("timeper").withColumnRenamed("tmp_date","time_periods")
+      .drop("timeper")
+      .withColumnRenamed("tmp_date","time_periods")
+      .transform(withCalenderDetails)
       .withColumn("tmp_dollars",
         cleanDollersUDF(col("dollars")))
       .drop("dollars")
       .withColumnRenamed("tmp_dollars","dollars")
-      .transform(withExchangeRates)
       .transform(withCAASP)
-      .transform(withCalenderDetails)
+      .transform(withExchangeRates)
       .transform(withCACategory)
       .transform(withSmartBuy)
       //.transform(withCATopSellers)
