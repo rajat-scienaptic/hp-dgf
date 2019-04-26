@@ -238,7 +238,7 @@ object USTransformer {
     final_fact_tbl.createOrReplaceTempView("final_fact")
 
     spark.sql(s"""
-                 |INSERT OVERWRITE TABLE npd.sandbox.fct_tbl_us_monthly_pc
+                 |INSERT OVERWRITE TABLE npd_sandbox.fct_tbl_us_monthly_pc
                  |PARTITION(ams_year)
                  |SELECT *
                  |FROM final_fact
