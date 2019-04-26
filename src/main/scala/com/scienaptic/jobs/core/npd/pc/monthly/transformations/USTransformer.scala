@@ -226,10 +226,10 @@ object USTransformer {
 
     spark.conf.set("spark.sql.sources.partitionOverwriteMode","dynamic")
 
-    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2019');")
-    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2018');")
-    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2017');")
-    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2016');")
+    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2019')")
+    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2018')")
+    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2017')")
+    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2016')")
 
     USMthReseller_int
       .select(missingToNull(cols1):_*)
