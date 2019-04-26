@@ -10,7 +10,7 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    val masterExchangeRates = spark.sql("select time_periods,ca_exchange_rate from ams_datamart_pc.tbl_master_exchange_rates")
+    val masterExchangeRates = spark.sql("select `time_period(s)` as time_periods,ca_exchange_rate from ams_datamart_pc.tbl_master_exchange_rates")
 
     val withExchangeRates= df.join(masterExchangeRates,
       df("time_periods") === masterExchangeRates("time_periods"),"left")
