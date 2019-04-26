@@ -121,17 +121,17 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    val masterCategoryDf = spark.sql("select * from ams_datamart_pc.tbl_master_category")
+    val masterCategoryDf = spark.sql("select subcat,catgory,npd_category from ams_datamart_pc.tbl_master_category")
 
     val withCategory = df.join(masterCategoryDf,
       df("subcat")===masterCategoryDf("subcat"),"left")
 
     val finalCategoryDf = withCategory
-      .drop("ams_sub_category")
       .drop(masterCategoryDf("subcat"))
-      .drop("catgrp")
       .withColumnRenamed("catgory","ams_catgrp")
-      .withColumnRenamed("npd_category","ams_npd_category")
+      .withColumn("ams_npd_category",
+        when(col("npd_category").isNull,"Workstation").otherwise(col("npd_category")))
+      .drop("npd_category")
       .withColumn("ams_sub_category",
         subCategoryUDF(col("moblwork"),col("subcat")))
       .withColumn("ams_sub_category_temp",
