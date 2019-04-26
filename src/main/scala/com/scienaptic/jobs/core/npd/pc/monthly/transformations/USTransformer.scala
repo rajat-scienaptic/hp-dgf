@@ -122,6 +122,7 @@ object USTransformer {
     "ams_sku_date",
     "ams_transactional_nontransactional_skus",
     "ams_newdate",
+    "integrated_camera",
     "ams_year")
 
   def withAllTransformations(df : DataFrame) = {
