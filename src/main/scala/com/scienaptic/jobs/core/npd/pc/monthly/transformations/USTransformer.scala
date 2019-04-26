@@ -9,7 +9,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
 
 object USTransformer {
 
-  val all_columns = Set("time_periods",
+  val hive_columns = Set("time_periods",
     "industry",
     "industry_segment",
     "category_group",
@@ -217,6 +217,8 @@ object USTransformer {
     val cols3 = USMthDist_int.columns.toSet
     val cols4 = USMthDistBTO_int.columns.toSet
     val cols5 = USMthRetail_int.columns.toSet
+
+    val all_columns = hive_columns ++ cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5
 
     def missingToNull(myCols: Set[String]) = {
       all_columns.toList.map(x => x match {
