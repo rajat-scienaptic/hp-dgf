@@ -26,6 +26,7 @@ object CATransformations {
       withTempDollers("time_periods") === masterExchangeRates("time_periods"),"left")
 
     withExchangeRates
+        .drop(masterExchangeRates("time_periods"))
       .withColumnRenamed("ca_exchange_rate","ams_exchange_rate")
       .withColumn("ams_us_dollars",
         when(col("ams_exchange_rate") === 0,0)
