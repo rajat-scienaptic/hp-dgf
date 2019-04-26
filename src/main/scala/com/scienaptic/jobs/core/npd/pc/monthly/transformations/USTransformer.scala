@@ -9,121 +9,6 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
 
 object USTransformer {
 
-  val hive_columns = Set("time_periods",
-    "industry",
-    "industry_segment",
-    "category_group",
-    "category",
-    "sub_category",
-    "brand",
-    "model",
-    "item_description",
-    "all_in_one",
-    "battery_cell",
-    "battery_run_time_in_hours",
-    "biometric",
-    "blu_ray_technology",
-    "bluetooth",
-    "cellular_ready_technology",
-    "consumer_commercial",
-    "density_optimized",
-    "device_color",
-    "digital_connector",
-    "display_resolution",
-    "display_size",
-    "display_type",
-    "flash_drive_capacity",
-    "gps_included",
-    "gaming",
-    "graphics_controller",
-    "graphics_controller_brand",
-    "graphics_memory",
-    "hd_form_factor",
-    "hard_drive_disk_size",
-    "height_inches",
-    "included_drives",
-    "egrated_camera",
-    "ernal_memory",
-    "keyboard_style",
-    "mhz",
-    "max_processors",
-    "number_of_processors_included",
-    "op_sys",
-    "pc_family",
-    "pc_form",
-    "pc_memory",
-    "pc_technology",
-    "pc_technology_family",
-    "processor_brand_name",
-    "processor_core",
-    "rack_units",
-    "refurbished",
-    "removable_media_type",
-    "screen_finish",
-    "screen_format",
-    "storage_drive_type",
-    "touchscreen_display",
-    "usb_type_c_connector",
-    "weight_lbs#",
-    "wireless_display_erface",
-    "wireless_wan",
-    "wireless_technology",
-    "destination_channel",
-    "channel_level_0",
-    "dollars",
-    "units",
-    "ams_temp_units",
-    "ams_temp_dollars",
-    "ams_asp",
-    "ams_quarter",
-    "ams_vendorfamily",
-    "ams_screen_size_group",
-    "ams_os_group",
-    "ams_smart_buys",
-    "ams_top_sellers",
-    "ams_smartbuy_topseller",
-    "transactional_nontransactional_skus",
-    "ams_aup",
-    "ams_focus",
-    "ams_lenovo_focus",
-    "ams_lenovo_system_type",
-    "ams_lenovo_form_factor",
-    "ams_lenovo_list_price",
-    "ams_lenovo_topseller_transitions",
-    "ams_hp_form_factor",
-    "ams_channel",
-    "ams_y_n",
-    "ams_price_band",
-    "ams_price_band_map",
-    "ams_price_band_100",
-    "ams_source",
-    "channel_level_2_total_retail",
-    "mobile_workstation",
-    "ams_l3m",
-    "ams_l6m",
-    "ams_l12m",
-    "ams_l13m",
-    "ams_cdw_os",
-    "ams_cdw_price",
-    "ams_year_quarter",
-    "ams_year_quarter_fiscal",
-    "ams_qtd_current_prior",
-    "ams_promo_season",
-    "ams_current_prior",
-    "ams_sub_category",
-    "map_price_band_detailed",
-    "map_price_band4",
-    "ams_sub_category_temp",
-    "ams_catgrp",
-    "ams_npd_category",
-    "pen_stylus",
-    "pen_stylus_technology",
-    "headphone_series",
-    "ams_sku_date",
-    "ams_transactional_nontransactional_skus",
-    "ams_newdate",
-    "integrated_camera",
-    "ams_year")
 
   def withAllTransformations(df : DataFrame) = {
 
@@ -211,14 +96,16 @@ object USTransformer {
     USMthRetail_int.write.mode(SaveMode.Overwrite)
       .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Retail");
 
+    val historicalFact = spark.sql("select * from npd_sandbox.fct_tbl_us_monthly_pc where ams_year in (2014,2015)")
 
     val cols1 = USMthReseller_int.columns.toSet
     val cols2 = USMthResellerBTO_int.columns.toSet
     val cols3 = USMthDist_int.columns.toSet
     val cols4 = USMthDistBTO_int.columns.toSet
     val cols5 = USMthRetail_int.columns.toSet
+    val historic_columns = historicalFact.columns.toSet
 
-    val all_columns = hive_columns ++ cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5
+    val all_columns = historic_columns ++ cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5
 
     def missingToNull(myCols: Set[String]) = {
       all_columns.toList.map(x => x match {
@@ -227,25 +114,14 @@ object USTransformer {
       })
     }
 
-    spark.conf.set("spark.sql.sources.partitionOverwriteMode","dynamic")
 
-    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2019')")
-    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2018')")
-    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2017')")
-    spark.sql("alter table npd_sandbox.fct_tbl_us_monthly_pc drop partition(ams_year='2016')")
-
-    USMthReseller_int
-      .select(missingToNull(cols1):_*)
-      .union(USMthResellerBTO_int
-        .select(missingToNull(cols2):_*))
-      .union(USMthDist_int
-        .select(missingToNull(cols3):_*))
-      .union(USMthDistBTO_int
-        .select(missingToNull(cols4):_*))
-      .union(USMthRetail_int
-        .select(missingToNull(cols5):_*))
-      .repartition(col("ams_year"))
-      .write.mode(SaveMode.Append)
+    historicalFact.select(missingToNull(historic_columns):_*)
+      .union(USMthReseller_int.select(missingToNull(cols1):_*))
+      .union(USMthResellerBTO_int.select(missingToNull(cols2):_*))
+      .union(USMthDist_int.select(missingToNull(cols3):_*))
+      .union(USMthDistBTO_int.select(missingToNull(cols4):_*))
+      .union(USMthRetail_int.select(missingToNull(cols5):_*))
+      .write.mode(SaveMode.Overwrite)
       .partitionBy("ams_year")
       .saveAsTable(DATAMART+"."+TABLE_NAME);
 
