@@ -12,7 +12,7 @@ object CATransformer {
   def withAllTransformations(df : DataFrame) = {
 
     val cleanUpDollers = (str : String) => {
-      str.replace("$","").replace(",","").toInt
+      str.replace("$","").replace(",","").toDouble
     }
 
     def cleanDollersUDF = udf(cleanUpDollers)
