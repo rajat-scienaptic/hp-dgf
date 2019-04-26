@@ -157,9 +157,6 @@ object USTransformer {
 
     val spark = executionContext.spark
 
-    spark.conf.set("hive.exec.dynamic.partition", "true")
-    spark.conf.set("hive.exec.dynamic.partition.mode", "nonstrict")
-
     val DATAMART = "npd_sandbox"
     val TABLE_NAME = "fct_tbl_us_monthly_pc"
 
@@ -241,6 +238,7 @@ object USTransformer {
         .select(missingToNull(cols5):_*))
       .repartition(col("ams_year"))
       .write.mode(SaveMode.Overwrite)
+      .partitionBy("ams_year")
       .saveAsTable(DATAMART+"."+TABLE_NAME);
 
   }
