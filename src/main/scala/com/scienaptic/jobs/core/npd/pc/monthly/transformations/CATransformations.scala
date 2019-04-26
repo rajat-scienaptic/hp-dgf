@@ -10,26 +10,6 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    val masterExchangeRates = spark.sql("select `time_period(s)` as time_periods,ca_exchange_rate from ams_datamart_pc.tbl_master_exchange_rates")
-
-    val withExchangeRates= df.join(masterExchangeRates,
-      df("time_periods") === masterExchangeRates("time_periods"),"left")
-
-    withExchangeRates
-      .withColumnRenamed("ca_exchange_rate","ams_exchange_rate")
-      .withColumn("ams_us_dollars",
-        when(col("ams_exchange_rate") === 0,0)
-          .otherwise(col("ams_temp_dollars")/col("ams_exchange_rate")))
-
-  }
-
-
-
-  /*
-  This procedure updates AMS_Temp_Units,AMS_Temp_Dollars,AMS_ASP,AMS_AUP,unitsabs,dollarsabs
-  */
-  def withCAASP(df: DataFrame): DataFrame = {
-
     val cleanDf = df.withColumn("AMS_Temp_Units",
       when(
         (col("Units")>0) && (col("Dollars")>0),
@@ -40,7 +20,26 @@ object CATransformations {
       when((col("Units")>0) && (col("Dollars")>0),col("Dollars")).otherwise(lit(0).cast(IntegerType)))
 
 
-    val withASPDf =withTempDollers.withColumn("AMS_ASP_CA",
+    val masterExchangeRates = spark.sql("select `time_period(s)` as time_periods,ca_exchange_rate from ams_datamart_pc.tbl_master_exchange_rates")
+
+    val withExchangeRates= withTempDollers.join(masterExchangeRates,
+      withTempDollers("time_periods") === masterExchangeRates("time_periods"),"left")
+
+    withExchangeRates
+      .withColumnRenamed("ca_exchange_rate","ams_exchange_rate")
+      .withColumn("ams_us_dollars",
+        when(col("ams_exchange_rate") === 0,0)
+          .otherwise(col("ams_temp_dollars")/col("ams_exchange_rate")))
+
+  }
+
+  
+  /*
+  This procedure updates AMS_Temp_Units,AMS_Temp_Dollars,AMS_ASP,AMS_AUP,unitsabs,dollarsabs
+  */
+  def withCAASP(df: DataFrame): DataFrame = {
+
+    val withASPDf =df.withColumn("AMS_ASP_CA",
       when(col("AMS_Temp_Units")===0 ,lit(0).cast(IntegerType)).otherwise(col("AMS_Temp_Dollars")/col("AMS_Temp_Units")))
       .withColumn("units_abs",abs(col("units")))
       .withColumn("dollars_abs",abs(col("dollars")))
