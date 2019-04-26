@@ -33,7 +33,7 @@ object CATransformations {
 
   }
 
-  
+
   /*
   This procedure updates AMS_Temp_Units,AMS_Temp_Dollars,AMS_ASP,AMS_AUP,unitsabs,dollarsabs
   */
@@ -127,7 +127,7 @@ object CATransformations {
 
     val finalCategoryDf = withCategory
       .drop("ams_sub_category")
-      .drop("subcat")
+      .drop(masterCategoryDf("subcat"))
       .drop("catgrp")
       .withColumnRenamed("catgory","ams_catgrp")
       .withColumnRenamed("npd_category","ams_npd_category")
