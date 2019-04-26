@@ -18,7 +18,9 @@ object CATransformer {
     def cleanDollersUDF = udf(cleanUpDollers)
 
     val finalDF = df
-      .transform(timePeriodsToDate)
+      //.transform(timePeriodsToDate)
+      .withColumn("tmp_date",to_date(col("timeper"), "MMM yyyy"))
+      .drop("timeper").withColumnRenamed("tmp_date","time_periods")
       .withColumn("tmp_dollars",
         cleanDollersUDF(col("dollars")))
       .drop("dollars")
