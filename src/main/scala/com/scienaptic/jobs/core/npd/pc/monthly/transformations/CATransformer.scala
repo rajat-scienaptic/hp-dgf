@@ -29,6 +29,7 @@ object CATransformer {
       .transform(withExchangeRates)
       .transform(withCAASP)
       .transform(withCACategory)
+      .withColumnRenamed("MODELA","MODEL")
       .transform(withSmartBuy)
       //.transform(withCATopSellers)
       .transform(withCAPriceBand)
