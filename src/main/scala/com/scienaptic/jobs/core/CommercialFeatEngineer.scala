@@ -46,6 +46,9 @@ object CommercialFeatEnggProcessor {
     val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
 
     import spark.implicits._
+    val maxRegressionDate = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/etherData/managedSources/NPD/NPD_weekly.csv"))
+      .select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp")))
+      .withColumn("Week_End_Date", date_sub(col("Week_End_Date"), 7)).agg(max("Week_End_Date")).head().getDate(0)
 
     val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
     //val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Outputs\\April8_Run\\April8_outputs\\posqty_output_commercial.csv")
@@ -60,7 +63,9 @@ object CommercialFeatEnggProcessor {
       //TODO For production keep this
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .where(col("Week_End_Date") >= lit("2014-01-01"))
-      .where(col("Week_End_Date") <= lit("2019-03-30"))
+      //AVIK Change: Making max pre-regression dynamic based on NPD
+      .where(col("Week_End_Date") <= lit(maxRegressionDate))
+      //.where(col("Week_End_Date") <= lit("2019-03-30"))
       //.withColumn("ES date",to_date(unix_timestamp(col("ES date"),"yyyy-MM-dd").cast("timestamp")))
       //.withColumn("GA date",to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
       //TODO: For production keep this
