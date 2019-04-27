@@ -80,7 +80,7 @@ package object transformations {
   }
 
   val topSellers = (ts : String)  => {
-    if(ts != null && ts.equals("Yes")){
+    if(ts != null && ts.toLowerCase().equals("yes")){
       "Top Seller"
     }else{
       "Non Top Seller"
