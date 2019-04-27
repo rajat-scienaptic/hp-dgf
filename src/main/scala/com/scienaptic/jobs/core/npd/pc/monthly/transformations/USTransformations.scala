@@ -21,7 +21,7 @@ object USTransformations {
       when((col("Units")>0) && (col("Dollars")>0),col("Dollars")).otherwise(lit(0).cast(IntegerType)))
 
 
-    val withASPDf =withTempDollers.withColumn("AMS_ASP",
+    val withASPDf =withTempDollers.withColumn("ams_asp",
       when(col("ams_temp_units")===0 ,lit(0).cast(IntegerType)).otherwise(col("ams_temp_dollars")/col("ams_temp_units")))
       .withColumn("units_abs",abs(col("units")))
       .withColumn("dollars_abs",abs(col("dollars")))
@@ -212,7 +212,7 @@ object USTransformations {
     val masterPriceBand = spark.sql("select price_band,price_band_map,pb_less,pb_high from ams_datamart_pc.tbl_master_priceBand")
 
     val withPriceBand= df.join(masterPriceBand,
-      df("AMS_ASP") >= masterPriceBand("PB_LESS") && df("AMS_ASP") < masterPriceBand("PB_HIGH")
+      df("ams_asp") >= masterPriceBand("PB_LESS") && df("ams_asp") < masterPriceBand("PB_HIGH")
       ,"inner")
 
     withPriceBand
