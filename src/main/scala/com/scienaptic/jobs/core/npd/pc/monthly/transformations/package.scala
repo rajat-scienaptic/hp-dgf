@@ -74,6 +74,7 @@ package object transformations {
   val skuDate = (sku : String,ams_month : String)  => {
     if(ams_month != null){
       val iso = dateToISO(ams_month)
+      iso
     } else {
       sku
     }
