@@ -20,21 +20,21 @@ object USTransformer {
 
     val finalDF = df
       .transform(timePeriodsToDate)
-      .transform(withCalenderDetails)
-      .withColumn("tmp_dollars",
-      cleanDollersUDF(col("dollars")))
-      .drop("dollars")
-      .withColumnRenamed("tmp_dollars","dollars")
-      .transform(withASP)
+//      .transform(withCalenderDetails)
+//      .withColumn("tmp_dollars",
+//      cleanDollersUDF(col("dollars")))
+//      .drop("dollars")
+//      .withColumnRenamed("tmp_dollars","dollars")
+//      .transform(withASP)
       .transform(withSmartBuy)
       .transform(withTopSellers)
       //.transform(withLenovoFocus)
-      .transform(withVendorFamily)
+      /*.transform(withVendorFamily)
       .transform(withCategory)
       .transform(withCDW)
       .transform(withOSGroup)
       .transform(withPriceBand)
-
+*/
     finalDF
 
   }
