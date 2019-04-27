@@ -13,7 +13,8 @@ object USTransformer {
   def withAllTransformations(df : DataFrame) = {
 
     val cleanUpDollers = (str : String) => {
-      str.replace("$","").replace(",","").toDouble
+      val dollar = str.replace("$","").replace(",","").toDouble
+      Math.round(dollar * 100.0) / 100.0
     }
 
     val cleanUpUnits = (str : String) => {
