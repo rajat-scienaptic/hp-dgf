@@ -63,7 +63,7 @@ object USTransformations {
 
     val spark = df.sparkSession
 
-    val Tbl_Master_LenovoTopSellers = spark.sql("select sku,ams_month,top_seller from ams_datamart_pc.tbl_master_lenovotopsellers");
+    val Tbl_Master_LenovoTopSellers = spark.sql("select * from ams_datamart_pc.tbl_master_lenovotopsellers");
 
     val masterWithSkuDate = Tbl_Master_LenovoTopSellers.withColumn("ams_sku_date_temp",
       skuDateUDF(col("sku"),col("ams_month")))
@@ -94,7 +94,18 @@ object USTransformations {
           col("ams_top_sellers"),
           col("brand"),
           col("model")))
-    withTopSellers
+
+
+
+    val finalDf = withTopSellers
+      .withColumnRenamed("focus","ams_focus")
+      .withColumnRenamed("system_type","ams_lenovo_system_type")
+      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
+      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
+      .withColumn("ams_lenovo_focus",
+        lenovoFocusUDF(col("ams_focus")))
+
+    finalDf
 
   }
 
@@ -163,29 +174,27 @@ object USTransformations {
   Stored PROC : Proc_Update_Master_TopSeller_LenovoFocus_MONTHLY
   */
 
-  def withLenovoFocus(df: DataFrame): DataFrame = {
-
-    val spark = df.sparkSession
-
-    val masterLenovoTopSellers = spark
-      .sql("select ams_sku_date,focus,system_type,form_factor,pricing_list_price from ams_datamart_pc.tbl_master_lenovotopsellers")
-
-    val withLenovoFocus= df.join(masterLenovoTopSellers,
-      df("ams_sku_date")===masterLenovoTopSellers("ams_sku_date"),"left")
-
-    val finalDf = withLenovoFocus
-      .withColumnRenamed("focus","ams_focus")
-      .withColumnRenamed("system_type","ams_lenovo_system_type")
-      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
-      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
-      .withColumn("ams_lenovo_focus",
-        lenovoFocusUDF(col("ams_focus")))
-
-    finalDf
-
-  }
-
-
+//  def withLenovoFocus(df: DataFrame): DataFrame = {
+//
+//    val spark = df.sparkSession
+//
+//    val masterLenovoTopSellers = spark
+//      .sql("select ams_sku_date,focus,system_type,form_factor,pricing_list_price from ams_datamart_pc.tbl_master_lenovotopsellers")
+//
+//    val withLenovoFocus= df.join(masterLenovoTopSellers,
+//      df("ams_sku_date")===masterLenovoTopSellers("ams_sku_date"),"left")
+//
+//    val finalDf = withLenovoFocus
+//      .withColumnRenamed("focus","ams_focus")
+//      .withColumnRenamed("system_type","ams_lenovo_system_type")
+//      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
+//      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
+//      .withColumn("ams_lenovo_focus",
+//        lenovoFocusUDF(col("ams_focus")))
+//
+//    finalDf
+//
+//  }
 
   def withOSGroup(df: DataFrame): DataFrame = {
 
