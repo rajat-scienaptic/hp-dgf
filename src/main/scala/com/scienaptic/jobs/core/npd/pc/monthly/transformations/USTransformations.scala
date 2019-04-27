@@ -43,7 +43,7 @@ object USTransformations {
     val masterBrandDf = spark.sql("select * from ams_datamart_pc.tbl_master_brand")
 
     val vendorFamilyDf = df.join(masterBrandDf,df("brand") === masterBrandDf("ams_vendorFamily")
-      , "inner")
+      , "left")
       .drop("ams_vendorFamily")
         .withColumnRenamed("ams_brand","ams_vendorFamily")
 
@@ -72,7 +72,7 @@ object USTransformations {
       skuDateUDF(col("model"),col("time_periods")))
 
     val withTopSellers = dfWithSKUDate.join(masterWithSkuDate,
-      dfWithSKUDate("ams_sku_date")===masterWithSkuDate("ams_sku_date"),"inner")
+      dfWithSKUDate("ams_sku_date")===masterWithSkuDate("ams_sku_date"),"left")
       .withColumn("ams_top_sellers",
           topSellersUDF(col("top_sellers")))
       .withColumn("ams_smartbuy_topseller",
@@ -111,7 +111,7 @@ object USTransformations {
     val masterCategoryDf = spark.sql("select * from ams_datamart_pc.tbl_master_category")
 
     val withCategory = df.join(masterCategoryDf,
-      df("sub_category")===masterCategoryDf("subcat"),"inner")
+      df("sub_category")===masterCategoryDf("subcat"),"left")
 
     val finalCategoryDf = withCategory
       .drop("ams_sub_category")
@@ -142,7 +142,7 @@ object USTransformations {
     val masterParsehubCDW = spark.sql("select sku,windows,price from ams_datamart_pc.tbl_master_parsehub_cdw")
 
     val withCDW= df.join(masterParsehubCDW,
-      df("model")===masterParsehubCDW("sku"),"inner")
+      df("model")===masterParsehubCDW("sku"),"left")
 
     val finalDf = withCDW
       .drop(masterParsehubCDW("sku"))
@@ -169,7 +169,7 @@ object USTransformations {
       .sql("select ams_sku_date,focus,system_type,form_factor,pricing_list_price from ams_datamart_pc.tbl_master_lenovotopsellers")
 
     val withLenovoFocus= df.join(masterLenovoTopSellers,
-      df("ams_sku_date")===masterLenovoTopSellers("ams_sku_date"),"inner")
+      df("ams_sku_date")===masterLenovoTopSellers("ams_sku_date"),"left")
 
     val finalDf = withLenovoFocus
       .withColumnRenamed("focus","ams_focus")
@@ -191,7 +191,7 @@ object USTransformations {
       .sql("select ams_os_detail,ams_os_name_chrome_win_mac from ams_datamart_pc.tbl_master_os")
 
     val withOSGroup= df.join(masterOS,
-      df("op_sys")===masterOS("ams_os_detail"),"inner")
+      df("op_sys")===masterOS("ams_os_detail"),"left")
 
     val finalDf = withOSGroup
       .withColumnRenamed("ams_os_name_chrome_win_mac","ams_os_group")
@@ -208,7 +208,7 @@ object USTransformations {
 
     val withPriceBand= df.join(masterPriceBand,
       df("AMS_ASP") >= masterPriceBand("PB_LESS") && df("AMS_ASP") < masterPriceBand("PB_HIGH")
-      ,"inner")
+      ,"left")
 
     withPriceBand
         .drop("pb_less")
