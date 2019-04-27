@@ -7,22 +7,22 @@ import org.apache.spark.sql.types.IntegerType
 object USTransformations {
 
   /*
-  This procedure updates AMS_Temp_Units,AMS_Temp_Dollars,AMS_ASP,AMS_AUP,unitsabs,dollarsabs
+  This procedure updates ams_temp_units,ams_temp_dollars,ams_asp,ams_aup,unitsabs,dollarsabs
   */
   def withASP(df: DataFrame): DataFrame = {
 
-    val cleanDf = df.withColumn("AMS_Temp_Units",
+    val cleanDf = df.withColumn("ams_temp_units",
       when(
         (col("Units")>0) && (col("Dollars")>0),
         col("Units")
       ).otherwise(lit(0).cast(IntegerType)))
 
-    val withTempDollers = cleanDf.withColumn("AMS_Temp_Dollars",
+    val withTempDollers = cleanDf.withColumn("ams_temp_dollars",
       when((col("Units")>0) && (col("Dollars")>0),col("Dollars")).otherwise(lit(0).cast(IntegerType)))
 
 
     val withASPDf =withTempDollers.withColumn("AMS_ASP",
-      when(col("AMS_Temp_Units")===0 ,lit(0).cast(IntegerType)).otherwise(col("AMS_Temp_Dollars")/col("AMS_Temp_Units")))
+      when(col("ams_temp_units")===0 ,lit(0).cast(IntegerType)).otherwise(col("ams_temp_dollars")/col("ams_temp_units")))
       .withColumn("units_abs",abs(col("units")))
       .withColumn("dollars_abs",abs(col("dollars")))
 
@@ -33,7 +33,7 @@ object USTransformations {
   }
 
   /*
-  This procedure updates "AMS_VendorFamily"
+  This procedure updates "ams_vendorfamily"
   Stored PROC : Proc_Update_Master_Vendor.txt
   */
   def withVendorFamily(df: DataFrame): DataFrame = {
@@ -42,10 +42,10 @@ object USTransformations {
 
     val masterBrandDf = spark.sql("select * from ams_datamart_pc.tbl_master_brand")
 
-    val vendorFamilyDf = df.join(masterBrandDf,df("brand") === masterBrandDf("ams_vendorFamily")
+    val vendorFamilyDf = df.join(masterBrandDf,df("brand") === masterBrandDf("ams_vendorfamily")
       , "left")
-      .drop("ams_vendorFamily")
-        .withColumn("ams_vendorFamily",
+      .drop("ams_vendorfamily")
+        .withColumn("ams_vendorfamily",
           when(col("ams_brand").isNull,col("brand"))
             .otherwise(col("ams_brand")))
 
