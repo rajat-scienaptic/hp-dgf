@@ -96,7 +96,7 @@ object USTransformer {
     USMthRetail_int.write.mode(SaveMode.Overwrite)
       .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Retail");
 
-    val historicalFact = spark.sql("select * from npd_sandbox.fct_tbl_us_monthly_pc where ams_year in (2014,2015)")
+    val historicalFact = spark.sql("select * from npd_sandbox.fct_tbl_us_monthly_pc_historical")
 
     val cols1 = USMthReseller_int.columns.toSet
     val cols2 = USMthResellerBTO_int.columns.toSet
