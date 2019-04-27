@@ -27,7 +27,7 @@ object USTransformer {
       .withColumnRenamed("tmp_dollars","dollars")
       .transform(withASP)
       .transform(withSmartBuy)
-      //.transform(withTopSellers)
+      .transform(withTopSellers)
       //.transform(withLenovoFocus)
       .transform(withVendorFamily)
       .transform(withCategory)
