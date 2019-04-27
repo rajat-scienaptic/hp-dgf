@@ -72,12 +72,15 @@ package object transformations {
   }
 
   val skuDate = (sku : String,ams_month : String)  => {
-    val iso = dateToISO(ams_month);
-    sku+iso
+    if(ams_month != null){
+      val iso = dateToISO(ams_month)
+    } else {
+      sku
+    }
   }
 
   val topSellers = (ts : String)  => {
-    if(ts.equals("Yes")){
+    if(ts != null && ts.equals("Yes")){
       "Top Seller"
     }else{
       "Non Top Seller"

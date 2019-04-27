@@ -94,7 +94,6 @@ object USTransformations {
           col("ams_top_sellers"),
           col("brand"),
           col("model")))
-
     withTopSellers
 
   }
