@@ -96,16 +96,15 @@ object USTransformations {
           col("model")))
 
 
+//    val finalDf = withTopSellers
+//      .withColumnRenamed("focus","ams_focus")
+//      .withColumnRenamed("system_type","ams_lenovo_system_type")
+//      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
+//      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
+//      .withColumn("ams_lenovo_focus",
+//        lenovoFocusUDF(col("ams_focus")))
 
-    val finalDf = withTopSellers
-      .withColumnRenamed("focus","ams_focus")
-      .withColumnRenamed("system_type","ams_lenovo_system_type")
-      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
-      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
-      .withColumn("ams_lenovo_focus",
-        lenovoFocusUDF(col("ams_focus")))
-
-    finalDf
+    withTopSellers
 
   }
 
