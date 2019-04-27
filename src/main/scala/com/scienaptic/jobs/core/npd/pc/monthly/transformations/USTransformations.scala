@@ -63,7 +63,7 @@ object USTransformations {
 
     val spark = df.sparkSession
 
-    val Tbl_Master_LenovoTopSellers = spark.sql("select sku,ams_month,top_seller from ams_datamart_pc.tbl_master_lenovotopsellers group by sku,ams_month,top_seller");
+    val Tbl_Master_LenovoTopSellers = spark.sql("select sku,ams_month,top_seller from ams_datamart_pc.tbl_master_lenovotopsellers");
 
     val masterWithSkuDate = Tbl_Master_LenovoTopSellers.withColumn("ams_sku_date_temp",
       skuDateUDF(col("sku"),col("ams_month")))
