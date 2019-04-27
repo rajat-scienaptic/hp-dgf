@@ -141,7 +141,7 @@ object USTransformations {
 
     val spark = df.sparkSession
 
-    val masterParsehubCDW = spark.sql("select sku,windows,price from ams_datamart_pc.tbl_master_parsehub_cdw")
+    val masterParsehubCDW = spark.sql("select sku,windows,price from ams_datamart_pc.tbl_master_parsehub_cdw group by sku,windows,price ")
 
     val withCDW= df.join(masterParsehubCDW,
       df("model")===masterParsehubCDW("sku"),"left")
