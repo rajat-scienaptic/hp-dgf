@@ -75,6 +75,7 @@ object USTransformations {
 
     val withTopSellers = dfWithSKUDate.join(masterWithSkuDate,
       dfWithSKUDate("ams_sku_date")===masterWithSkuDate("ams_sku_date"),"left")
+      .drop(masterWithSkuDate("ams_sku_date"))
       .withColumn("ams_top_sellers",
           topSellersUDF(col("top_seller")))
       .withColumn("ams_smartbuy_topseller",
