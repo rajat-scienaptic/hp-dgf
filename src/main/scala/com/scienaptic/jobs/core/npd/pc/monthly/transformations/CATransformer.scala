@@ -36,7 +36,7 @@ object CATransformer {
       .transform(withSmartBuy)
       .transform(withCAPriceBand)
       .transform(with_CA_US_PriceBand)
-
+      .transform(withCAPriceBand4)
 
     finalDF
 
