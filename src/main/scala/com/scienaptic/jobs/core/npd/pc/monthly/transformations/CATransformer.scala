@@ -35,10 +35,10 @@ object CATransformer {
       .transform(withCACategory)
       .transform(withSmartBuy)
       .transform(withCAPriceBand)
-      .transform(with_CA_US_PriceBand)
       .transform(withCAPriceBand4)
       .transform(withCAPriceBandDetailed)
       .transform(with_CA_US_PriceBand)
+      .transform(with_CA_US_PriceBand4)
       .transform(with_CA_US_PriceBandDetailed)
 
     finalDF
