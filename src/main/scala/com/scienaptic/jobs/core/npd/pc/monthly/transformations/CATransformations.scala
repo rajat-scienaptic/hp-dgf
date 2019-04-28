@@ -87,6 +87,7 @@ object CATransformations {
     val withTopSellers = df.join(tbl_Master_LenovoTopSellers,
       df("model")===tbl_Master_LenovoTopSellers("sku"),"left")
       .withColumnRenamed("top_seller","ams_top_sellers")
+      .na.fill("Non Top Seller",Seq("ams_top_sellers"))
       .withColumn("ams_smartbuy_topseller",
           smartBuyTopSellersUDF(
             col("ams_smart_buys"),
