@@ -82,12 +82,11 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    val tbl_Master_LenovoTopSellers = spark.sql("select sku,top_sellers from ams_datamart_pc.tbl_master_top_sellers_ca");
+    val tbl_Master_LenovoTopSellers = spark.sql("select sku,top_sellers from ams_datamart_pc.tbl_master_top_sellers_ca group by sku,top_sellers");
 
     val withTopSellers = df.join(tbl_Master_LenovoTopSellers,
       df("model")===tbl_Master_LenovoTopSellers("sku"),"left")
-      .withColumn("ams_top_sellers",
-          topSellersUDF(col("top_sellers")))
+      .withColumnRenamed("top_seller","ams_top_sellers")
       .withColumn("ams_smartbuy_topseller",
           smartBuyTopSellersUDF(
             col("ams_smart_buys"),
