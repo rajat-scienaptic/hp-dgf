@@ -147,23 +147,25 @@ object USTransformations {
   Stored PROC : Proc_Update_Master_ParsehUB_CDW
   */
 
-  def withCDW(df: DataFrame): DataFrame = {
+  // Not Used
 
-    val spark = df.sparkSession
-
-    val masterParsehubCDW = spark.sql("select sku,windows,price from ams_datamart_pc.tbl_master_parsehub_cdw group by sku,windows,price ")
-
-    val withCDW= df.join(masterParsehubCDW,
-      df("model")===masterParsehubCDW("sku"),"left")
-
-    val finalDf = withCDW
-      .drop(masterParsehubCDW("sku"))
-      .withColumnRenamed("windows","ams_cdw_os")
-      .withColumnRenamed("price","ams_cdw_price")
-
-    finalDf
-
-  }
+//  def withCDW(df: DataFrame): DataFrame = {
+//
+//    val spark = df.sparkSession
+//
+//    val masterParsehubCDW = spark.sql("select sku,windows,price from ams_datamart_pc.tbl_master_parsehub_cdw group by sku,windows,price ")
+//
+//    val withCDW= df.join(masterParsehubCDW,
+//      df("model")===masterParsehubCDW("sku"),"left")
+//
+//    val finalDf = withCDW
+//      .drop(masterParsehubCDW("sku"))
+//      .withColumnRenamed("windows","ams_cdw_os")
+//      .withColumnRenamed("price","ams_cdw_price")
+//
+//    finalDf
+//
+//  }
 
 
   /*
@@ -228,6 +230,71 @@ object USTransformations {
         .drop("pb_high")
       .withColumnRenamed("price_band","ams_price_band")
       .withColumnRenamed("price_band_map","ams_price_band_map")
+
+  }
+
+  def withPriceBand4(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    df.withColumn("temp_cat",
+      when(col("ams_category_temp") === "Mobile Workstation","MOBILEWORKSTATION").otherwise("COMMERCIAL"))
+
+    val masterPriceBand = spark.sql("select category,price_band,pb_less,pb_high from ams_datamart_pc.tbl_master_map_pb4")
+
+    val withPriceBand= df.join(masterPriceBand,
+      df("ams_asp") >= masterPriceBand("PB_LESS") && df("ams_asp") < masterPriceBand("PB_HIGH") && df("temp_cat") === masterPriceBand("category")
+      ,"left")
+
+    val map_price_band4_final_df = withPriceBand
+        .drop("category")
+      .drop("temp_cat")
+      .drop(masterPriceBand("PB_LESS"))
+      .drop(masterPriceBand("PB_HIGH"))
+      .withColumnRenamed("price_band","map_price_band4")
+
+  }
+
+  def withPriceBandDetailed(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    df.withColumn("temp_cat",
+      when(col("ams_category_temp") === "Mobile Workstation","WORKSTATION").otherwise("RETAIL_COMMERCIAL"))
+
+    val masterPriceBand = spark.sql("select category,price_band,pb_less,pb_high from ams_datamart_pc.tbl_master_map_pb_detailed")
+
+    val withPriceBand= df.join(masterPriceBand,
+      df("ams_asp") >= masterPriceBand("PB_LESS") && df("ams_asp") < masterPriceBand("PB_HIGH") && df("temp_cat") === masterPriceBand("category")
+      ,"left")
+
+    val map_price_band4_final_df = withPriceBand
+      .drop("category")
+      .drop("temp_cat")
+      .drop(masterPriceBand("PB_LESS"))
+      .drop(masterPriceBand("PB_HIGH"))
+      .withColumnRenamed("price_band","map_price_band_detailed")
+
+    map_price_band4_final_df
+
+  }
+
+
+  def withSmartBuyFormFactor(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val masterSmartBuys = spark.sql("select sku,form_factor from ams_datamart_pc.tbl_master_smartbuys")
+
+    val withFormFactor= df.join(masterSmartBuys,
+      df("model") === masterSmartBuys("sku")
+      ,"left")
+
+    val final_df = withFormFactor
+      .drop(masterSmartBuys("sku"))
+      .withColumnRenamed("form_factor","ams_hp_form_factor")
+
+    final_df
 
   }
 
