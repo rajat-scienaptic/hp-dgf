@@ -175,7 +175,6 @@ object CATransformations {
       .withColumnRenamed("price_band","ams_price_band_ca")
       .withColumnRenamed("price_band_map","ams_price_band_map_ca")
 
-
   }
 
   def with_CA_US_PriceBand(df: DataFrame): DataFrame = {
@@ -194,9 +193,6 @@ object CATransformations {
       .withColumnRenamed("price_band","ams_price_band_ca")
       .withColumnRenamed("price_band_map","ams_price_band_map_ca")
 
-
   }
-
-
 
 }

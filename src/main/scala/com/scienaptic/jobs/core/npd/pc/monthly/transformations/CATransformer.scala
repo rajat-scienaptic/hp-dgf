@@ -52,7 +52,14 @@ object CATransformer {
     val CAMthRetail_stg  = spark.sql("select * from "+DATAMART+"."+DM_CA_PC_Monthly_Retail_STG)
 
     val CAMthDist_int = CAMthDist_stg.transform(withAllTransformations)
+
+    CAMthDist_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"int_DM_CA_PC_Monthly_Dist");
+
     val CAMthRetail_int = CAMthRetail_stg.transform(withAllTransformations)
+
+    CAMthRetail_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"int_DM_CA_PC_Monthly_Retail");
 
     val historicalFact = spark.sql("select * from npd_sandbox.fct_tbl_ca_monthly_pc_historical")
 
