@@ -89,9 +89,10 @@ package object transformations {
   }
 
   val smartBuyTopSellers = (smartBuys : String,topSellers:String)  => {
-    if(smartBuys.equals("Smartbuy")){
+
+    if(smartBuys != null && smartBuys.equals("Smartbuy")){
       "Smartbuy"
-    }else if(topSellers.equals("Top Seller")) {
+    }else if( topSellers != null && topSellers.equals("Top Seller")) {
       "Lenovo Top Seller"
     }else{
       "Non SB/Non LTS"
