@@ -30,9 +30,12 @@ object CATransformer {
       .transform(withExchangeRates)
       .transform(withCAASP)
       .withColumnRenamed("MODELA","model")
+      .transform(withOSGroup)
+      .transform(withCACategory)
       .transform(withSmartBuy)
       .transform(withCAPriceBand)
       .transform(with_CA_US_PriceBand)
+
 
     finalDF
 

@@ -92,4 +92,23 @@ object CommonTransformations {
     withSmartBuysDf
   }
 
+
+  def withOSGroup(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val masterOS = spark
+      .sql("select ams_os_detail,ams_os_name_chrome_win_mac from ams_datamart_pc.tbl_master_os" +
+        " group by ams_os_detail,ams_os_name_chrome_win_mac")
+
+    val withOSGroup= df.join(masterOS,
+      lower(df("op_sys"))===lower(masterOS("ams_os_detail")),"left")
+
+    val finalDf = withOSGroup
+      .withColumnRenamed("ams_os_name_chrome_win_mac","ams_os_group")
+
+    finalDf
+
+  }
+
 }
