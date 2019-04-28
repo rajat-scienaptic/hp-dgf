@@ -221,13 +221,13 @@ object USTransformations {
 
     val spark = df.sparkSession
 
-    df.withColumn("temp_cat",
+    val withTempCat = df.withColumn("temp_cat",
       when(col("ams_sub_category_temp") === "Mobile Workstation","MOBILEWORKSTATION").otherwise("COMMERCIAL"))
 
     val masterPriceBand = spark.sql("select category,price_band,pb_less,pb_high from ams_datamart_pc.tbl_master_map_pb4")
 
-    val withPriceBand= df.join(masterPriceBand,
-      df("ams_asp") >= masterPriceBand("PB_LESS") && df("ams_asp") < masterPriceBand("PB_HIGH") && df("temp_cat") === masterPriceBand("category")
+    val withPriceBand= withTempCat.join(masterPriceBand,
+      withTempCat("ams_asp") >= masterPriceBand("PB_LESS") && withTempCat("ams_asp") < masterPriceBand("PB_HIGH") && withTempCat("temp_cat") === masterPriceBand("category")
       ,"left")
 
     val final_df = withPriceBand
@@ -245,13 +245,13 @@ object USTransformations {
 
     val spark = df.sparkSession
 
-    df.withColumn("temp_cat",
+    val withTempCat =df.withColumn("temp_cat",
       when(col("ams_sub_category_temp") === "Mobile Workstation","WORKSTATION").otherwise("RETAIL_COMMERCIAL"))
 
     val masterPriceBand = spark.sql("select category,price_band,pb_less,pb_high from ams_datamart_pc.tbl_master_map_pb_detailed")
 
-    val withPriceBand= df.join(masterPriceBand,
-      df("ams_asp") >= masterPriceBand("PB_LESS") && df("ams_asp") < masterPriceBand("PB_HIGH") && df("temp_cat") === masterPriceBand("category")
+    val withPriceBand= withTempCat.join(masterPriceBand,
+      withTempCat("ams_asp") >= masterPriceBand("PB_LESS") && withTempCat("ams_asp") < masterPriceBand("PB_HIGH") && withTempCat("temp_cat") === masterPriceBand("category")
       ,"left")
 
     val final_df = withPriceBand
