@@ -63,7 +63,9 @@ object USTransformations {
 
     val spark = df.sparkSession
 
-    val Tbl_Master_LenovoTopSellers = spark.sql("select sku,top_seller,ams_month from ams_datamart_pc.tbl_master_lenovotopsellers group by sku,top_seller,ams_month");
+    val Tbl_Master_LenovoTopSellers = spark.sql("select sku,top_seller,ams_month,focus,system_type,form_factor,pricing_list_price " +
+      "from ams_datamart_pc.tbl_master_lenovotopsellers " +
+      "group by sku,top_seller,ams_month,focus,system_type,form_factor,pricing_list_price");
 
     val masterWithSkuDate = Tbl_Master_LenovoTopSellers.withColumn("ams_sku_date_temp",
      skuDateUDF(col("sku"),col("ams_month")))
@@ -96,15 +98,15 @@ object USTransformations {
           col("model")))
 
 
-//    val finalDf = withTopSellers
-//      .withColumnRenamed("focus","ams_focus")
-//      .withColumnRenamed("system_type","ams_lenovo_system_type")
-//      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
-//      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
-//      .withColumn("ams_lenovo_focus",
-//        lenovoFocusUDF(col("ams_focus")))
+    val finalDf = withTopSellers
+      .withColumnRenamed("focus","ams_focus")
+      .withColumnRenamed("system_type","ams_lenovo_system_type")
+      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
+      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
+      .withColumn("ams_lenovo_focus",
+        lenovoFocusUDF(col("ams_focus")))
 
-    withTopSellers
+    finalDf
 
   }
 
