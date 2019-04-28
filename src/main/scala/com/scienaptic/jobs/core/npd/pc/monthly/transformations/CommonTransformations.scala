@@ -61,6 +61,7 @@ object CommonTransformations {
       .withColumnRenamed("fiscalquarter","ams_year_quarter")
       .withColumnRenamed("hpcalendar_quarter","ams_year_quarter_fiscal")
       .withColumnRenamed("promo_season","ams_promo_season")
+      .na.fill("-")
 
 
     val onlyAMS = withMasterMonth.select("time_periods",

@@ -68,7 +68,7 @@ object CATransformer {
     }
 
     historicalFact.select(missingToNull(historic_columns):_*)
-      CAMthDist_int.select(missingToNull(cols1):_*)
+      .union(CAMthDist_int.select(missingToNull(cols1):_*))
       .union(CAMthRetail_int.select(missingToNull(cols2):_*))
       .write.mode(SaveMode.Overwrite)
       .saveAsTable(DATAMART+"."+TABLE_NAME);

@@ -142,61 +142,6 @@ object CATransformations {
 
   }
 
-
-  /*
-  This procedure updates AMS_CDW_OS,AMS_CDW_PRICE
-
-  Stored PROC : Proc_Update_Master_ParsehUB_CDW
-  */
-
-  def withCDW(df: DataFrame): DataFrame = {
-
-    val spark = df.sparkSession
-
-    val masterParsehubCDW = spark.sql("select sku,windows,price from ams_datamart_pc.tbl_master_parsehub_cdw")
-
-    val withCDW= df.join(masterParsehubCDW,
-      df("model")===masterParsehubCDW("sku"),"left")
-
-    val finalDf = withCDW
-      .drop(masterParsehubCDW("sku"))
-      .withColumnRenamed("windows","ams_cdw_os")
-      .withColumnRenamed("price","ams_cdw_price")
-
-    finalDf
-
-  }
-
-
-  /*
-  This procedure updates AMS_Focus,AMS_Lenovo_Focus,AMS_Lenovo_System_Type
-  ,AMS_Lenovo_Form_Factor,AMS_Lenovo_List_Price
-
-  Stored PROC : Proc_Update_Master_TopSeller_LenovoFocus_MONTHLY
-  */
-
-  def withLenovoFocus(df: DataFrame): DataFrame = {
-
-    val spark = df.sparkSession
-
-    val masterLenovoTopSellers = spark
-      .sql("select ams_sku_date,focus,system_type,form_factor,pricing_list_price from ams_datamart_pc.tbl_master_lenovotopsellers")
-
-    val withLenovoFocus= df.join(masterLenovoTopSellers,
-      df("ams_sku_date")===masterLenovoTopSellers("ams_sku_date"),"left")
-
-    val finalDf = withLenovoFocus
-      .withColumnRenamed("focus","ams_focus")
-      .withColumnRenamed("system_type","ams_lenovo_system_type")
-      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
-      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
-      .withColumn("ams_lenovo_focus",
-        lenovoFocusUDF(col("ams_focus")))
-
-    finalDf
-
-  }
-
   def withOSGroup(df: DataFrame): DataFrame = {
 
     val spark = df.sparkSession
