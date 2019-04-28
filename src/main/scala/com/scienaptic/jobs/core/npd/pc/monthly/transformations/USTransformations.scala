@@ -63,7 +63,7 @@ object USTransformations {
 
     val spark = df.sparkSession
 
-    val Tbl_Master_LenovoTopSellers = spark.sql("select * from ams_datamart_pc.tbl_master_lenovotopsellers");
+    val Tbl_Master_LenovoTopSellers = spark.sql("select sku,top_seller,ams_month from ams_datamart_pc.tbl_master_lenovotopsellers group by sku,top_seller,ams_month");
 
     val masterWithSkuDate = Tbl_Master_LenovoTopSellers.withColumn("ams_sku_date_temp",
       skuDateUDF(col("sku"),col("ams_month")))
@@ -265,7 +265,7 @@ object USTransformations {
 
   }
 
-
+  //not unique on key
   def withSmartBuyFormFactor(df: DataFrame): DataFrame = {
 
     val spark = df.sparkSession
