@@ -27,13 +27,15 @@ object NPDUtility {
 
   def writeToDataMart(spark: SparkSession,df : DataFrame,dataMart : String,tableName : String) = {
 
-    val sparkTableName = dataMart+"."+tableName+"_Spark"
+    val sparkTableName = dataMart+"."+tableName
 
-    df.createOrReplaceTempView(tableName)
+    val tempViewName = tableName+"_tempview"
+
+    df.createOrReplaceTempView(tempViewName)
 
     spark.sql("drop table if exists "+sparkTableName)
 
-    spark.sql("create table "+sparkTableName+" STORED AS ORC AS select * from "+tableName)
+    spark.sql("create table "+sparkTableName+" STORED AS ORC AS select * from "+tempViewName)
 
     logger.info("Creating hive table : "+sparkTableName)
 

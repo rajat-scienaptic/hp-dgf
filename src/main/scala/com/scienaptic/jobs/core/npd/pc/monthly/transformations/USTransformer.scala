@@ -4,6 +4,7 @@ import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.core.npd.common.CommonTransformations._
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.USTransformations._
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.CommonTransformations._
+import com.scienaptic.jobs.utility.NPDUtility
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
@@ -120,15 +121,17 @@ object USTransformer {
     }
 
 
-    historicalFact.select(missingToNull(historic_columns):_*)
+    val finalDf = historicalFact.select(missingToNull(historic_columns):_*)
       .union(USMthReseller_int.select(missingToNull(cols1):_*))
       .union(USMthResellerBTO_int.select(missingToNull(cols2):_*))
       .union(USMthDist_int.select(missingToNull(cols3):_*))
       .union(USMthDistBTO_int.select(missingToNull(cols4):_*))
       .union(USMthRetail_int.select(missingToNull(cols5):_*))
-      .write.mode(SaveMode.Overwrite)
-      //.partitionBy("ams_year")
-      .saveAsTable(DATAMART+"."+TABLE_NAME);
+//      .write.mode(SaveMode.Overwrite)
+//      //.partitionBy("ams_year")
+//      .saveAsTable(DATAMART+"."+TABLE_NAME);
+    
+    NPDUtility.writeToDataMart(spark,finalDf,DATAMART,TABLE_NAME)
 
   }
 
