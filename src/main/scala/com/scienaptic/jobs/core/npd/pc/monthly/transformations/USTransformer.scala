@@ -130,7 +130,7 @@ object USTransformer {
 //      .write.mode(SaveMode.Overwrite)
 //      //.partitionBy("ams_year")
 //      .saveAsTable(DATAMART+"."+TABLE_NAME);
-    
+
     NPDUtility.writeToDataMart(spark,finalDf,DATAMART,TABLE_NAME)
 
   }
