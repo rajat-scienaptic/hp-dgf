@@ -190,8 +190,8 @@ object CATransformations {
     withPriceBand
       .drop("pb_less")
       .drop("pb_high")
-      .withColumnRenamed("price_band","ams_price_band_ca")
-      .withColumnRenamed("price_band_map","ams_price_band_map_ca")
+      .withColumnRenamed("price_band","ams_price_band_us")
+      .withColumnRenamed("price_band_map","ams_price_band_map_us")
 
   }
 
