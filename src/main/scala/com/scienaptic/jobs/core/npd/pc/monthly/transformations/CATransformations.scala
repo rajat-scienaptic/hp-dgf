@@ -182,13 +182,13 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    df.withColumn("temp_cat",
+    val withTmpCat = df.withColumn("temp_cat",
       when(col("ams_Sub_category_temp") === "Mobile Workstation","MOBILEWORKSTATION").otherwise("COMMERCIAL"))
 
     val masterPriceBand = spark.sql("select category,price_band,pb_less,pb_high from ams_datamart_pc.tbl_master_map_pb4")
 
-    val withPriceBand= df.join(masterPriceBand,
-      df("ams_asp_ca") >= masterPriceBand("PB_LESS") && df("ams_asp_ca") < masterPriceBand("PB_HIGH") && df("temp_cat") === masterPriceBand("category")
+    val withPriceBand= withTmpCat.join(masterPriceBand,
+      withTmpCat("ams_asp_ca") >= masterPriceBand("PB_LESS") && withTmpCat("ams_asp_ca") < masterPriceBand("PB_HIGH") && withTmpCat("temp_cat") === masterPriceBand("category")
       ,"left")
 
     val final_df = withPriceBand
