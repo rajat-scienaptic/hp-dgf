@@ -36,7 +36,7 @@ object CATransformations {
 
 
   /*
-  This procedure updates AMS_Temp_Units,AMS_Temp_Dollars,AMS_ASP,,unitsabs,dollarsabs
+  This procedure updates ams_asp_ca,ams_asp_us
   */
   def withCAASP(df: DataFrame): DataFrame = {
 
@@ -47,10 +47,10 @@ object CATransformations {
       .withColumn("ams_asp_us",
         when(col("ams_temp_units")===0 ,lit(0).cast(IntegerType)).otherwise(col("ams_us_dollars")/col("ams_temp_units")))
 
-
     withASPDf
 
   }
+
 
   /*
   This procedure updates "AMS_VendorFamily"
@@ -172,6 +172,25 @@ object CATransformations {
     withPriceBand
         .drop("pb_less")
         .drop("pb_high")
+      .withColumnRenamed("price_band","ams_price_band_ca")
+      .withColumnRenamed("price_band_map","ams_price_band_map_ca")
+
+
+  }
+
+  def with_CA_US_PriceBand(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val masterPriceBand = spark.sql("select price_band,price_band_map,pb_less,pb_high from ams_datamart_pc.tbl_master_priceBand")
+
+    val withPriceBand= df.join(masterPriceBand,
+      df("ams_asp_us") >= masterPriceBand("PB_LESS") && df("ams_asp_us") < masterPriceBand("PB_HIGH")
+      ,"left")
+
+    withPriceBand
+      .drop("pb_less")
+      .drop("pb_high")
       .withColumnRenamed("price_band","ams_price_band_ca")
       .withColumnRenamed("price_band_map","ams_price_band_map_ca")
 

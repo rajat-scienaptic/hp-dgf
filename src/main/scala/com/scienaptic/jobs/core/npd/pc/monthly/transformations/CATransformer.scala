@@ -31,6 +31,8 @@ object CATransformer {
       .transform(withCAASP)
       .withColumnRenamed("MODELA","model")
       .transform(withSmartBuy)
+      .transform(withCAPriceBand)
+      .transform(with_CA_US_PriceBand)
 
     finalDF
 
