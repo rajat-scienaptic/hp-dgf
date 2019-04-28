@@ -20,7 +20,7 @@ object CATransformations {
       when((col("Units")>0) && (col("Dollars")>0),col("Dollars")).otherwise(lit(0).cast(IntegerType)))
 
 
-    val masterExchangeRates = spark.sql("select `time_period(s)` as time_periods,ca_exchange_rate from ams_datamart_pc.tbl_master_exchange_rates")
+    val masterExchangeRates = spark.sql("select cast(`time_period(s)` as date) as time_periods,ca_exchange_rate from ams_datamart_pc.tbl_master_exchange_rates")
 
     val withExchangeRates= withTempDollers.join(masterExchangeRates,
       withTempDollers("time_periods") === masterExchangeRates("time_periods"),"left")
@@ -184,7 +184,7 @@ object CATransformations {
     val masterPriceBand = spark.sql("select price_band,price_band_map,pb_less,pb_high from ams_datamart_pc.tbl_master_priceBand")
 
     val withPriceBand= df.join(masterPriceBand,
-      df("ams_asp_us") >= masterPriceBand("PB_LESS") && df("ams_asp_us") < masterPriceBand("PB_HIGH")
+      df("ams_asp_us") >= masterPriceBand("pb_less") && df("ams_asp_us") < masterPriceBand("pb_high")
       ,"left")
 
     withPriceBand
