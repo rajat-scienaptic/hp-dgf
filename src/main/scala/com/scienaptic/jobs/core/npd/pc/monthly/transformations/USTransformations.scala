@@ -246,12 +246,14 @@ object USTransformations {
       df("ams_asp") >= masterPriceBand("PB_LESS") && df("ams_asp") < masterPriceBand("PB_HIGH") && df("temp_cat") === masterPriceBand("category")
       ,"left")
 
-    val map_price_band4_final_df = withPriceBand
+    val final_df = withPriceBand
         .drop("category")
       .drop("temp_cat")
       .drop(masterPriceBand("PB_LESS"))
       .drop(masterPriceBand("PB_HIGH"))
       .withColumnRenamed("price_band","map_price_band4")
+
+    final_df
 
   }
 
@@ -268,14 +270,14 @@ object USTransformations {
       df("ams_asp") >= masterPriceBand("PB_LESS") && df("ams_asp") < masterPriceBand("PB_HIGH") && df("temp_cat") === masterPriceBand("category")
       ,"left")
 
-    val map_price_band4_final_df = withPriceBand
+    val final_df = withPriceBand
       .drop("category")
       .drop("temp_cat")
       .drop(masterPriceBand("PB_LESS"))
       .drop(masterPriceBand("PB_HIGH"))
       .withColumnRenamed("price_band","map_price_band_detailed")
 
-    map_price_band4_final_df
+    final_df
 
   }
 
