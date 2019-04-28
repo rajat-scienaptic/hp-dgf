@@ -35,7 +35,7 @@ object USTransformer {
       //.transform(withLenovoFocus)
       .transform(withVendorFamily)
       .transform(withCategory)
-      .transform(withCDW)
+      //.transform(withCDW)
       .transform(withOSGroup)
       .transform(withPriceBand)
 
