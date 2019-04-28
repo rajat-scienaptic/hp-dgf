@@ -30,6 +30,7 @@ object CATransformer {
       .transform(withExchangeRates)
       .transform(withCAASP)
       .withColumnRenamed("MODELA","model")
+      .withColumnRenamed("os","op_sys")
       .transform(withOSGroup)
       .transform(withCACategory)
       .transform(withSmartBuy)
