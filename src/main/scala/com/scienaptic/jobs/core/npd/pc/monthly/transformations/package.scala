@@ -100,9 +100,9 @@ package object transformations {
   }
 
   val lenovoSmartBuyTopSellers =  (smartBuys : String,topSellers:String,brand : String, model : String)  => {
-    if(smartBuys.equals("Smartbuy")){
+    if(smartBuys != null && smartBuys.equals("Smartbuy")){
       "Transactional"
-    }else if(topSellers.equals("Top Seller")) {
+    }else if(topSellers != null && topSellers.equals("Top Seller")) {
       "Transactional"
     }else{
       if(brand.equals("Dell") && (model.length() == 5)){
@@ -114,9 +114,9 @@ package object transformations {
   }
 
   val transactionalNontransactionalSkus = (smartBuys : String,topSellers:String, brand : String, model : String)  => {
-    if(smartBuys.equals("Smartbuy")){
+    if(smartBuys != null && smartBuys.equals("Smartbuy")){
       "Transactional"
-    }else if(topSellers.equals("Top Seller")) {
+    }else if(topSellers != null && topSellers.equals("Top Seller")) {
       "Transactional"
     }else{
       if(brand.equals("Dell") && (model.length() == 5)){
