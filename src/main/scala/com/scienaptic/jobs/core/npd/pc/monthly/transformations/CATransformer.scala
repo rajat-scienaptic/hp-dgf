@@ -29,7 +29,7 @@ object CATransformer {
       .withColumn("tmp_units", cleanUnitsUDF(col("units"))).drop("units").withColumnRenamed("tmp_units","units")
       .transform(withExchangeRates)
       .transform(withCAASP)
-      .withColumnRenamed("MODELA","MODEL")
+      .withColumnRenamed("MODELA","model")
       .transform(withSmartBuy)
 
     finalDF

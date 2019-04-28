@@ -10,13 +10,13 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    val cleanDf = df.withColumn("AMS_Temp_Units",
+    val cleanDf = df.withColumn("ams_temp_units",
       when(
         (col("Units")>0) && (col("Dollars")>0),
         col("Units")
       ).otherwise(lit(0).cast(IntegerType)))
 
-    val withTempDollers = cleanDf.withColumn("AMS_Temp_Dollars",
+    val withTempDollers = cleanDf.withColumn("ams_temp_dollars",
       when((col("Units")>0) && (col("Dollars")>0),col("Dollars")).otherwise(lit(0).cast(IntegerType)))
 
 
@@ -36,17 +36,17 @@ object CATransformations {
 
 
   /*
-  This procedure updates AMS_Temp_Units,AMS_Temp_Dollars,AMS_ASP,AMS_AUP,unitsabs,dollarsabs
+  This procedure updates AMS_Temp_Units,AMS_Temp_Dollars,AMS_ASP,,unitsabs,dollarsabs
   */
   def withCAASP(df: DataFrame): DataFrame = {
 
-    val withASPDf =df.withColumn("AMS_ASP_CA",
-      when(col("AMS_Temp_Units")===0 ,lit(0).cast(IntegerType)).otherwise(col("AMS_Temp_Dollars")/col("AMS_Temp_Units")))
+    val withASPDf =df.withColumn("ams_asp_ca",
+      when(col("ams_temp_units")===0 ,lit(0).cast(IntegerType)).otherwise(col("ams_temp_dollars")/col("ams_temp_units")))
       .withColumn("units_abs",abs(col("units")))
       .withColumn("dollars_abs",abs(col("dollars")))
-      .withColumn("AMS_ASP_US",
-        when(col("AMS_Temp_Units")===0 ,lit(0).cast(IntegerType)).otherwise(col("ams_us_dollars")/col("AMS_Temp_Units")))
-    //val withAUPDf = withASPDf.withColumn("ams_aup",col("ams_asp"))
+      .withColumn("ams_asp_us",
+        when(col("ams_temp_units")===0 ,lit(0).cast(IntegerType)).otherwise(col("ams_us_dollars")/col("ams_temp_units")))
+
 
     withASPDf
 
@@ -221,7 +221,7 @@ object CATransformations {
     val masterPriceBand = spark.sql("select price_band,price_band_map,pb_less,pb_high from ams_datamart_pc.tbl_master_priceBand")
 
     val withPriceBand= df.join(masterPriceBand,
-      df("AMS_ASP_CA") >= masterPriceBand("PB_LESS") && df("AMS_ASP_CA") < masterPriceBand("PB_HIGH")
+      df("ams_asp_ca") >= masterPriceBand("PB_LESS") && df("ams_asp_ca") < masterPriceBand("PB_HIGH")
       ,"left")
 
     withPriceBand
