@@ -82,7 +82,7 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    val tbl_Master_LenovoTopSellers = spark.sql("select sku,top_sellers from ams_datamart_pc.tbl_master_top_sellers_ca group by sku,top_sellers");
+    val tbl_Master_LenovoTopSellers = spark.sql("select sku,top_seller from ams_datamart_pc.tbl_master_top_sellers_ca group by sku,top_seller");
 
     val withTopSellers = df.join(tbl_Master_LenovoTopSellers,
       df("model")===tbl_Master_LenovoTopSellers("sku"),"left")
