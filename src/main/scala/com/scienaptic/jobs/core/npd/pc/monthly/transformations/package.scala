@@ -128,9 +128,9 @@ package object transformations {
   }
 
   val lenovoFocus = (focus : String)  => {
-    if(focus.equals("Yes") || focus.equals("Yes/STF")){
+    if(focus != null && (focus.equals("Yes") || focus.equals("Yes/STF"))){
       "Yes"
-    }else if(focus.equals("No")) {
+    }else if(focus != null && focus.equals("No")) {
       "No"
     }else{
       "NA"
