@@ -10,12 +10,23 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    val masterExchangeRates = spark.sql("select time_periods,ca_exchange_rate from ams_datamart_pc.tbl_master_exchange_rates")
+    val cleanDf = df.withColumn("ams_temp_units",
+      when(
+        (col("Units")>0) && (col("Dollars")>0),
+        col("Units")
+      ).otherwise(lit(0).cast(IntegerType)))
 
-    val withExchangeRates= df.join(masterExchangeRates,
-      df("time_periods") === masterExchangeRates("time_periods"),"left")
+    val withTempDollers = cleanDf.withColumn("ams_temp_dollars",
+      when((col("Units")>0) && (col("Dollars")>0),col("Dollars")).otherwise(lit(0).cast(IntegerType)))
+
+
+    val masterExchangeRates = spark.sql("select cast(`time_period(s)` as date) as time_periods,ca_exchange_rate from ams_datamart_pc.tbl_master_exchange_rates")
+
+    val withExchangeRates= withTempDollers.join(masterExchangeRates,
+      withTempDollers("time_periods") === masterExchangeRates("time_periods"),"left")
 
     withExchangeRates
+        .drop(masterExchangeRates("time_periods"))
       .withColumnRenamed("ca_exchange_rate","ams_exchange_rate")
       .withColumn("ams_us_dollars",
         when(col("ams_exchange_rate") === 0,0)
@@ -24,33 +35,22 @@ object CATransformations {
   }
 
 
-
   /*
-  This procedure updates AMS_Temp_Units,AMS_Temp_Dollars,AMS_ASP,AMS_AUP,unitsabs,dollarsabs
+  This procedure updates ams_asp_ca,ams_asp_us
   */
   def withCAASP(df: DataFrame): DataFrame = {
 
-    val cleanDf = df.withColumn("AMS_Temp_Units",
-      when(
-        (col("Units")>0) && (col("Dollars")>0),
-        col("Units")
-      ).otherwise(lit(0).cast(IntegerType)))
-
-    val withTempDollers = cleanDf.withColumn("AMS_Temp_Dollars",
-      when((col("Units")>0) && (col("Dollars")>0),col("Dollars")).otherwise(lit(0).cast(IntegerType)))
-
-
-    val withASPDf =withTempDollers.withColumn("AMS_ASP_CA",
-      when(col("AMS_Temp_Units")===0 ,lit(0).cast(IntegerType)).otherwise(col("AMS_Temp_Dollars")/col("AMS_Temp_Units")))
+    val withASPDf =df.withColumn("ams_asp_ca",
+      when(col("ams_temp_units")===0 ,lit(0).cast(IntegerType)).otherwise(col("ams_temp_dollars")/col("ams_temp_units")))
       .withColumn("units_abs",abs(col("units")))
       .withColumn("dollars_abs",abs(col("dollars")))
-      .withColumn("AMS_ASP_US",
-        when(col("AMS_Temp_Units")===0 ,lit(0).cast(IntegerType)).otherwise(col("ams_us_dollars")/col("AMS_Temp_Units")))
-    //val withAUPDf = withASPDf.withColumn("ams_aup",col("ams_asp"))
+      .withColumn("ams_asp_us",
+        when(col("ams_temp_units")===0 ,lit(0).cast(IntegerType)).otherwise(col("ams_us_dollars")/col("ams_temp_units")))
 
     withASPDf
 
   }
+
 
   /*
   This procedure updates "AMS_VendorFamily"
@@ -82,12 +82,12 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    val tbl_Master_LenovoTopSellers = spark.sql("select sku,top_sellers from ams_datamart_pc.tbl_master_top_sellers_ca");
+    val tbl_Master_LenovoTopSellers = spark.sql("select sku,top_seller from ams_datamart_pc.tbl_master_top_sellers_ca group by sku,top_seller");
 
     val withTopSellers = df.join(tbl_Master_LenovoTopSellers,
       df("model")===tbl_Master_LenovoTopSellers("sku"),"left")
-      .withColumn("ams_top_sellers",
-          topSellersUDF(col("top_sellers")))
+      .withColumnRenamed("top_seller","ams_top_sellers")
+      .na.fill("Non Top Seller",Seq("ams_top_sellers"))
       .withColumn("ams_smartbuy_topseller",
           smartBuyTopSellersUDF(
             col("ams_smart_buys"),
@@ -121,95 +121,24 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    val masterCategoryDf = spark.sql("select * from ams_datamart_pc.tbl_master_category")
+    val masterCategoryDf = spark.sql("select subcat,catgory,npd_category from ams_datamart_pc.tbl_master_category")
 
     val withCategory = df.join(masterCategoryDf,
       df("subcat")===masterCategoryDf("subcat"),"left")
 
     val finalCategoryDf = withCategory
-      .drop("ams_sub_category")
-      .drop("subcat")
-      .drop("catgrp")
-      .withColumnRenamed("catgory","ams_catgrp")
-      .withColumnRenamed("npd_category","ams_npd_category")
+      .drop(masterCategoryDf("subcat"))
+      .withColumn("ams_catgrp",masterCategoryDf("catgory"))
+      .drop(masterCategoryDf("catgory"))
+      .withColumn("ams_npd_category",
+        when(col("npd_category").isNull,"Workstation").otherwise(col("npd_category")))
+      .drop("npd_category")
       .withColumn("ams_sub_category",
         subCategoryUDF(col("moblwork"),col("subcat")))
       .withColumn("ams_sub_category_temp",
         subCategoryTempUDF(col("moblwork"),col("subcat")))
 
     finalCategoryDf
-
-  }
-
-
-  /*
-  This procedure updates AMS_CDW_OS,AMS_CDW_PRICE
-
-  Stored PROC : Proc_Update_Master_ParsehUB_CDW
-  */
-
-  def withCDW(df: DataFrame): DataFrame = {
-
-    val spark = df.sparkSession
-
-    val masterParsehubCDW = spark.sql("select sku,windows,price from ams_datamart_pc.tbl_master_parsehub_cdw")
-
-    val withCDW= df.join(masterParsehubCDW,
-      df("model")===masterParsehubCDW("sku"),"left")
-
-    val finalDf = withCDW
-      .drop(masterParsehubCDW("sku"))
-      .withColumnRenamed("windows","ams_cdw_os")
-      .withColumnRenamed("price","ams_cdw_price")
-
-    finalDf
-
-  }
-
-
-  /*
-  This procedure updates AMS_Focus,AMS_Lenovo_Focus,AMS_Lenovo_System_Type
-  ,AMS_Lenovo_Form_Factor,AMS_Lenovo_List_Price
-
-  Stored PROC : Proc_Update_Master_TopSeller_LenovoFocus_MONTHLY
-  */
-
-  def withLenovoFocus(df: DataFrame): DataFrame = {
-
-    val spark = df.sparkSession
-
-    val masterLenovoTopSellers = spark
-      .sql("select ams_sku_date,focus,system_type,form_factor,pricing_list_price from ams_datamart_pc.tbl_master_lenovotopsellers")
-
-    val withLenovoFocus= df.join(masterLenovoTopSellers,
-      df("ams_sku_date")===masterLenovoTopSellers("ams_sku_date"),"left")
-
-    val finalDf = withLenovoFocus
-      .withColumnRenamed("focus","ams_focus")
-      .withColumnRenamed("system_type","ams_lenovo_system_type")
-      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
-      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
-      .withColumn("ams_lenovo_focus",
-        lenovoFocusUDF(col("ams_focus")))
-
-    finalDf
-
-  }
-
-  def withOSGroup(df: DataFrame): DataFrame = {
-
-    val spark = df.sparkSession
-
-    val masterOS = spark
-      .sql("select ams_os_detail,ams_os_name_chrome_win_mac from ams_datamart_pc.tbl_master_os")
-
-    val withOSGroup= df.join(masterOS,
-      df("op_sys")===masterOS("ams_os_detail"),"left")
-
-    val finalDf = withOSGroup
-      .withColumnRenamed("ams_os_name_chrome_win_mac","ams_os_group")
-
-    finalDf
 
   }
 
@@ -220,7 +149,7 @@ object CATransformations {
     val masterPriceBand = spark.sql("select price_band,price_band_map,pb_less,pb_high from ams_datamart_pc.tbl_master_priceBand")
 
     val withPriceBand= df.join(masterPriceBand,
-      df("AMS_ASP_CA") >= masterPriceBand("PB_LESS") && df("AMS_ASP_CA") < masterPriceBand("PB_HIGH")
+      df("ams_asp_ca") >= masterPriceBand("pb_less") && df("ams_asp_ca") < masterPriceBand("pb_high")
       ,"left")
 
     withPriceBand
@@ -229,8 +158,124 @@ object CATransformations {
       .withColumnRenamed("price_band","ams_price_band_ca")
       .withColumnRenamed("price_band_map","ams_price_band_map_ca")
 
+  }
+
+  def with_CA_US_PriceBand(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val masterPriceBand = spark.sql("select price_band,price_band_map,pb_less,pb_high from ams_datamart_pc.tbl_master_priceBand")
+
+    val withPriceBand= df.join(masterPriceBand,
+      df("ams_asp_us") >= masterPriceBand("pb_less") && df("ams_asp_us") < masterPriceBand("pb_high")
+      ,"left")
+
+    withPriceBand
+      .drop("pb_less")
+      .drop("pb_high")
+      .withColumnRenamed("price_band","ams_price_band_us")
+      .withColumnRenamed("price_band_map","ams_price_band_map_us")
 
   }
+
+  def withCAPriceBand4(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val withTmpCat = df.withColumn("temp_cat",
+      when(col("ams_Sub_category_temp") === "Mobile Workstation","MOBILEWORKSTATION").otherwise("COMMERCIAL"))
+
+    val masterPriceBand = spark.sql("select category,price_band,pb_less,pb_high from ams_datamart_pc.tbl_master_map_pb4")
+
+    val withPriceBand= withTmpCat.join(masterPriceBand,
+      withTmpCat("ams_asp_ca") >= masterPriceBand("pb_less") && withTmpCat("ams_asp_ca") < masterPriceBand("pb_high") && withTmpCat("temp_cat") === masterPriceBand("category")
+      ,"left")
+
+    val final_df = withPriceBand
+      .drop("category")
+      .drop("temp_cat")
+      .drop(masterPriceBand("pb_less"))
+      .drop(masterPriceBand("pb_high"))
+      .withColumnRenamed("price_band","map_price_band4")
+
+    final_df
+
+  }
+
+
+  def withCAPriceBandDetailed(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val withTempCat =  df.withColumn("temp_cat",
+      when(col("ams_sub_category_temp") === "Mobile Workstation","WORKSTATION").otherwise("RETAIL_COMMERCIAL"))
+
+    val masterPriceBand = spark.sql("select category,price_band,pb_less,pb_high from ams_datamart_pc.tbl_master_map_pb_detailed")
+
+    val withPriceBand= withTempCat.join(masterPriceBand,
+      withTempCat("ams_asp_ca") >= masterPriceBand("pb_less") && withTempCat("ams_asp_ca") < masterPriceBand("pb_high") && withTempCat("temp_cat") === masterPriceBand("category")
+      ,"left")
+
+    val final_df = withPriceBand
+      .drop("category")
+      .drop("temp_cat")
+      .drop(masterPriceBand("pb_less"))
+      .drop(masterPriceBand("pb_high"))
+      .withColumnRenamed("price_band","map_price_band_detailed")
+
+    final_df
+
+  }
+
+  def with_CA_US_PriceBand4(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val withTmpCat = df.withColumn("temp_cat",
+      when(col("ams_Sub_category_temp") === "Mobile Workstation","MOBILEWORKSTATION").otherwise("COMMERCIAL"))
+
+    val masterPriceBand = spark.sql("select category,price_band,pb_less,pb_high from ams_datamart_pc.tbl_master_map_pb4")
+
+    val withPriceBand= withTmpCat.join(masterPriceBand,
+      withTmpCat("ams_asp_us") >= masterPriceBand("pb_less") && withTmpCat("ams_asp_us") < masterPriceBand("pb_high") && withTmpCat("temp_cat") === masterPriceBand("category")
+      ,"left")
+
+    val final_df = withPriceBand
+      .drop("category")
+      .drop("temp_cat")
+      .drop(masterPriceBand("pb_less"))
+      .drop(masterPriceBand("pb_high"))
+      .withColumnRenamed("price_band","map_price_band4_us")
+
+    final_df
+
+  }
+
+
+  def with_CA_US_PriceBandDetailed(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val withTempCat =  df.withColumn("temp_cat",
+      when(col("ams_sub_category_temp") === "Mobile Workstation","WORKSTATION").otherwise("RETAIL_COMMERCIAL"))
+
+    val masterPriceBand = spark.sql("select category,price_band,pb_less,pb_high from ams_datamart_pc.tbl_master_map_pb_detailed")
+
+    val withPriceBand= withTempCat.join(masterPriceBand,
+      withTempCat("ams_asp_us") >= masterPriceBand("pb_less") && withTempCat("ams_asp_us") < masterPriceBand("pb_high") && withTempCat("temp_cat") === masterPriceBand("category")
+      ,"left")
+
+    val final_df = withPriceBand
+      .drop("category")
+      .drop("temp_cat")
+      .drop(masterPriceBand("pb_less"))
+      .drop(masterPriceBand("pb_high"))
+      .withColumnRenamed("price_band","map_price_band_detailed_us")
+
+    final_df
+
+  }
+
 
 
 

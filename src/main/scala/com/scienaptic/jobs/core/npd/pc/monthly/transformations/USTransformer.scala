@@ -4,35 +4,40 @@ import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.core.npd.common.CommonTransformations._
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.USTransformations._
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.CommonTransformations._
+import com.scienaptic.jobs.utility.NPDUtility
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
 object USTransformer {
 
+
   def withAllTransformations(df : DataFrame) = {
 
     val cleanUpDollers = (str : String) => {
-      str.replace("$","").replace(",","").toInt
+      val dollar = str.replace("$","").replace(",","").toDouble
+      Math.round(dollar * 100.0) / 100.0
+    }
+
+    val cleanUpUnits = (str : String) => {
+      str.replace(",","").toInt
     }
 
     def cleanDollersUDF = udf(cleanUpDollers)
+    def cleanUnitsUDF = udf(cleanUpUnits)
 
     val finalDF = df
       .transform(timePeriodsToDate)
       .transform(withCalenderDetails)
-      .withColumn("tmp_dollars",
-      cleanDollersUDF(col("dollars")))
-      .drop("dollars")
-      .withColumnRenamed("tmp_dollars","dollars")
+      .withColumn("tmp_dollars", cleanDollersUDF(col("dollars"))).drop("dollars").withColumnRenamed("tmp_dollars","dollars")
+      .withColumn("tmp_units", cleanUnitsUDF(col("units"))).drop("units").withColumnRenamed("tmp_units","units")
       .transform(withASP)
-      //.transform(withSmartBuy)
-      //.transform(withTopSellers)
-      //.transform(withLenovoFocus)
+      .transform(withSmartBuy)
+      .transform(withTopSellers)
       .transform(withVendorFamily)
-      //.transform(withCategory)
-      //.transform(withCDW)
-      //.transform(withOSGroup)
-      //.transform(withPriceBand)
+      .transform(withCategory)
+      .transform(withOSGroup)
+      .transform(withPriceBand)
+
 
     finalDF
 
@@ -62,34 +67,69 @@ object USTransformer {
     val USMthRetail_stg  = spark.sql("select * from "+DATAMART+"."+DM_US_PC_Monthly_Retail_STG)
       .withColumn("ams_source",lit("Retail"))
 
-    val cols1 = USMthReseller_stg.columns.toSet
-    val cols2 = USMthResellerBTO_stg.columns.toSet
-    val cols3 = USMthDist_stg.columns.toSet
-    val cols4 = USMthDistBTO_stg.columns.toSet
-    val cols5 = USMthRetail_stg.columns.toSet
-    val total = cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5 // union
 
-    def missingToNull(myCols: Set[String], allCols: Set[String]) = {
-      allCols.toList.map(x => x match {
+    val USMthReseller_int  = USMthReseller_stg.transform(withAllTransformations)
+      .withColumn("ams_source",lit("Reseller"))
+
+    USMthReseller_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_PC_US_Mth_Reseller");
+
+    val USMthResellerBTO_int  = USMthResellerBTO_stg.transform(withAllTransformations)
+      .withColumn("ams_source",lit("ResellerBTO"))
+
+    USMthResellerBTO_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_PC_US_Mth_Reseller_BTO");
+
+    val USMthDist_int  = USMthDist_stg.transform(withAllTransformations)
+      .withColumn("ams_source",lit("Dist"))
+
+    USMthDist_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Dist");
+
+
+    val USMthDistBTO_int  = USMthDistBTO_stg.transform(withAllTransformations)
+      .withColumn("ams_source",lit("DistBTO"))
+
+    USMthDistBTO_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Dist_BTO");
+
+
+    val USMthRetail_int = USMthRetail_stg.transform(withAllTransformations)
+      .withColumn("ams_source",lit("Retail"))
+
+    USMthRetail_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Retail");
+
+    val historicalFact = spark.sql("select * from npd_sandbox.fct_tbl_us_monthly_pc_historical")
+
+    val cols1 = USMthReseller_int.columns.toSet
+    val cols2 = USMthResellerBTO_int.columns.toSet
+    val cols3 = USMthDist_int.columns.toSet
+    val cols4 = USMthDistBTO_int.columns.toSet
+    val cols5 = USMthRetail_int.columns.toSet
+    val historic_columns = historicalFact.columns.toSet
+
+    val all_columns = historic_columns ++ cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5
+
+    def missingToNull(myCols: Set[String]) = {
+      all_columns.toList.map(x => x match {
         case x if myCols.contains(x) => col(x)
         case _ => lit("NA").as(x)
       })
     }
 
-    USMthReseller_stg
-      .select(missingToNull(cols1,total):_*)
-      .union(USMthResellerBTO_stg
-        .select(missingToNull(cols2,total):_*))
-      .union(USMthDist_stg
-        .select(missingToNull(cols3,total):_*))
-      .union(USMthDistBTO_stg
-        .select(missingToNull(cols4,total):_*))
-      .union(USMthRetail_stg
-        .select(missingToNull(cols5,total):_*))
-      .transform(withAllTransformations)
-      .write.mode(SaveMode.Overwrite)
-      .partitionBy("ams_year")
-      .saveAsTable(DATAMART+"."+TABLE_NAME);
+
+    val finalDf = historicalFact.select(missingToNull(historic_columns):_*)
+      .union(USMthReseller_int.select(missingToNull(cols1):_*))
+      .union(USMthResellerBTO_int.select(missingToNull(cols2):_*))
+      .union(USMthDist_int.select(missingToNull(cols3):_*))
+      .union(USMthDistBTO_int.select(missingToNull(cols4):_*))
+      .union(USMthRetail_int.select(missingToNull(cols5):_*))
+//      .write.mode(SaveMode.Overwrite)
+//      //.partitionBy("ams_year")
+//      .saveAsTable(DATAMART+"."+TABLE_NAME);
+
+    NPDUtility.writeToDataMart(spark,finalDf,DATAMART,TABLE_NAME)
 
   }
 

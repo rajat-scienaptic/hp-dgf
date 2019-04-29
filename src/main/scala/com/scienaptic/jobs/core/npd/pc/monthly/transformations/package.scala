@@ -72,12 +72,16 @@ package object transformations {
   }
 
   val skuDate = (sku : String,ams_month : String)  => {
-    val iso = dateToISO(ams_month);
-    sku+iso
+    if(ams_month != null){
+      val iso = dateToISO(ams_month)
+      sku+iso
+    } else {
+      sku
+    }
   }
 
   val topSellers = (ts : String)  => {
-    if(ts.equals("Yes")){
+    if(ts != null && ts.toLowerCase().equals("yes")){
       "Top Seller"
     }else{
       "Non Top Seller"
@@ -85,9 +89,10 @@ package object transformations {
   }
 
   val smartBuyTopSellers = (smartBuys : String,topSellers:String)  => {
-    if(smartBuys.equals("Smartbuy")){
+
+    if(smartBuys != null && smartBuys.equals("Smartbuy")){
       "Smartbuy"
-    }else if(topSellers.equals("Top Seller")) {
+    }else if( topSellers != null && topSellers.equals("Top Seller")) {
       "Lenovo Top Seller"
     }else{
       "Non SB/Non LTS"
@@ -95,9 +100,9 @@ package object transformations {
   }
 
   val lenovoSmartBuyTopSellers =  (smartBuys : String,topSellers:String,brand : String, model : String)  => {
-    if(smartBuys.equals("Smartbuy")){
+    if(smartBuys != null && smartBuys.equals("Smartbuy")){
       "Transactional"
-    }else if(topSellers.equals("Top Seller")) {
+    }else if(topSellers != null && topSellers.equals("Top Seller")) {
       "Transactional"
     }else{
       if(brand.equals("Dell") && (model.length() == 5)){
@@ -109,9 +114,9 @@ package object transformations {
   }
 
   val transactionalNontransactionalSkus = (smartBuys : String,topSellers:String, brand : String, model : String)  => {
-    if(smartBuys.equals("Smartbuy")){
+    if(smartBuys != null && smartBuys.equals("Smartbuy")){
       "Transactional"
-    }else if(topSellers.equals("Top Seller")) {
+    }else if(topSellers != null && topSellers.equals("Top Seller")) {
       "Transactional"
     }else{
       if(brand.equals("Dell") && (model.length() == 5)){
@@ -123,9 +128,9 @@ package object transformations {
   }
 
   val lenovoFocus = (focus : String)  => {
-    if(focus.equals("Yes") || focus.equals("Yes/STF")){
+    if(focus != null && (focus.equals("Yes") || focus.equals("Yes/STF"))){
       "Yes"
-    }else if(focus.equals("No")) {
+    }else if(focus != null && focus.equals("No")) {
       "No"
     }else{
       "NA"

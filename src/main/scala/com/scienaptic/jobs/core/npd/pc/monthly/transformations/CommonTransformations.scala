@@ -30,10 +30,6 @@ object CommonTransformations {
       .withColumn("fiscalquarter",
         concat(col("year"),col("quarter")))
 
-    masterMonthNumRawData.write.mode(SaveMode.Overwrite)
-      .saveAsTable("npd_sandbox"+"."+"masterMonthNumRawData");
-
-
 
     val tbl_Master_L3M_L12M_L13M = spark.sql("select * from ams_datamart_pc.tbl_master_l3m_l12m_l13m")
 
@@ -65,6 +61,7 @@ object CommonTransformations {
       .withColumnRenamed("fiscalquarter","ams_year_quarter")
       .withColumnRenamed("hpcalendar_quarter","ams_year_quarter_fiscal")
       .withColumnRenamed("promo_season","ams_promo_season")
+      .na.fill("-")
 
 
     val onlyAMS = withMasterMonth.select("time_periods",
@@ -72,8 +69,6 @@ object CommonTransformations {
       "ams_qtd_current/prior","ams_year_quarter","ams_year_quarter_fiscal"
       ,"ams_promo_season")
 
-    onlyAMS.write.mode(SaveMode.Overwrite)
-      .saveAsTable("npd_sandbox"+"."+"masterMonthNumRawData_withAMS");
 
     val finalDf = df.join(onlyAMS,df("time_periods")===onlyAMS("time_periods"),"left")
       .drop(onlyAMS("time_periods"))
@@ -95,6 +90,25 @@ object CommonTransformations {
       smartBuysUDF(col("brand"),col("model")))
 
     withSmartBuysDf
+  }
+
+
+  def withOSGroup(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    val masterOS = spark
+      .sql("select ams_os_detail,ams_os_name_chrome_win_mac from ams_datamart_pc.tbl_master_os" +
+        " group by ams_os_detail,ams_os_name_chrome_win_mac")
+
+    val withOSGroup= df.join(masterOS,
+      lower(df("op_sys"))===lower(masterOS("ams_os_detail")),"left")
+
+    val finalDf = withOSGroup
+      .withColumnRenamed("ams_os_name_chrome_win_mac","ams_os_group")
+
+    finalDf
+
   }
 
 }
