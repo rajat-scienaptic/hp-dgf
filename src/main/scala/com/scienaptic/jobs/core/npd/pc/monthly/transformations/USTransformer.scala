@@ -33,10 +33,8 @@ object USTransformer {
       .transform(withASP)
       .transform(withSmartBuy)
       .transform(withTopSellers)
-      //.transform(withLenovoFocus)
       .transform(withVendorFamily)
       .transform(withCategory)
-      //.transform(withCDW)
       .transform(withOSGroup)
       .transform(withPriceBand)
 
@@ -73,34 +71,34 @@ object USTransformer {
     val USMthReseller_int  = USMthReseller_stg.transform(withAllTransformations)
       .withColumn("ams_source",lit("Reseller"))
 
-//    USMthReseller_int.write.mode(SaveMode.Overwrite)
-//      .saveAsTable(DATAMART+"."+"Int_Fact_DM_PC_US_Mth_Reseller");
+    USMthReseller_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_PC_US_Mth_Reseller");
 
     val USMthResellerBTO_int  = USMthResellerBTO_stg.transform(withAllTransformations)
       .withColumn("ams_source",lit("ResellerBTO"))
 
-//    USMthResellerBTO_int.write.mode(SaveMode.Overwrite)
-//      .saveAsTable(DATAMART+"."+"Int_Fact_DM_PC_US_Mth_Reseller_BTO");
+    USMthResellerBTO_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_PC_US_Mth_Reseller_BTO");
 
     val USMthDist_int  = USMthDist_stg.transform(withAllTransformations)
       .withColumn("ams_source",lit("Dist"))
 
-//    USMthDist_int.write.mode(SaveMode.Overwrite)
-//      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Dist");
+    USMthDist_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Dist");
 
 
     val USMthDistBTO_int  = USMthDistBTO_stg.transform(withAllTransformations)
       .withColumn("ams_source",lit("DistBTO"))
 
-//    USMthDistBTO_int.write.mode(SaveMode.Overwrite)
-//      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Dist_BTO");
+    USMthDistBTO_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Dist_BTO");
 
 
     val USMthRetail_int = USMthRetail_stg.transform(withAllTransformations)
       .withColumn("ams_source",lit("Retail"))
 
-//    USMthRetail_int.write.mode(SaveMode.Overwrite)
-//      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Retail");
+    USMthRetail_int.write.mode(SaveMode.Overwrite)
+      .saveAsTable(DATAMART+"."+"Int_Fact_DM_US_PC_Monthly_Retail");
 
     val historicalFact = spark.sql("select * from npd_sandbox.fct_tbl_us_monthly_pc_historical")
 

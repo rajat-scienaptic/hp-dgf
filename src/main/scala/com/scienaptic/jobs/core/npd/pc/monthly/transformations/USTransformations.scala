@@ -69,7 +69,8 @@ object USTransformations {
 
     val masterWithSkuDate = Tbl_Master_LenovoTopSellers.withColumn("ams_sku_date_temp",
      skuDateUDF(col("sku"),col("ams_month")))
-      .select("top_seller","ams_sku_date_temp")
+      .drop("sku")
+      .drop("ams_month")
       .withColumnRenamed("ams_sku_date_temp","ams_sku_date")
 
     val dfWithSKUDate = df.withColumn("ams_sku_date",
