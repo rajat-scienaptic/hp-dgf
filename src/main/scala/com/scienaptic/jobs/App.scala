@@ -1,7 +1,7 @@
 package com.scienaptic.jobs
 
 import com.scienaptic.jobs.config.{AppConfiguration, ConfigurationFactory}
-import com.scienaptic.jobs.core.{CommercialTransform, HPDataProcessor, RetailTransform}
+import com.scienaptic.jobs.core.HPDataProcessor
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
