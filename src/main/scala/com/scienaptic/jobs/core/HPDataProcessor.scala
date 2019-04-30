@@ -1,13 +1,18 @@
 package com.scienaptic.jobs.core
 
 import com.scienaptic.jobs.ExecutionContext
+import com.scienaptic.jobs.core.gap._
 import com.scienaptic.jobs.core.npd.pc.monthly.staging.{CAMonthlyStaging, USMonthlyStaging}
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.{CATransformer, USTransformer}
 import com.scienaptic.jobs.core.npd.print._
+import com.scienaptic.jobs.core.pricing.amazon.AmazonTransform
+import com.scienaptic.jobs.core.pricing.commercial._
+import com.scienaptic.jobs.core.pricing.retail._
 
 object HPDataProcessor {
   def execute(executionContext: ExecutionContext): Unit = {
     executionContext.configuration.config match {
+      case "HP-orca-merge" => Blender.execute(executionContext)
       case "retail" => RetailTransform.execute(executionContext)
       case "retail-2" => RetailTransform2.execute(executionContext)
       case "retail-3" => RetailTransform3.execute(executionContext)

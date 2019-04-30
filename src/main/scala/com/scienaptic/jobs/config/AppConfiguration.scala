@@ -13,6 +13,8 @@ case class SparkConfig(@JsonProperty("master") master: String,
                        @JsonProperty("appName") appName: String)
 
 case class Source(@JsonProperty("name") name: String,
+                  @JsonProperty("historicFilePath") historicFilePath: String,
+                  @JsonProperty("orcaNewFilePath") orcaNewFilePath: String,
                   @JsonProperty("filePath") filePath: String,
                   @JsonProperty("select") selectOperation: Map[String, SelectOperation],
                   @JsonProperty("join") joinOperation: Map[String, JoinAndSelectOperation],
