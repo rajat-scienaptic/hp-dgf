@@ -11,13 +11,6 @@ import scala.collection.mutable
 
 object RetailPreRegressionPart15 {
 
-  val getMonthNumberFromString = udf((month: String) => {
-    val date: Date = monthDateFormat.parse(month)
-    val cal: Calendar = Calendar.getInstance
-    cal.setTime(date)
-    cal.get(Calendar.MONTH)
-  })
-
   val stability_weeks = 4
   val stability_range = 0.7
   val intro_weeks = 8
