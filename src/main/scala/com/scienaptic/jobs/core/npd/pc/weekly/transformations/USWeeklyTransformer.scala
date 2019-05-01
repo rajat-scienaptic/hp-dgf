@@ -8,7 +8,7 @@ import com.scienaptic.jobs.utility.NPDUtility
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
-object USTransformer {
+object USWeeklyTransformer {
 
 
   def withAllTransformations(df : DataFrame) = {

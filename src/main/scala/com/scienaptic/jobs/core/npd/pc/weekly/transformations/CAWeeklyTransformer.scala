@@ -4,7 +4,7 @@ import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.utility.NPDUtility
 import org.apache.spark.sql.functions._
 
-object CATransformer {
+object CAWeeklyTransformer {
 
   def execute(executionContext: ExecutionContext): Unit = {
 
