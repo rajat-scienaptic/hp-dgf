@@ -68,7 +68,7 @@ object USWeeklyTransformations {
     val master_TopVendors = spark.sql("select ams_top_vendors from ams_datamart_pc.tbl_master_topvendors")
 
     val withTopVendors = df.join(master_TopVendors,
-      df("ams_top_vendors")===master_TopVendors("ams_top_vendors"),"left")
+      df("ams_vendorfamily")===master_TopVendors("ams_top_vendors"),"left")
 
     withTopVendors
       .drop(master_TopVendors("ams_top_vendors")).na.fill("All Others",Seq("ams_top_vendors"))
