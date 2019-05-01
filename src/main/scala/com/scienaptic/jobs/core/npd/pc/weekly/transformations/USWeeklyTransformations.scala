@@ -34,7 +34,6 @@ object USWeeklyTransformations {
       )
 
 
-
     joinedDf
   }
 

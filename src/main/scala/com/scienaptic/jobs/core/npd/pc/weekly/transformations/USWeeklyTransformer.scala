@@ -26,16 +26,16 @@ object USWeeklyTransformer {
     def cleanUnitsUDF = udf(cleanUpUnits)
 
     val finalDF = df
-      .transform(timePeriodsToDate)
-      .transform(withCalenderDetails)
+      //.transform(timePeriodsToDate)
+      //.transform(withCalenderDetails)
       .withColumn("tmp_dollars", cleanDollersUDF(col("dollars"))).drop("dollars").withColumnRenamed("tmp_dollars","dollars")
       .withColumn("tmp_units", cleanUnitsUDF(col("units"))).drop("units").withColumnRenamed("tmp_units","units")
       .transform(withASP)
       .transform(withSmartBuy)
-      .transform(withTopSellers)
+      //.transform(withTopSellers)
       .transform(withVendorFamily)
       .transform(withCategory)
-      .transform(withOSGroup)
+      //.transform(withOSGroup)
       .transform(withPriceBand)
 
     finalDF
