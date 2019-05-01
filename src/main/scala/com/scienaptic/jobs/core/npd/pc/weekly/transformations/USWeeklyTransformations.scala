@@ -8,7 +8,7 @@ object USWeeklyTransformations {
   def withWeeksToDisplay(df :DataFrame) : DataFrame ={
     val spark = df.sparkSession
 
-    val master_Month = spark.sql("select * from ams_datamart_pc.Tbl_Master_Month");
+    val master_Month = spark.sql("select * from ams_datamart_pc.tbl_master_month_pc");
 
     val withTempMonth = df.withColumn("temp_month",substring(col("time_periods"),15,3))
 
@@ -31,10 +31,9 @@ object USWeeklyTransformations {
         concat(substring(col("time_periods"),22,4),
           weekofyear(col("ams_newdate"))
         )
-      )
+      ).drop("temp_month")
 
-
-    joinedDf
+    withNewDate
   }
 
 
