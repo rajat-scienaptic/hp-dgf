@@ -3,6 +3,7 @@ package com.scienaptic.jobs.core.npd.pc.monthly.transformations
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.CATransformations._
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.CommonTransformations._
+import com.scienaptic.jobs.utility.NPDUtility
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SaveMode}
 
@@ -50,26 +51,27 @@ object CATransformer {
 
     val spark = executionContext.spark
 
-    val DATAMART = "npd_sandbox"
+    val SANDBOX_DATAMART = "npd_sandbox"
+    val AMS_DATAMART = "ams_datamart_pc"
     val TABLE_NAME = "fct_tbl_ca_monthly_pc"
 
     val DM_CA_PC_Monthly_Dist_STG = "Stg_DM_CA_PC_Monthly_Dist"
     val DM_CA_PC_Monthly_Retail_STG = "Stg_DM_CA_PC_Monthly_Retail"
 
-    val CAMthDist_stg  = spark.sql("select * from "+DATAMART+"."+DM_CA_PC_Monthly_Dist_STG)
-    val CAMthRetail_stg  = spark.sql("select * from "+DATAMART+"."+DM_CA_PC_Monthly_Retail_STG)
+    val CAMthDist_stg  = spark.sql("select * from "+SANDBOX_DATAMART+"."+DM_CA_PC_Monthly_Dist_STG)
+    val CAMthRetail_stg  = spark.sql("select * from "+SANDBOX_DATAMART+"."+DM_CA_PC_Monthly_Retail_STG)
 
     val CAMthDist_int = CAMthDist_stg.transform(withAllTransformations)
 
     CAMthDist_int.write.mode(SaveMode.Overwrite)
-      .saveAsTable(DATAMART+"."+"int_DM_CA_PC_Monthly_Dist");
+      .saveAsTable(SANDBOX_DATAMART+"."+"int_DM_CA_PC_Monthly_Dist");
 
     val CAMthRetail_int = CAMthRetail_stg.transform(withAllTransformations)
 
     CAMthRetail_int.write.mode(SaveMode.Overwrite)
-      .saveAsTable(DATAMART+"."+"int_DM_CA_PC_Monthly_Retail");
+      .saveAsTable(SANDBOX_DATAMART+"."+"int_DM_CA_PC_Monthly_Retail");
 
-    val historicalFact = spark.sql("select * from npd_sandbox.fct_tbl_ca_monthly_pc_historical")
+    val historicalFact = spark.sql("select * from "+SANDBOX_DATAMART+".fct_tbl_ca_monthly_pc_historical")
 
     val cols1 = CAMthDist_int.columns.toSet
     val cols2 = CAMthRetail_int.columns.toSet
@@ -84,11 +86,11 @@ object CATransformer {
       })
     }
 
-    historicalFact.select(missingToNull(historic_columns):_*)
+    val finalDf = historicalFact.select(missingToNull(historic_columns):_*)
       .union(CAMthDist_int.select(missingToNull(cols1):_*))
       .union(CAMthRetail_int.select(missingToNull(cols2):_*))
-      .write.mode(SaveMode.Overwrite)
-      .saveAsTable(DATAMART+"."+TABLE_NAME);
+
+    NPDUtility.writeToDataMart(spark,finalDf,AMS_DATAMART,TABLE_NAME)
 
   }
 
