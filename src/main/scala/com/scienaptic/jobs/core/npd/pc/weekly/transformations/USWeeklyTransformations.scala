@@ -10,10 +10,9 @@ object USWeeklyTransformations {
 
     val master_Month = spark.sql("select * from ams_datamart_pc.tbl_master_month_pc");
 
-    val withTempMonth = df.withColumn("temp_month",substring(col("time_periods"),15,3))
+    val withTempMonth = df.withColumn("temp_month",upper(substring(col("time_periods"),15,3)))
 
-    val joinedDf = withTempMonth.join(master_Month,
-      upper(withTempMonth("temp_month"))===upper(master_Month("month_name")),"inner")
+    val joinedDf = withTempMonth.join(master_Month, withTempMonth("temp_month")===trim(master_Month("month_name")),"left")
 
     val withNewDate = joinedDf
       .withColumn("ams_newdate",
