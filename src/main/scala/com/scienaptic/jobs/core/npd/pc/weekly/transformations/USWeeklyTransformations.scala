@@ -16,12 +16,15 @@ object USWeeklyTransformations {
 
     val withNewDate = joinedDf
       .withColumn("ams_newdate",
-      concat(col("month_number"),
-        lit("/"),
-        substring(col("time_periods"),19,2),
-        lit("/"),
-        substring(col("time_periods"),22,4)
-      ))
+        to_date(
+          concat(col("month_number"),
+          lit("/"),
+          substring(col("time_periods"),19,2),
+          lit("/"),
+          substring(col("time_periods"),22,4)
+          ),
+          "MM/dd/yyyy")
+      )
       .withColumn("ams_qtr",
       concat(substring(col("time_periods"),22,4),
         col("calendar_quarter")
