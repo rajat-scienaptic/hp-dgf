@@ -67,9 +67,9 @@ object USWeeklyTransformations {
 
     //TODO compute and handle ams_sku_date_week while master table creation
 
-    val masterWithSkuDateWeek = spark.sql("select ams_sku_date_week,top_seller " +
+    val masterWithSkuDateWeek = spark.sql("select ams_sku_date_week,top_seller,focus,system_type,form_factor,pricing_list_price " +
       "from ams_datamart_pc.tbl_master_lenovotopsellers " +
-      "group by ams_sku_date_week,top_seller");
+      "group by ams_sku_date_week,top_seller,focus,system_type,form_factor,pricing_list_price");
 
     val dfWithSKUDate = df.withColumn("ams_sku_date",
       concat(
