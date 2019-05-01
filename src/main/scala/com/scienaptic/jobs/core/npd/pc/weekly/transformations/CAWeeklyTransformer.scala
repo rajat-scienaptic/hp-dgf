@@ -18,12 +18,13 @@ object CAWeeklyTransformer {
 
     val CAMthRetail_int = spark.sql("select * from "+SANDBOX_DATAMART+".Stg_"+DM_PC_CA_Weekly_Retail)
 
-    val historicalFact = spark.sql("select * from npd_sandbox.fct_tbl_ca_weekly_pc_historical")
+    //val historicalFact = spark.sql("select * from npd_sandbox.fct_tbl_ca_weekly_pc_historical")
 
     val cols1 = CAMthRetail_int.columns.toSet
-    val historic_columns = historicalFact.columns.toSet
+    //val historic_columns = historicalFact.columns.toSet
 
-    val all_columns = historic_columns ++ cols1 // union
+    //val all_columns = historic_columns ++ cols1 // union
+    val all_columns = cols1 // union
 
     def missingToNull(myCols: Set[String]) = {
       all_columns.toList.map(x => x match {
@@ -32,8 +33,7 @@ object CAWeeklyTransformer {
       })
     }
 
-    val finalDf = historicalFact.select(missingToNull(historic_columns):_*)
-      .union(CAMthRetail_int.select(missingToNull(cols1):_*))
+    val finalDf = CAMthRetail_int.select(missingToNull(cols1):_*)
 
     NPDUtility.writeToDataMart(spark,finalDf,AMS_DATAMART,TABLE_NAME)
 
