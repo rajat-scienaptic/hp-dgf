@@ -38,9 +38,18 @@ object USWeeklyTransformations {
     val dataLoadDayCount = 80*7
     val weeksDisplayDayCount = 6*7
 
-    val withMaxDate = withNewDate
+    val maxDatLoadDF = withNewDate.select(date_add(max("ams_newdate"),-dataLoadDayCount) as "data_load_maxdate")
+    val maxWeeksDisplayDF = withNewDate.select(date_add(max("ams_newdate"),-weeksDisplayDayCount) as "weeks_display_maxdate")
+
+    /*val withMaxDate = withNewDate
       .withColumn("data_load_maxdate",date_add(max("ams_newdate"),-dataLoadDayCount))
       .withColumn("weeks_display_maxdate",date_add(max("ams_newdate"),-weeksDisplayDayCount))
+      .withColumn("ams_datatoload",
+        when(col("ams_newdate") > col("data_load_maxdate"),"T").otherwise("F"))
+      .withColumn("ams_weekstodisplay",
+        when(col("ams_newdate") > col("weeks_display_maxdate"),"T").otherwise("F"))
+*/
+    val withMaxDate = withNewDate.crossJoin(maxDatLoadDF).crossJoin(maxWeeksDisplayDF)
       .withColumn("ams_datatoload",
         when(col("ams_newdate") > col("data_load_maxdate"),"T").otherwise("F"))
       .withColumn("ams_weekstodisplay",
