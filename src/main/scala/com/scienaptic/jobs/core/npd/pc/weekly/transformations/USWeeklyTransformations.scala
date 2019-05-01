@@ -1,6 +1,6 @@
 package com.scienaptic.jobs.core.npd.pc.weekly.transformations
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.sql.functions._
 
 object USWeeklyTransformations {
@@ -35,7 +35,19 @@ object USWeeklyTransformations {
         )
       ).drop("temp_month")
 
-    withNewDate
+    val dataLoadDayCount = 80*7
+    val weeksDisplayDayCount = 6*7
+
+    val withMaxDate = withNewDate
+      .withColumn("data_load_maxdate",date_add(max("ams_newdate"),-dataLoadDayCount))
+      .withColumn("weeks_display_maxdate",date_add(max("ams_newdate"),-weeksDisplayDayCount))
+      .withColumn("ams_datatoload",
+        when(col("ams_newdate") > col("data_load_maxdate"),"T").otherwise("F"))
+      .withColumn("ams_weekstodisplay",
+        when(col("ams_newdate") > col("weeks_display_maxdate"),"T").otherwise("F"))
+
+    withMaxDate
+
   }
 
 
@@ -55,10 +67,10 @@ object USWeeklyTransformations {
       df("model")===master_cdw_formfactor("model"),"left")
 
     withFormFactor
-      .withColumn("AMS_CDW_FormFactor",col("form_factor"))
+      .withColumn("ams_cdw_formfactor",col("form_factor"))
       .drop("form_factor")
       .drop(master_cdw_formfactor("model"))
-      .na.fill("NA",Seq("AMS_CDW_FormFactor"))
+      .na.fill("NA",Seq("ams_cdw_formfactor"))
 
   }
 
@@ -71,8 +83,7 @@ object USWeeklyTransformations {
     val withTopVendors = df.join(master_TopVendors,
       df("ams_vendorfamily")===master_TopVendors("ams_top_vendors"),"left")
 
-    withTopVendors
-      .drop(master_TopVendors("ams_top_vendors")).na.fill("All Others",Seq("ams_top_vendors"))
+    withTopVendors.na.fill("All Others",Seq("ams_top_vendors"))
 
   }
 
