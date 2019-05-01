@@ -8,7 +8,7 @@ object USWeeklyTransformations {
   def withWeeksToDisplay(df :DataFrame) : DataFrame ={
     val spark = df.sparkSession
 
-    val master_Month = spark.sql("select * from Tbl_Master_Month");
+    val master_Month = spark.sql("select * from ams_datamart_pc.Tbl_Master_Month");
 
     val withTempMonth = df.withColumn("temp_month",substring(col("time_periods"),15,3))
 
@@ -48,7 +48,7 @@ object USWeeklyTransformations {
 
     val spark = df.sparkSession
 
-    val master_cdw_formfactor = spark.sql("select model,form_factor from tbl_master_cdw_formfactor")
+    val master_cdw_formfactor = spark.sql("select model,form_factor from ams_datamart_pc.tbl_master_cdw_formfactor")
 
     val withFormFactor = df.join(master_cdw_formfactor,
       df("model")===master_cdw_formfactor("model"),"left")
@@ -65,7 +65,7 @@ object USWeeklyTransformations {
 
     val spark = df.sparkSession
 
-    val master_TopVendors = spark.sql("select ams_top_vendors from tbl_master_topvendors")
+    val master_TopVendors = spark.sql("select ams_top_vendors from ams_datamart_pc.tbl_master_topvendors")
 
     val withTopVendors = df.join(master_TopVendors,
       df("ams_top_vendors")===master_TopVendors("ams_top_vendors"),"left")
@@ -79,7 +79,7 @@ object USWeeklyTransformations {
 
     val spark = df.sparkSession
 
-    val master_os = spark.sql("select ams_os_detail,ams_os_group,ams_os_sub_group,ams_os_name,ams_os_name_chrome,ams_os_name_chrome_win_mac from tbl_master_os")
+    val master_os = spark.sql("select ams_os_detail,ams_os_group,ams_os_sub_group,ams_os_name,ams_os_name_chrome,ams_os_name_chrome_win_mac from ams_datamart_pc.tbl_master_os")
 
     val withOS = df.join(master_os,
       df("op_sys")===master_os("ams_os_detail"),"left")
