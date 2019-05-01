@@ -13,7 +13,7 @@ object USWeeklyTransformations {
     val withTempMonth = df.withColumn("temp_month",substring(col("time_periods"),15,3))
 
     val joinedDf = withTempMonth.join(master_Month,
-      lower(withTempMonth("temp_month"))===lower(master_Month("month_name")),"inner")
+      upper(withTempMonth("temp_month"))===upper(master_Month("month_name")),"inner")
 
     val withNewDate = joinedDf
       .withColumn("ams_newdate",
