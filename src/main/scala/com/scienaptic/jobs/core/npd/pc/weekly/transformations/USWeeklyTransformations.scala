@@ -1,6 +1,7 @@
 package com.scienaptic.jobs.core.npd.pc.weekly.transformations
 
-import org.apache.spark.sql.{DataFrame, SaveMode}
+import com.scienaptic.jobs.core.npd.pc.monthly.transformations._
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 
 object USWeeklyTransformations {
@@ -56,6 +57,60 @@ object USWeeklyTransformations {
         when(col("ams_newdate") > col("weeks_display_maxdate"),"T").otherwise("F"))
 
     withMaxDate
+
+  }
+
+
+  def withWeeklyTopSellers(df: DataFrame): DataFrame = {
+
+    val spark = df.sparkSession
+
+    //TODO compute and handle ams_sku_date_week while master table creation
+
+    val masterWithSkuDateWeek = spark.sql("select ams_sku_date_week,top_seller " +
+      "from ams_datamart_pc.tbl_master_lenovotopsellers " +
+      "group by ams_sku_date_week,top_seller");
+
+    val dfWithSKUDate = df.withColumn("ams_sku_date",
+      concat(
+        col("model"),
+        month(col("ams_newdate")),
+        year(col("ams_newdate"))
+      )
+    )
+
+    val withTopSellers = dfWithSKUDate.join(masterWithSkuDateWeek,
+      dfWithSKUDate("ams_sku_date")===masterWithSkuDateWeek("ams_sku_date_week"),"left")
+      .drop(masterWithSkuDateWeek("ams_sku_date_week"))
+      .withColumn("ams_top_sellers",
+        topSellersUDF(col("top_seller")))
+      .withColumn("ams_smartbuy_topseller",
+        smartBuyTopSellersUDF(
+          col("ams_smart_buys"),
+          col("ams_top_sellers")))
+      .withColumn("ams_smartbuy_lenovotopseller",
+        LenovoSmartBuyTopSellersUDF(
+          col("ams_smart_buys"),
+          col("ams_top_sellers"),
+          col("brand"),
+          col("model")))
+      .withColumn("ams_transactional-nontransactional-skus",
+        transactionalNontransactionalSkusUDF(
+          col("ams_smart_buys"),
+          col("ams_top_sellers"),
+          col("brand"),
+          col("model")))
+
+
+    val finalDf = withTopSellers
+      .withColumnRenamed("focus","ams_focus")
+      .withColumnRenamed("system_type","ams_lenovo_system_type")
+      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
+      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
+      .withColumn("ams_lenovo_focus",
+        lenovoFocusUDF(col("ams_focus")))
+
+    finalDf
 
   }
 

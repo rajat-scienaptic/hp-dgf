@@ -70,46 +70,6 @@ object CATransformations {
     vendorFamilyDf
   }
 
-
-  /*
-  This procedure updates AMS_Top_Sellers,AMS_SmartBuy_TopSeller,
-  AMS_SKU_DATE,AMS_TRANSACTIONAL-NONTRANSACTIONAL-SKUS
-
-  Stored PROC : Proc_Update_Master_TopSeller_CA
-  */
-
-  def withCATopSellers(df: DataFrame): DataFrame = {
-
-    val spark = df.sparkSession
-
-    val tbl_Master_LenovoTopSellers = spark.sql("select sku,top_seller from ams_datamart_pc.tbl_master_top_sellers_ca group by sku,top_seller");
-
-    val withTopSellers = df.join(tbl_Master_LenovoTopSellers,
-      df("model")===tbl_Master_LenovoTopSellers("sku"),"left")
-      .withColumnRenamed("top_seller","ams_top_sellers")
-      .na.fill("Non Top Seller",Seq("ams_top_sellers"))
-      .withColumn("ams_smartbuy_topseller",
-          smartBuyTopSellersUDF(
-            col("ams_smart_buys"),
-            col("ams_top_sellers")))
-      .withColumn("ams_smartbuy_lenovotopseller",
-        LenovoSmartBuyTopSellersUDF(
-          col("ams_smart_buys"),
-          col("ams_top_sellers"),
-          col("brand"),
-          col("model")))
-      .withColumn("ams_transactional-nontransactional-skus",
-        transactionalNontransactionalSkusUDF(
-          col("ams_smart_buys"),
-          col("ams_top_sellers"),
-          col("brand"),
-          col("model")))
-
-    withTopSellers
-
-  }
-
-
   /*
   This procedure updates ams_catgrp,ams_npd_category,ams_sub_category,ams_sub_category_temp
   AMS_SKU_DATE,AMS_TRANSACTIONAL-NONTRANSACTIONAL-SKUS

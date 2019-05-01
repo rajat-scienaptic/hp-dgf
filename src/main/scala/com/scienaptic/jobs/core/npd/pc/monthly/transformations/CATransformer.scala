@@ -34,7 +34,7 @@ object CATransformer {
       .transform(withOSGroup)
       .transform(withCACategory)
       .transform(withSmartBuy)
-      .transform(withCATopSellers)
+      .transform(withTopSellers)
       .transform(withCAPriceBand)
       .transform(withCAPriceBand4)
       .transform(withCAPriceBandDetailed)
