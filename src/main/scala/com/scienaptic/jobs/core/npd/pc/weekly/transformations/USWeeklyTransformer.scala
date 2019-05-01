@@ -1,9 +1,9 @@
 package com.scienaptic.jobs.core.npd.pc.weekly.transformations
 
 import com.scienaptic.jobs.ExecutionContext
-import com.scienaptic.jobs.core.npd.common.CommonTransformations._
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.CommonTransformations._
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.USTransformations._
+import com.scienaptic.jobs.core.npd.pc.weekly.transformations.USWeeklyTransformations._
 import com.scienaptic.jobs.utility.NPDUtility
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SaveMode}
@@ -37,6 +37,10 @@ object USWeeklyTransformer {
       .transform(withCategory)
       //.transform(withOSGroup)
       .transform(withPriceBand)
+      .transform(withOSDetails)
+      .transform(withItemDescription)
+      .transform(withCDWFormFactor)
+      .transform(withTopVendors)
 
     finalDF
 
@@ -103,16 +107,17 @@ object USWeeklyTransformer {
     USWeeklyRetail_int.write.mode(SaveMode.Overwrite)
       .saveAsTable(SANDBOX_DATAMART+"."+"Int_Fact_"+DM_Weekly_Retail_PC_US);
 
-    val historicalFact = spark.sql("select * from "+AMS_DATAMART+"."+Historical_Fact_Table)
+    //val historicalFact = spark.sql("select * from "+AMS_DATAMART+"."+Historical_Fact_Table)
 
     val cols1 = USWeeklyReseller_int.columns.toSet
     val cols2 = USWeeklyResellerBTO_int.columns.toSet
     val cols3 = USWeeklyDist_int.columns.toSet
     val cols4 = USWeeklyDistBTO_int.columns.toSet
     val cols5 = USWeeklyRetail_int.columns.toSet
-    val historic_columns = historicalFact.columns.toSet
+    //val historic_columns = historicalFact.columns.toSet
 
-    val all_columns = historic_columns ++ cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5
+    //val all_columns = historic_columns ++ cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5
+    val all_columns =   cols1 ++ cols2 ++ cols3 ++ cols4 ++ cols5
 
     def missingToNull(myCols: Set[String]) = {
       all_columns.toList.map(x => x match {
@@ -121,8 +126,8 @@ object USWeeklyTransformer {
       })
     }
 
-    val finalDf = historicalFact.select(missingToNull(historic_columns):_*)
-      .union(USWeeklyReseller_int.select(missingToNull(cols1):_*))
+    //val finalDf = historicalFact.select(missingToNull(historic_columns):_*)
+    val finalDf = USWeeklyReseller_int.select(missingToNull(cols1):_*)
       .union(USWeeklyResellerBTO_int.select(missingToNull(cols2):_*))
       .union(USWeeklyDist_int.select(missingToNull(cols3):_*))
       .union(USWeeklyDistBTO_int.select(missingToNull(cols4):_*))
