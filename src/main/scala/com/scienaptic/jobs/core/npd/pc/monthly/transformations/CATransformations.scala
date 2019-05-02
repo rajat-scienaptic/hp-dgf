@@ -82,9 +82,9 @@ object CATransformations {
 
     val spark = df.sparkSession
 
-    val Tbl_Master_LenovoTopSellers = spark.sql("select sku,top_seller,ams_month,focus,system_type,form_factor,pricing_list_price " +
+    val Tbl_Master_LenovoTopSellers = spark.sql("select sku,topseller,ams_month,focus,system_type,form_factor,pricing_list_price " +
       "from ams_datamart_pc.tbl_master_lenovotopsellers_ca " +
-      "group by sku,top_seller,ams_month,focus,system_type,form_factor,pricing_list_price");
+      "group by sku,topseller,ams_month,focus,system_type,form_factor,pricing_list_price");
 
     val masterWithSkuDate = Tbl_Master_LenovoTopSellers.withColumn("ams_sku_date_temp",
       skuDateUDF(col("sku"),col("ams_month")))
@@ -99,7 +99,7 @@ object CATransformations {
       dfWithSKUDate("ams_sku_date")===masterWithSkuDate("ams_sku_date"),"left")
       .drop(masterWithSkuDate("ams_sku_date"))
       .withColumn("ams_top_sellers",
-        topSellersUDF(col("top_seller")))
+        topSellersUDF(col("topseller")))
       .withColumn("ams_smartbuy_topseller",
         smartBuyTopSellersUDF(
           col("ams_smart_buys"),
