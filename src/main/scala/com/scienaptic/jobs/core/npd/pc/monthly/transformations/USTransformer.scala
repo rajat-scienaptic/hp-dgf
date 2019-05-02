@@ -32,7 +32,7 @@ object USTransformer {
       .withColumn("tmp_units", cleanUnitsUDF(col("units"))).drop("units").withColumnRenamed("tmp_units","units")
       .transform(withASP)
       .transform(withSmartBuy)
-      .transform(withTopSellers)
+      .transform(withUSTopSellers)
       .transform(withVendorFamily)
       .transform(withCategory)
       .transform(withOSGroup)

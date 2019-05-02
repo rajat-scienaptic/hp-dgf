@@ -92,64 +92,7 @@ object CommonTransformations {
     withSmartBuysDf
   }
 
-  /*
-  This procedure updates AMS_Top_Sellers,AMS_SmartBuy_TopSeller,
-  AMS_SKU_DATE,AMS_TRANSACTIONAL-NONTRANSACTIONAL-SKUS
 
-  Stored PROC : Proc_MONTHLY_Update_Master_TopSeller
-  */
-
-  def withTopSellers(df: DataFrame): DataFrame = {
-
-    val spark = df.sparkSession
-
-    val Tbl_Master_LenovoTopSellers = spark.sql("select sku,top_seller,ams_month,focus,system_type,form_factor,pricing_list_price " +
-      "from ams_datamart_pc.tbl_master_lenovotopsellers " +
-      "group by sku,top_seller,ams_month,focus,system_type,form_factor,pricing_list_price");
-
-    val masterWithSkuDate = Tbl_Master_LenovoTopSellers.withColumn("ams_sku_date_temp",
-      skuDateUDF(col("sku"),col("ams_month")))
-      .drop("sku")
-      .drop("ams_month")
-      .withColumnRenamed("ams_sku_date_temp","ams_sku_date")
-
-    val dfWithSKUDate = df.withColumn("ams_sku_date",
-      skuDateUDF(col("model"),col("time_periods")))
-
-    val withTopSellers = dfWithSKUDate.join(masterWithSkuDate,
-      dfWithSKUDate("ams_sku_date")===masterWithSkuDate("ams_sku_date"),"left")
-      .drop(masterWithSkuDate("ams_sku_date"))
-      .withColumn("ams_top_sellers",
-        topSellersUDF(col("top_seller")))
-      .withColumn("ams_smartbuy_topseller",
-        smartBuyTopSellersUDF(
-          col("ams_smart_buys"),
-          col("ams_top_sellers")))
-      .withColumn("ams_smartbuy_lenovotopseller",
-        LenovoSmartBuyTopSellersUDF(
-          col("ams_smart_buys"),
-          col("ams_top_sellers"),
-          col("brand"),
-          col("model")))
-      .withColumn("ams_transactional-nontransactional-skus",
-        transactionalNontransactionalSkusUDF(
-          col("ams_smart_buys"),
-          col("ams_top_sellers"),
-          col("brand"),
-          col("model")))
-
-
-    val finalDf = withTopSellers
-      .withColumnRenamed("focus","ams_focus")
-      .withColumnRenamed("system_type","ams_lenovo_system_type")
-      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
-      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
-      .withColumn("ams_lenovo_focus",
-        lenovoFocusUDF(col("ams_focus")))
-
-    finalDf
-
-  }
 
   def withOSGroup(df: DataFrame): DataFrame = {
 
