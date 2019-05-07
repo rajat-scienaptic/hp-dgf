@@ -92,7 +92,9 @@ object RetailPreRegressionPart21 {
     val spark: SparkSession = executionContext.spark
 
     var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv"))
-    val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp"))).agg(max("Week_End_Date")).head().getDate(0)
+    //val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp"))).agg(max("Week_End_Date")).head().getDate(0)
+    val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp")))
+      .withColumn("Week_End_Date", date_sub(col("Week_End_Date"), 7)).agg(max("Week_End_Date")).head().getDate(0)
 
     //var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/Intermediate/retail-DirectCann-PART20.csv")
     var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART20.csv")
@@ -326,6 +328,8 @@ object RetailPreRegressionPart21 {
     //      //    colnames(retail)[colnames(retail)=="Ã¯..Online"] <- "Online"
     //      .withColumnRenamed("Ã¯..Online", "Online")
 
+    retailWithCompCann3DF = retailWithCompCann3DF.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date")), "MM/dd/yyyy"))
+      .withColumn("Week_End_Date", col("Week_End_Date").cast("string"))
 
     val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
