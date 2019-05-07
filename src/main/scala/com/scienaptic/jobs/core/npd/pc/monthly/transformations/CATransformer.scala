@@ -71,13 +71,15 @@ object CATransformer {
     CAMthRetail_int.write.mode(SaveMode.Overwrite)
       .saveAsTable(SANDBOX_DATAMART+"."+"int_DM_CA_PC_Monthly_Retail");
 
-    val historicalFact = spark.sql("select * from "+SANDBOX_DATAMART+".fct_tbl_ca_monthly_pc_historical")
+    //val historicalFact = spark.sql("select * from "+SANDBOX_DATAMART+".fct_tbl_ca_monthly_pc_historical")
 
     val cols1 = CAMthDist_int.columns.toSet
     val cols2 = CAMthRetail_int.columns.toSet
-    val historic_columns = historicalFact.columns.toSet
 
-    val all_columns = historic_columns ++ cols1 ++ cols2 // union
+    //val historic_columns = historicalFact.columns.toSet
+
+    //val all_columns = historic_columns ++ cols1 ++ cols2 // union
+    val all_columns =  cols1 ++ cols2 // union
 
     def missingToNull(myCols: Set[String]) = {
       all_columns.toList.map(x => x match {
@@ -86,8 +88,8 @@ object CATransformer {
       })
     }
 
-    val finalDf = historicalFact.select(missingToNull(historic_columns):_*)
-      .union(CAMthDist_int.select(missingToNull(cols1):_*))
+    //val finalDf = historicalFact.select(missingToNull(historic_columns):_*)
+    val finalDf = CAMthDist_int.select(missingToNull(cols1):_*)
       .union(CAMthRetail_int.select(missingToNull(cols2):_*))
 
     NPDUtility.writeToDataMart(spark,finalDf,AMS_DATAMART,TABLE_NAME)
