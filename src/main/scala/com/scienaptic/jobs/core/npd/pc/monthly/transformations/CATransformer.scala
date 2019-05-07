@@ -32,6 +32,7 @@ object CATransformer {
       .transform(withCAASP)
       .withColumnRenamed("MODELA","model")
       .withColumnRenamed("os","op_sys")
+      .transform(withVendorFamily)
       .transform(withOSGroup)
       .transform(withCACategory)
       .transform(withSmartBuy)
