@@ -124,7 +124,9 @@ object USTransformations {
 
     val masterCategoryDf = spark.sql("select subcat,catgory,npd_category from ams_datamart_pc.tbl_master_category")
 
-    val withCategory = df.join(masterCategoryDf,
+    val withCategory = df
+      .filter(!col("sub_category").isin(Seq("BTO Servers","Bare-Bones Computers","Servers")))
+      .join(masterCategoryDf,
       df("sub_category")===masterCategoryDf("subcat"),"left")
 
     val finalCategoryDf = withCategory
