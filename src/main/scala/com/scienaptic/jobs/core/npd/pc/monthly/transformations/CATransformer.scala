@@ -92,6 +92,7 @@ object CATransformer {
     //val finalDf = historicalFact.select(missingToNull(historic_columns):_*)
     val finalDf = CAMthDist_int.select(missingToNull(cols1):_*)
       .union(CAMthRetail_int.select(missingToNull(cols2):_*))
+        .drop("actual_units")
 
     NPDUtility.writeToDataMart(spark,finalDf,AMS_DATAMART,TABLE_NAME)
 

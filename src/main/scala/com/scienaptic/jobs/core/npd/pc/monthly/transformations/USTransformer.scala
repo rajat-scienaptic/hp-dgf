@@ -126,6 +126,7 @@ object USTransformer {
       .union(USMthDist_int.select(missingToNull(cols3):_*))
       .union(USMthDistBTO_int.select(missingToNull(cols4):_*))
       .union(USMthRetail_int.select(missingToNull(cols5):_*))
+      .drop("actual_units")
 
     NPDUtility.writeToDataMart(spark,finalDf,AMS_DATAMART,TABLE_NAME)
 

@@ -51,21 +51,23 @@ object CATransformations {
 
   }
 
-
   /*
-  This procedure updates "AMS_VendorFamily"
+  This procedure updates "ams_vendorfamily"
   Stored PROC : Proc_Update_Master_Vendor.txt
   */
+
   def withVendorFamily(df: DataFrame): DataFrame = {
 
     val spark = df.sparkSession
 
     val masterBrandDf = spark.sql("select * from ams_datamart_pc.tbl_master_brand")
 
-    val vendorFamilyDf = df.join(masterBrandDf,df("brand") === masterBrandDf("ams_vendorFamily")
+    val vendorFamilyDf = df.join(masterBrandDf,df("brand") === masterBrandDf("ams_vendorfamily")
       , "left")
-      .drop("ams_vendorFamily")
-        .withColumnRenamed("ams_brand","ams_vendorFamily")
+      .drop("ams_vendorfamily")
+      .withColumn("ams_vendorfamily",
+        when(col("ams_brand").isNull,col("brand"))
+          .otherwise(col("ams_brand")))
 
     vendorFamilyDf
   }
