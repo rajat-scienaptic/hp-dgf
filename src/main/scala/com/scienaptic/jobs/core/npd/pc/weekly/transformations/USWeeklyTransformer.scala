@@ -27,18 +27,18 @@ object USWeeklyTransformer {
 
     val finalDF = df
       .transform(withWeeksToDisplay)
-      .withColumn("tmp_dollars", cleanDollersUDF(col("dollars"))).drop("dollars").withColumnRenamed("tmp_dollars","dollars")
-      .withColumn("tmp_units", cleanUnitsUDF(col("units"))).drop("units").withColumnRenamed("tmp_units","units")
-      .transform(withASP)
-      .transform(withSmartBuy)
-      .transform(withWeeklyTopSellers)
-      .transform(withVendorFamily)
-      .transform(withCategory)
-      .transform(withPriceBand)
-      .transform(withOSDetails)
-      .transform(withItemDescription)
-      .transform(withCDWFormFactor)
-      .transform(withTopVendors)
+      //.withColumn("tmp_dollars", cleanDollersUDF(col("dollars"))).drop("dollars").withColumnRenamed("tmp_dollars","dollars")
+      //.withColumn("tmp_units", cleanUnitsUDF(col("units"))).drop("units").withColumnRenamed("tmp_units","units")
+      //.transform(withASP)
+      //.transform(withSmartBuy)
+      //.transform(withWeeklyTopSellers)
+      //.transform(withVendorFamily)
+      //.transform(withCategory)
+      //.transform(withPriceBand)
+      //.transform(withOSDetails)
+      //.transform(withItemDescription)
+      //.transform(withCDWFormFactor)
+      //.transform(withTopVendors)
 
     finalDF
 

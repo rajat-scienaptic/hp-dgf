@@ -38,7 +38,6 @@ object USTransformer {
       .transform(withOSGroup)
       .transform(withPriceBand)
 
-
     finalDF
 
   }
