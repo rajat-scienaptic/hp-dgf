@@ -125,7 +125,7 @@ object USTransformations {
     val masterCategoryDf = spark.sql("select subcat,catgory,npd_category from ams_datamart_pc.tbl_master_category")
 
     val filterList  = List("BTO Servers","Bare-Bones Computers","Servers")
-    
+
     val withCategory = df
       .filter(!col("sub_category").isin(filterList:_*))
       .join(masterCategoryDf,

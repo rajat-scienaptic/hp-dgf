@@ -56,7 +56,8 @@ object USWeeklyTransformations {
       .withColumn("ams_weekstodisplay",
         when(col("ams_newdate") > col("weeks_display_maxdate"),"T").otherwise("F"))
 
-    withMaxDate
+    val filterList = List("T")
+    withMaxDate.filter(col("ams_datatoload").isin(filterList:_*))
 
   }
 
