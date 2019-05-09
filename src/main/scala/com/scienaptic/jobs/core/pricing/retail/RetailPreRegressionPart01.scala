@@ -175,6 +175,7 @@ object RetailPreRegressionPart01 {
       SKUMapping = SKUMapping.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     SKUMapping = SKUMapping.cache()
+      .withColumn("Product", lower(col("Product")))
 
     var GAP1 = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/Pricing/Outputs/POS_GAP/gap_data_full_"+currentTS+".csv")).cache()
     GAP1.columns.toList.foreach(x => {
