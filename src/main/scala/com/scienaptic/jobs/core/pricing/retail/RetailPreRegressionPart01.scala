@@ -161,16 +161,32 @@ object RetailPreRegressionPart01 {
       .agg(sum(col("POS_Qty")).as("POS_Qty"))
 
     retailMergeIFS2DF = retailMergeIFS2DF.drop("POS_Qty")
-    val wind = Window.partitionBy("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
-      .orderBy(col("Distribution_Inv").asc,
-        col("Street_Price").asc,
-        col("POS_Qty").asc)
-    val retailJoinRetailTreatmentAndAggregatePOSDF = retailMergeIFS2DF
       .join(retailAggregatePOSDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
-      .withColumn("rank", row_number().over(wind))
-      .filter(col("rank") === 1)
-      .drop("rank")
-//      .dropDuplicates("SKU", "Account", "Week_End_Date", "Online", "Special_Programs") // duplicated line:112 R
+
+    //Change May 10: Drop duplicate section start
+    var restOfRetailDF = retailMergeIFS2DF
+      .filter(col("Account") === "Rest of Retail")
+
+    val restOfRetailGroupedDF = restOfRetailDF
+      .groupBy("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
+      .agg(avg(col("Distribution_Inv")).as("Distribution_Inv2"),
+        avg(col("Street_Price")).as("Street_Price2"),
+        avg(col("POS_Qty")).as("POS_Qty2")
+      )
+
+    restOfRetailDF = restOfRetailDF.join(restOfRetailGroupedDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
+      .drop("Distribution_Inv", "Street_Price", "POS_Qty")
+      .withColumnRenamed("Distribution_Inv2", "Distribution_Inv")
+      .withColumnRenamed("Street_Price2", "Street_Price")
+      .withColumnRenamed("POS_Qty2", "POS_Qty")
+
+    var retailJoinRetailTreatmentAndAggregatePOSDF = retailMergeIFS2DF
+        .filter(col("Account") =!= "Rest of Retail")
+      //.join(retailAggregatePOSDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
+      .dropDuplicates("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
+
+    retailJoinRetailTreatmentAndAggregatePOSDF = retailJoinRetailTreatmentAndAggregatePOSDF.union(restOfRetailDF)
+    //Change May 10: Drop duplicate section End
 
     var SKUMapping = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/S-Print/SKU_Mapping/s-print_SKU_mapping.csv"))
     SKUMapping.columns.toList.foreach(x => {
@@ -187,6 +203,10 @@ object RetailPreRegressionPart01 {
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("Total_IR", when(col("Account") === "Best Buy" && col("SKU") === "V1N08A", 0).otherwise(col("Total_IR")))
       .withColumn("Total_IR", when(col("Account") === "Office Depot-Max" && col("SKU") === "V1N07A", 0).otherwise(col("Total_IR")))
+      /*
+       * Because Product is in lower case in S-Print_Master_Calendar source.
+       * Uncomment when same implemented in R
+      .withColumn("Product", upper(col("Product")))*/
 
     val adPositionDF = GAP1.filter(col("Brand").isin("HP", "Samsung"))
       .select("SKU", "Week_End_Date", "Account", "Online", "Ad_Location", "Brand", "Product")

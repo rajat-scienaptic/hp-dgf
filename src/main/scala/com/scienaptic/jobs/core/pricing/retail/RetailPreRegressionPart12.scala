@@ -160,13 +160,35 @@ object RetailPreRegressionPart12 {
       //      .withColumn("Street_Price", when(col("Street_Price").isNull, col("Street_Price_Org")).otherwise(col("Street_Price")))
       .filter((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") < col("Valid_End_Date")))
     //AVIK Change: Order based on Hardware_GM and Supplies_GM
-    val windForSKUnAccount = Window.partitionBy("SKU","Account").orderBy("Hardware_GM","Supplies_GM")
-    //val windForSKUnAccountSupplies = Window.partitionBy("SKU","Account").orderBy("Supplies_GM")
-    var aveGM = retailWithCompCannDF/*.drop("Supplies_GM")*/.withColumn("row_num", row_number().over(windForSKUnAccount))
-      .where(col("row_num")===1).drop("row_num")
-    /*val aveGMSupplies = retailWithCompCannDF.select("SKU","Account","Supplies_GM").withColumn("row_num", row_number().over(windForSKUnAccountSupplies))
-      .where(col("row_num")===1).drop("row_num")
-    aveGM = aveGM.join(aveGMSupplies, Seq("SKU","Account"), "left")*/
+
+    //May10 Change: Drop duplicate based on SKU, Account Start
+    val restOfRetailGroupedDF = retailWithCompCannDF
+      .groupBy("SKU", "Account")
+      .agg(avg(col("Hardware_Rev")).as("Hardware_Rev2"),
+        avg(col("Hardware_GM")).as("Hardware_GM2"),
+        avg(col("Supplies_Rev")).as("Supplies_Rev2"),
+        avg(col("Supplies_GM")).as("Supplies_GM2"),
+        avg(col("supplies_GM_scaling_factor")).as("supplies_GM_scaling_factor2")
+      )
+
+    retailWithCompCannDF = retailWithCompCannDF.join(restOfRetailGroupedDF, Seq("SKU", "Account"), "left")
+      .drop("Hardware_Rev", "Hardware_GM", "Supplies_Rev", "Supplies_GM","supplies_GM_scaling_factor")
+      .withColumnRenamed("Hardware_Rev2", "Hardware_Rev")
+      .withColumnRenamed("Hardware_GM2", "Hardware_GM")
+      .withColumnRenamed("Supplies_Rev2", "Supplies_Rev")
+      .withColumnRenamed("Supplies_GM2", "Supplies_GM")
+      .withColumnRenamed("supplies_GM_scaling_factor2", "supplies_GM_scaling_factor")
+    /*
+ //    val windForSKUnAccount = Window.partitionBy("SKU","Account").orderBy("Hardware_GM","Supplies_GM")
+     //val windForSKUnAccountSupplies = Window.partitionBy("SKU","Account").orderBy("Supplies_GM")
+     var aveGM = retailWithCompCannDF/*.drop("Supplies_GM")*/.withColumn("row_num", row_number().over(windForSKUnAccount))
+       .where(col("row_num")===1).drop("row_num")
+     val aveGMSupplies = retailWithCompCannDF.select("SKU","Account","Supplies_GM").withColumn("row_num", row_number().over(windForSKUnAccountSupplies))
+       .where(col("row_num")===1).drop("row_num")
+     aveGM = aveGM.join(aveGMSupplies, Seq("SKU","Account"), "left")*/
+    var aveGM = retailWithCompCannDF
+        .dropDuplicates("SKU", "Account")
+
     aveGM = aveGM //retailWithCompCannDF.dropDuplicates("SKU", "Account")
       .groupBy("SKU")
       .agg(mean(col("Hardware_GM")).as("aveHWGM"),
