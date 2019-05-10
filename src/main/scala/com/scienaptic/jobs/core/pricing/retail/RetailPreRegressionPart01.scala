@@ -159,7 +159,9 @@ object RetailPreRegressionPart01 {
       .agg(sum(col("POS_Qty")).as("POS_Qty"))
 
     retailMergeIFS2DF = retailMergeIFS2DF.drop("POS_Qty")
+      .join(retailAggregatePOSDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
 
+    //Change May 10: Drop duplicate section start
     var restOfRetailDF = retailMergeIFS2DF
       .filter(col("Account") === "Rest of Retail")
 
@@ -176,12 +178,13 @@ object RetailPreRegressionPart01 {
       .withColumnRenamed("Street_Price2", "Street_Price")
       .withColumnRenamed("POS_Qty2", "POS_Qty")
 
-    val retailJoinRetailTreatmentAndAggregatePOSDF = retailMergeIFS2DF
+    var retailJoinRetailTreatmentAndAggregatePOSDF = retailMergeIFS2DF
         .filter(col("Account") =!= "Rest of Retail")
-      .join(retailAggregatePOSDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
+      //.join(retailAggregatePOSDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
       .dropDuplicates("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
 
-    retailJoinRetailTreatmentAndAggregatePOSDF.union(restOfRetailDF)
+    retailJoinRetailTreatmentAndAggregatePOSDF = retailJoinRetailTreatmentAndAggregatePOSDF.union(restOfRetailDF)
+    //Change May 10: Drop duplicate section End
 
     var SKUMapping = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/S-Print/SKU_Mapping/s-print_SKU_mapping.csv"))
     SKUMapping.columns.toList.foreach(x => {
@@ -199,7 +202,8 @@ object RetailPreRegressionPart01 {
       .withColumn("Total_IR", when(col("Account") === "Best Buy" && col("SKU") === "V1N08A", 0).otherwise(col("Total_IR")))
       .withColumn("Total_IR", when(col("Account") === "Office Depot-Max" && col("SKU") === "V1N07A", 0).otherwise(col("Total_IR")))
       /*
-      uncomment this
+       * Because Product is in lower case in S-Print_Master_Calendar source.
+       * Uncomment when same implemented in R
       .withColumn("Product", upper(col("Product")))*/
 
     val adPositionDF = GAP1.filter(col("Brand").isin("HP", "Samsung"))
