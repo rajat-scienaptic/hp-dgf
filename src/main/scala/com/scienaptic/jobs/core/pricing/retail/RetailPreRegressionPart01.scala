@@ -175,7 +175,6 @@ object RetailPreRegressionPart01 {
       SKUMapping = SKUMapping.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     SKUMapping = SKUMapping.cache()
-      .withColumn("Product", lower(col("Product")))
 
     var GAP1 = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/Pricing/Outputs/POS_GAP/gap_data_full_"+currentTS+".csv")).cache()
     GAP1.columns.toList.foreach(x => {
@@ -186,6 +185,7 @@ object RetailPreRegressionPart01 {
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("Total_IR", when(col("Account") === "Best Buy" && col("SKU") === "V1N08A", 0).otherwise(col("Total_IR")))
       .withColumn("Total_IR", when(col("Account") === "Office Depot-Max" && col("SKU") === "V1N07A", 0).otherwise(col("Total_IR")))
+      .withColumn("Product", upper(col("Product")))
 
     val adPositionDF = GAP1.filter(col("Brand").isin("HP", "Samsung"))
       .select("SKU", "Week_End_Date", "Account", "Online", "Ad_Location", "Brand", "Product")
