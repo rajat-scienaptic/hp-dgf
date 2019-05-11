@@ -239,7 +239,7 @@ object RetailPreRegressionPart02 {
         .when(col("Ad_Office Depot-Max") === 1 && col("Ad_Location") === "No_Ad", "No_Info")
         .when(col("Ad_Staples") === 1 && col("Ad_Location") === "No_Ad", "No_Info")
         .otherwise(col("Ad_Location").cast("string")))
-      .dropDuplicates() //All Ad variables match till here
+//      .dropDuplicates() //All Ad variables match till here
 
     retailJoincompAdTotalDFDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoincompAdTotalDFDF-PART02.csv")
     // Part 1 Ends here
