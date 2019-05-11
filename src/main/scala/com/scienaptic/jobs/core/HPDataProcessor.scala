@@ -4,6 +4,8 @@ import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.core.gap._
 import com.scienaptic.jobs.core.npd.pc.monthly.staging.{CAMonthlyStaging, USMonthlyStaging}
 import com.scienaptic.jobs.core.npd.pc.monthly.transformations.{CATransformer, USTransformer}
+import com.scienaptic.jobs.core.npd.pc.weekly.stagging.{CAWeeklyStaging, USWeeklyStaging}
+import com.scienaptic.jobs.core.npd.pc.weekly.transformations.{CAWeeklyTransformer, USWeeklyTransformer}
 import com.scienaptic.jobs.core.npd.print._
 import com.scienaptic.jobs.core.pricing.amazon.AmazonTransform
 import com.scienaptic.jobs.core.pricing.commercial._
@@ -59,6 +61,10 @@ object HPDataProcessor {
       case "npd-pc-monthly-us-fact" => USTransformer.execute(executionContext)
       case "npd-pc-monthly-ca-stg" => CAMonthlyStaging.execute(executionContext)
       case "npd-pc-monthly-ca-fact" => CATransformer.execute(executionContext)
+      case "npd-pc-weekly-us-stg" => USWeeklyStaging.execute(executionContext)
+      case "npd-pc-weekly-us-fact" => USWeeklyTransformer.execute(executionContext)
+      case "npd-pc-weekly-ca-stg" => CAWeeklyStaging.execute(executionContext)
+      case "npd-pc-weekly-ca-fact" => CAWeeklyTransformer.execute(executionContext)
       //case "preregression-retail" => RetailFeatEnggProcessor.execute(executionContext)
     }
   }

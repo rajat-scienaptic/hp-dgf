@@ -51,21 +51,23 @@ object CATransformations {
 
   }
 
-
   /*
-  This procedure updates "AMS_VendorFamily"
+  This procedure updates "ams_vendorfamily"
   Stored PROC : Proc_Update_Master_Vendor.txt
   */
+
   def withVendorFamily(df: DataFrame): DataFrame = {
 
     val spark = df.sparkSession
 
     val masterBrandDf = spark.sql("select * from ams_datamart_pc.tbl_master_brand")
 
-    val vendorFamilyDf = df.join(masterBrandDf,df("brand") === masterBrandDf("ams_vendorFamily")
+    val vendorFamilyDf = df.join(masterBrandDf,df("brand") === masterBrandDf("ams_vendorfamily")
       , "left")
-      .drop("ams_vendorFamily")
-        .withColumnRenamed("ams_brand","ams_vendorFamily")
+      .drop("ams_vendorfamily")
+      .withColumn("ams_vendorfamily",
+        when(col("ams_brand").isNull,col("brand"))
+          .otherwise(col("ams_brand")))
 
     vendorFamilyDf
   }
@@ -75,23 +77,35 @@ object CATransformations {
   This procedure updates AMS_Top_Sellers,AMS_SmartBuy_TopSeller,
   AMS_SKU_DATE,AMS_TRANSACTIONAL-NONTRANSACTIONAL-SKUS
 
-  Stored PROC : Proc_Update_Master_TopSeller_CA
+  Stored PROC : Proc_MONTHLY_Update_Master_TopSeller
   */
 
   def withCATopSellers(df: DataFrame): DataFrame = {
 
     val spark = df.sparkSession
 
-    val tbl_Master_LenovoTopSellers = spark.sql("select sku,top_seller from ams_datamart_pc.tbl_master_top_sellers_ca group by sku,top_seller");
+    val Tbl_Master_LenovoTopSellers = spark.sql("select sku,topseller,ams_month,focus,system_type,form_factor,pricing_list_price " +
+      "from ams_datamart_pc.tbl_master_lenovotopsellers_ca " +
+      "group by sku,topseller,ams_month,focus,system_type,form_factor,pricing_list_price");
 
-    val withTopSellers = df.join(tbl_Master_LenovoTopSellers,
-      df("model")===tbl_Master_LenovoTopSellers("sku"),"left")
-      .withColumnRenamed("top_seller","ams_top_sellers")
-      .na.fill("Non Top Seller",Seq("ams_top_sellers"))
+    val masterWithSkuDate = Tbl_Master_LenovoTopSellers.withColumn("ams_sku_date_temp",
+      skuDateUDF(col("sku"),col("ams_month")))
+      .drop("sku")
+      .drop("ams_month")
+      .withColumnRenamed("ams_sku_date_temp","ams_sku_date")
+
+    val dfWithSKUDate = df.withColumn("ams_sku_date",
+      skuDateUDF(col("model"),col("time_periods")))
+
+    val withTopSellers = dfWithSKUDate.join(masterWithSkuDate,
+      dfWithSKUDate("ams_sku_date")===masterWithSkuDate("ams_sku_date"),"left")
+      .drop(masterWithSkuDate("ams_sku_date"))
+      .withColumn("ams_top_sellers",
+        topSellersUDF(col("topseller")))
       .withColumn("ams_smartbuy_topseller",
-          smartBuyTopSellersUDF(
-            col("ams_smart_buys"),
-            col("ams_top_sellers")))
+        smartBuyTopSellersUDF(
+          col("ams_smart_buys"),
+          col("ams_top_sellers")))
       .withColumn("ams_smartbuy_lenovotopseller",
         LenovoSmartBuyTopSellersUDF(
           col("ams_smart_buys"),
@@ -105,10 +119,18 @@ object CATransformations {
           col("brand"),
           col("model")))
 
-    withTopSellers
+
+    val finalDf = withTopSellers
+      .withColumnRenamed("focus","ams_focus")
+      .withColumnRenamed("system_type","ams_lenovo_system_type")
+      .withColumnRenamed("form_factor","ams_lenovo_form_factor")
+      .withColumnRenamed("pricing_list_price","ams_lenovo_list_price")
+      .withColumn("ams_lenovo_focus",
+        lenovoFocusUDF(col("ams_focus")))
+
+    finalDf
 
   }
-
 
   /*
   This procedure updates ams_catgrp,ams_npd_category,ams_sub_category,ams_sub_category_temp
@@ -275,8 +297,5 @@ object CATransformations {
     final_df
 
   }
-
-
-
 
 }

@@ -1,0 +1,12 @@
+{
+  "config": "npd-pc-weekly-ca-fact",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "npd-pc-weekly-ca-fact"
+  },
+  "sources": {
+    "DM_PC_CA_Weekly_Retail": {
+      "name": "Stg_DM_PC_CA_Weekly_Retail"
+    }
+  }
+}

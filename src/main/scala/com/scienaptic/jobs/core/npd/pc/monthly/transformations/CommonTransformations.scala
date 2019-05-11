@@ -93,6 +93,7 @@ object CommonTransformations {
   }
 
 
+
   def withOSGroup(df: DataFrame): DataFrame = {
 
     val spark = df.sparkSession
