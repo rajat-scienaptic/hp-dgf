@@ -160,15 +160,16 @@ object RetailPreRegressionPart12 {
       //      .withColumn("Street_Price", when(col("Street_Price").isNull, col("Street_Price_Org")).otherwise(col("Street_Price")))
       .filter((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") < col("Valid_End_Date")))
     //AVIK Change: Order based on Hardware_GM and Supplies_GM
+//    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\spark-out-local\\10thMay\\retail-part12-mergeIFS2.csv")
 
     //May10 Change: Drop duplicate based on SKU, Account Start
     val restOfRetailGroupedDF = retailWithCompCannDF
       .groupBy("SKU", "Account")
-      .agg(avg(col("Hardware_Rev")).as("Hardware_Rev2"),
-        avg(col("Hardware_GM")).as("Hardware_GM2"),
-        avg(col("Supplies_Rev")).as("Supplies_Rev2"),
-        avg(col("Supplies_GM")).as("Supplies_GM2"),
-        avg(col("supplies_GM_scaling_factor")).as("supplies_GM_scaling_factor2")
+      .agg(mean(col("Hardware_Rev")).as("Hardware_Rev2"),
+        mean(col("Hardware_GM")).as("Hardware_GM2"),
+        mean(col("Supplies_Rev")).as("Supplies_Rev2"),
+        mean(col("Supplies_GM")).as("Supplies_GM2"),
+        mean(col("supplies_GM_scaling_factor")).as("supplies_GM_scaling_factor2")
       )
 
     retailWithCompCannDF = retailWithCompCannDF.join(restOfRetailGroupedDF, Seq("SKU", "Account"), "left")
@@ -178,6 +179,7 @@ object RetailPreRegressionPart12 {
       .withColumnRenamed("Supplies_Rev2", "Supplies_Rev")
       .withColumnRenamed("Supplies_GM2", "Supplies_GM")
       .withColumnRenamed("supplies_GM_scaling_factor2", "supplies_GM_scaling_factor")
+      //.dropDuplicates("SKU", "Account")
     /*
  //    val windForSKUnAccount = Window.partitionBy("SKU","Account").orderBy("Hardware_GM","Supplies_GM")
      //val windForSKUnAccountSupplies = Window.partitionBy("SKU","Account").orderBy("Supplies_GM")
