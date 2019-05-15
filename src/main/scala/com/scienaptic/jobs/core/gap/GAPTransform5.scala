@@ -19,7 +19,7 @@ object GAPTransform5 {
 
   val dat2000_01_01 = to_date(unix_timestamp(lit("2000-01-01"),"yyyy-MM-dd").cast("timestamp"))
   val dat9999_12_31 = to_date(unix_timestamp(lit("9999-12-31"),"yyyy-MM-dd").cast("timestamp"))
-  val TEMP_OUTPUT_DIR = "D:\\files\\temp\\spark-out-local\\14thMay\\temp\\gap_data_full.csv"
+  val TEMP_OUTPUT_DIR = "/etherData/GAPTemp/temp/gap_data_full.csv"
 
   val takeFirst = udf((collectedList: mutable.WrappedArray[String]) => {
     try {
@@ -81,21 +81,21 @@ object GAPTransform5 {
       .withColumn("Account",when(col("Account")===lit("WalMart.com"),"WalMart").otherwise(col("Account")))
       .withColumn("Account",when(col("Account")===lit("WalMart"),"Walmart").otherwise(col("Account")))
       .withColumn("Account",when(col("Account")===lit("BJS Wholesale Club"),"BJs Wholesale Club").otherwise(col("Account")))
-//      .withColumn("Account",when(col("Account")===lit("BestBuy.com"),"Best Buy").otherwise(col("Account")))
+      //Change: Not required
+      //.withColumn("Account",when(col("Account")===lit("BestBuy.com"),"Best Buy").otherwise(col("Account")))
       .withColumn("Account",when(col("Account")===lit("Sams Club"),"Sam's Club").otherwise(col("Account")))
       .withColumn("Account",when(col("Account")===lit("Office Depot"),"Office Depot-Max").otherwise(col("Account")))
       .withColumn("Account",when(col("Account")===lit("OfficeMax"),"Office Depot-Max").otherwise(col("Account")))
       .select("SKU","Brand","Account","Online","Week_End_Date"
         ,"Total_IR","Ad","Promotion_Type","Ad Location","Product","Days_on_Promo")
 
-    /*  Change for Adlocation Order within Group  - Start*/
+    /* Change for Adlocation Order within Group  - Start*/
     var adLocationTemp = Promo_Ad
       .groupBy("SKU","Brand","Account","Online","Week_End_Date")
       .agg(collect_list(col("Ad Location")).as("adArray"))
 
     adLocationTemp = adLocationTemp
       .withColumn("adLocation2", orderAdLocation(col("adArray")))
-
     /*  Change for Adlocation Order within Group  - ends*/
 
     /*  Change for Order within Group  - Start*/
@@ -104,7 +104,6 @@ object GAPTransform5 {
 
     Promo_Ad = Promo_Ad.withColumn("collected_product", collect_list(col("Product")).over(productWind))
     Promo_Ad = Promo_Ad.withColumn("collected_promotion", collect_list(col("Promotion_Type")).over(productWind))
-    //Promo_Ad = Promo_Ad.withColumn("collected_location", collect_list(col("Ad Location")).over(productWind))
     //.agg((collect_list(concat_ws("_", col("rank"), col("Distribution_Inv")).cast("string"))).as("DistInvArray"))
     Promo_Ad = Promo_Ad.withColumn("Product2", takeFirst(col("collected_product")))
     Promo_Ad = Promo_Ad.withColumn("Promotion_Type2", takeLast(col("collected_promotion")))
@@ -112,20 +111,18 @@ object GAPTransform5 {
       .join(adLocationTemp, Seq("SKU","Brand","Account","Online","Week_End_Date"), "left")
       .withColumnRenamed("adLocation2","Ad Location")
       .drop("adArray")
-    //Promo_Ad = Promo_Ad.withColumn("Ad Location2", takeFirst(col("collected_location")))
 
-    var GAP = Promo_Ad.drop("collected_product","collected_promotion"/*,"collected_ad_location"*/)
+    var GAP = Promo_Ad.drop("collected_product","collected_promotion")
       .drop("Product","Promotion_Type"/*,"Ad Location"*/)
       .withColumnRenamed("Product2", "Product")
       .withColumnRenamed("Promotion_Type2", "Promotion_Type")
-      //.withColumnRenamed("Ad Location2", "Ad Location")
     GAP = GAP.groupBy("SKU","Brand","Account","Online","Week_End_Date")
         .agg(max("Ad").as("Ad"), sum(when(col("Ad").isNull,1).otherwise(0)).as("Ad_null_count"),
           max("Total_IR").as("Total_IR"), sum(when(col("Total_IR").isNull,1).otherwise(0)).as("Total_IR_null_count"),
           max("Days_on_Promo").as("Days_on_Promo"), sum(when(col("Days_on_Promo").isNull,1).otherwise(0)).as("Days_on_Promo_null_count"),
-          first("Ad Location").as("Ad Location"), //sum(when(col("Ad Location").isNull,1).otherwise(0)).as("Ad Location_null_count"),
-          last("Promotion_Type").as("Promotion_Type"), //sum(when(col("Promotion_Type").isNull,1).otherwise(0)).as("Promotion_Type_null_count"),
-          first("Product").as("Product")) //sum(when(col("Product").isNull,1).otherwise(0)).as("Product_null_count")
+          first("Ad Location").as("Ad Location"),
+          last("Promotion_Type").as("Promotion_Type"),
+          first("Product").as("Product"))
 
     GAP = GAP
       .withColumn("Ad", when(col("Ad_null_count")>0, null).otherwise(col("Ad")))
