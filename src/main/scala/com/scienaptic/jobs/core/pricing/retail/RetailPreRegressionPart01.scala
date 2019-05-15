@@ -171,7 +171,7 @@ object RetailPreRegressionPart01 {
       .groupBy("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
       .agg(mean(col("Distribution_Inv")).as("Distribution_Inv2"),
         mean(col("Street_Price")).as("Street_Price2"),
-        mean(col("POS_Qty")).as("POS_Qty2")
+        sum(col("POS_Qty")).as("POS_Qty2")
       )
 
     restOfRetailDF = restOfRetailDF.join(restOfRetailGroupedDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")

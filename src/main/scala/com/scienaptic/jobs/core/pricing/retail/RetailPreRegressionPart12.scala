@@ -163,7 +163,7 @@ object RetailPreRegressionPart12 {
 //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\spark-out-local\\10thMay\\retail-part12-mergeIFS2.csv")
 
     //May10 Change: Drop duplicate based on SKU, Account Start
-    val restOfRetailGroupedDF = retailWithCompCannDF
+    /*val restOfRetailGroupedDF = retailWithCompCannDF
       .groupBy("SKU", "Account")
       .agg(mean(col("Hardware_Rev")).as("Hardware_Rev2"),
         mean(col("Hardware_GM")).as("Hardware_GM2"),
@@ -178,7 +178,7 @@ object RetailPreRegressionPart12 {
       .withColumnRenamed("Hardware_GM2", "Hardware_GM")
       .withColumnRenamed("Supplies_Rev2", "Supplies_Rev")
       .withColumnRenamed("Supplies_GM2", "Supplies_GM")
-      .withColumnRenamed("supplies_GM_scaling_factor2", "supplies_GM_scaling_factor")
+      .withColumnRenamed("supplies_GM_scaling_factor2", "supplies_GM_scaling_factor")*/
       //.dropDuplicates("SKU", "Account")
     /*
  //    val windForSKUnAccount = Window.partitionBy("SKU","Account").orderBy("Hardware_GM","Supplies_GM")
@@ -189,7 +189,7 @@ object RetailPreRegressionPart12 {
        .where(col("row_num")===1).drop("row_num")
      aveGM = aveGM.join(aveGMSupplies, Seq("SKU","Account"), "left")*/
     var aveGM = retailWithCompCannDF
-        .dropDuplicates("SKU", "Account")
+        .dropDuplicates("SKU", "Account", "Street_Price")
 
     aveGM = aveGM //retailWithCompCannDF.dropDuplicates("SKU", "Account")
       .groupBy("SKU")
