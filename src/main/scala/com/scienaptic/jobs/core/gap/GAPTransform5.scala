@@ -9,6 +9,8 @@ import org.apache.spark.sql.{SaveMode, SparkSession}
 import scala.collection.mutable
 import org.apache.spark.sql.expressions.Window
 
+import scala.collection.mutable
+
 object GAPTransform5 {
   val Cat_switch=1
   val min_baseline = 2
@@ -17,7 +19,7 @@ object GAPTransform5 {
 
   val dat2000_01_01 = to_date(unix_timestamp(lit("2000-01-01"),"yyyy-MM-dd").cast("timestamp"))
   val dat9999_12_31 = to_date(unix_timestamp(lit("9999-12-31"),"yyyy-MM-dd").cast("timestamp"))
-  val TEMP_OUTPUT_DIR = "/etherData/GAPTemp/temp/gap_data_full.csv"
+  val TEMP_OUTPUT_DIR = "D:\\files\\temp\\spark-out-local\\14thMay\\temp\\gap_data_full.csv"
 
   val takeFirst = udf((collectedList: mutable.WrappedArray[String]) => {
     try {
@@ -33,6 +35,34 @@ object GAPTransform5 {
     } catch {
       case _ : Exception => null
     }
+  })
+
+  val orderAdLocation = udf((adLocationArray: mutable.WrappedArray[String]) => {
+    var tempLocation = ""
+    if(adLocationArray.contains("Front")) {
+      tempLocation = "Front"
+    } else if(adLocationArray.contains("Back")) {
+      tempLocation = "Back"
+    } else if(adLocationArray.contains("Inside")) {
+      tempLocation = "Inside"
+    } else if(adLocationArray.contains("Home Top")) {
+      tempLocation = "Home Top"
+    } else if(adLocationArray.contains("Home")) {
+      tempLocation = "Home"
+    } else if(adLocationArray.contains("Category Top")) {
+      tempLocation = "Category Top"
+    } else if(adLocationArray.contains("Category")) {
+      tempLocation = "Category"
+    } else if(adLocationArray.contains("Online")) {
+      tempLocation = "Online"
+    } else if(adLocationArray.contains("Online Weekly Deals")) {
+      tempLocation = "Online Weekly Deals"
+    } else if(adLocationArray.contains("0")) {
+      tempLocation = "0"
+    } else {
+      tempLocation = ""
+    }
+    tempLocation
   })
 
   def execute(executionContext: ExecutionContext): Unit = {
@@ -57,22 +87,38 @@ object GAPTransform5 {
       .withColumn("Account",when(col("Account")===lit("OfficeMax"),"Office Depot-Max").otherwise(col("Account")))
       .select("SKU","Brand","Account","Online","Week_End_Date"
         ,"Total_IR","Ad","Promotion_Type","Ad Location","Product","Days_on_Promo")
+
+    /*  Change for Adlocation Order within Group  - Start*/
+    var adLocationTemp = Promo_Ad
+      .groupBy("SKU","Brand","Account","Online","Week_End_Date")
+      .agg(collect_list(col("Ad Location")).as("adArray"))
+
+    adLocationTemp = adLocationTemp
+      .withColumn("adLocation2", orderAdLocation(col("adArray")))
+
+    /*  Change for Adlocation Order within Group  - ends*/
+
     /*  Change for Order within Group  - Start*/
-    val productWind = Window.partitionBy("SKU","Brand","Account","Online","Week_End_Date").orderBy(col("Week_End_Date"),col("SKU"),col("Brand"),col("Account"),col("Online"),col("Total_IR"), col("Ad Location").desc, col("Product").desc, col("Promotion_Type"))
+    val productWind = Window.partitionBy("SKU","Brand","Account","Online","Week_End_Date")
+      .orderBy(col("Week_End_Date"),col("SKU"),col("Brand"),col("Account"),col("Online"),col("Total_IR")/*, col("Ad Location").desc*/, col("Product").desc, col("Promotion_Type"))
 
     Promo_Ad = Promo_Ad.withColumn("collected_product", collect_list(col("Product")).over(productWind))
     Promo_Ad = Promo_Ad.withColumn("collected_promotion", collect_list(col("Promotion_Type")).over(productWind))
-    Promo_Ad = Promo_Ad.withColumn("collected_location", collect_list(col("Ad Location")).over(productWind))
+    //Promo_Ad = Promo_Ad.withColumn("collected_location", collect_list(col("Ad Location")).over(productWind))
     //.agg((collect_list(concat_ws("_", col("rank"), col("Distribution_Inv")).cast("string"))).as("DistInvArray"))
     Promo_Ad = Promo_Ad.withColumn("Product2", takeFirst(col("collected_product")))
     Promo_Ad = Promo_Ad.withColumn("Promotion_Type2", takeLast(col("collected_promotion")))
-    Promo_Ad = Promo_Ad.withColumn("Ad Location2", takeFirst(col("collected_location")))
+      .drop("Ad Location")
+      .join(adLocationTemp, Seq("SKU","Brand","Account","Online","Week_End_Date"), "left")
+      .withColumnRenamed("adLocation2","Ad Location")
+      .drop("adArray")
+    //Promo_Ad = Promo_Ad.withColumn("Ad Location2", takeFirst(col("collected_location")))
 
     var GAP = Promo_Ad.drop("collected_product","collected_promotion"/*,"collected_ad_location"*/)
-      .drop("Product","Promotion_Type","Ad Location")
+      .drop("Product","Promotion_Type"/*,"Ad Location"*/)
       .withColumnRenamed("Product2", "Product")
       .withColumnRenamed("Promotion_Type2", "Promotion_Type")
-      .withColumnRenamed("Ad Location2", "Ad Location")
+      //.withColumnRenamed("Ad Location2", "Ad Location")
     GAP = GAP.groupBy("SKU","Brand","Account","Online","Week_End_Date")
         .agg(max("Ad").as("Ad"), sum(when(col("Ad").isNull,1).otherwise(0)).as("Ad_null_count"),
           max("Total_IR").as("Total_IR"), sum(when(col("Total_IR").isNull,1).otherwise(0)).as("Total_IR_null_count"),
