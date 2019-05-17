@@ -14,86 +14,14 @@ import scala.collection.mutable
 
 object RetailPreRegressionPart21 {
 
-  val Cat_switch = 1
-  val dat2000_01_01 = to_date(unix_timestamp(lit("2000-01-01"), "yyyy-MM-dd").cast("timestamp"))
-  val dat9999_12_31 = to_date(unix_timestamp(lit("9999-12-31"), "yyyy-MM-dd").cast("timestamp"))
-  val dateFormatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
-  val dateFormatterMMddyyyyWithSlash = new SimpleDateFormat("MM/dd/yyyy")
-  val dateFormatterMMddyyyyWithHyphen = new SimpleDateFormat("dd-MM-yyyy")
-  val monthDateFormat = new SimpleDateFormat("MMM", Locale.ENGLISH)
-
-  val stability_weeks = 4
-  val stability_range = 0.7
-  val intro_weeks = 8
-  val min_baseline = 5
-  val baselineThreshold = if (min_baseline / 2 > 0) min_baseline / 2 else 0
-
-  val indexerForAdLocation = new StringIndexer().setInputCol("Ad_Location").setOutputCol("Ad_Location_fact")
-  val pipelineForForAdLocation = new Pipeline().setStages(Array(indexerForAdLocation))
-
-  val convertFaultyDateFormat = udf((dateStr: String) => {
-    try {
-      if (dateStr.contains("-")) {
-        dateFormatter.format(dateFormatterMMddyyyyWithHyphen.parse(dateStr))
-      }
-      else {
-        dateFormatter.format(dateFormatterMMddyyyyWithSlash.parse(dateStr))
-      }
-    } catch {
-      case _: Exception => dateStr
-    }
-  })
-
   val TEMP_OUTPUT_DIR = "/etherData/retailTemp/RetailFeatEngg/temp/preregression_output_retail.csv"
-  val pmax = udf((col1: Double, col2: Double, col3: Double) => math.max(col1, math.max(col2, col3)))
-  val pmax2 = udf((col1: Double, col2: Double) => math.max(col1, col2))
-  val pmin = udf((col1: Double, col2: Double, col3: Double) => math.min(col1, math.min(col2, col3)))
-  val pmin2 = udf((col1: Double, col2: Double) => math.min(col1, col2))
-
-  val getMonthNumberFromString = udf((month: String) => {
-    val date: Date = monthDateFormat.parse(month)
-    val cal: Calendar = Calendar.getInstance
-    cal.setTime(date)
-    cal.get(Calendar.MONTH)
-  })
-
-  val concatenateRankWithDist = udf((x: mutable.WrappedArray[String]) => {
-    //val concatenateRank = udf((x: List[List[Any]]) => {
-    try {
-      //      val sortedList = x.map(x => x.getAs[Int](0).toString + "." + x.getAs[Double](1).toString).sorted
-      val sortedList = x.toList.map(x => (x.split("_")(0).toInt, x.split("_")(1).toDouble))
-      sortedList.sortBy(x => x._1).map(x => x._2.toDouble)
-    } catch {
-      case _: Exception => null
-    }
-  })
-
-  val checkPrevDistInvGTBaseline = udf((distributions: mutable.WrappedArray[Double], rank: Int, distribution: Double) => {
-    var totalGt = 0
-    if (rank <= stability_weeks)
-      0
-    else {
-      val start = rank - stability_weeks - 1
-      for (i <- start until rank - 1) {
-
-        // checks if every distribution's abs value is less than the stability range
-        if (math.abs(distributions(i) - distribution) <= stability_range) {
-          totalGt += 1
-        }
-      }
-      if (totalGt >= 1)
-        1
-      else
-        0
-    }
-  })
 
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
     var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv"))
     //val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp"))).agg(max("Week_End_Date")).head().getDate(0)
-    val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp")))
+    val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
       .withColumn("Week_End_Date", date_sub(col("Week_End_Date"), 7)).agg(max("Week_End_Date")).head().getDate(0)
 
     //var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/Intermediate/retail-DirectCann-PART20.csv")
@@ -330,7 +258,7 @@ object RetailPreRegressionPart21 {
     //      //    colnames(retail)[colnames(retail)=="Ã¯..Online"] <- "Online"
     //      .withColumnRenamed("Ã¯..Online", "Online")
 
-    retailWithCompCann3DF = retailWithCompCann3DF.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date")), "MM/dd/yyyy"))
+    retailWithCompCann3DF = retailWithCompCann3DF.withColumn("Week_End_Date", date_format(to_date(col("Week_End_Date"), "yyyy-MM-dd"), "MM/dd/yyyy"))
       .withColumn("Week_End_Date", col("Week_End_Date").cast("string"))
 
     val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)

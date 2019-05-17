@@ -10,40 +10,6 @@ import scala.collection.mutable
 
 object RetailPreRegressionPart18 {
 
-  val stability_weeks = 4
-  val stability_range = 0.7
-  val intro_weeks = 8
-  val min_baseline = 5
-  val concatenateRankWithDist = udf((x: mutable.WrappedArray[String]) => {
-    //val concatenateRank = udf((x: List[List[Any]]) => {
-    try {
-      //      val sortedList = x.map(x => x.getAs[Int](0).toString + "." + x.getAs[Double](1).toString).sorted
-      val sortedList = x.toList.map(x => (x.split("_")(0).toInt, x.split("_")(1).toDouble))
-      sortedList.sortBy(x => x._1).map(x => x._2.toDouble)
-    } catch {
-      case _: Exception => null
-    }
-  })
-
-  val checkPrevDistInvGTBaseline = udf((distributions: mutable.WrappedArray[Double], rank: Int, distribution: Double) => {
-    var totalGt = 0
-    if (rank <= stability_weeks)
-      0
-    else {
-      val start = rank - stability_weeks - 1
-      for (i <- start until rank - 1) {
-
-        // checks if every distribution's abs value is less than the stability range
-        if (math.abs(distributions(i) - distribution) <= stability_range) {
-          totalGt += 1
-        }
-      }
-      if (totalGt >= 1)
-        1
-      else
-        0
-    }
-  })
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 

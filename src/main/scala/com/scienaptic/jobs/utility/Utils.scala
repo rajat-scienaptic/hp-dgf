@@ -29,11 +29,11 @@ object Utils {
     columnList.map(name => dataFrame.col(name))
   }
 
-  def convertListToDFColumnWithRename(renameMap: Map[String, String], dataFrame: DataFrame) = {
-    renameMap.keySet.toList.foldLeft(dataFrame) { (df, col) =>
-      df.withColumnRenamed(col, renameMap.getOrElse(col, col))
+    def convertListToDFColumnWithRename(renameMap: Map[String, String], dataFrame: DataFrame) = {
+      renameMap.keySet.toList.foldLeft(dataFrame) { (df, col) =>
+        df.withColumnRenamed(col, renameMap.getOrElse(col, col))
+      }
     }
-  }
 
   def loadCSV(context: ExecutionContext, file: String): Try[DataFrame] = {
     Try {
