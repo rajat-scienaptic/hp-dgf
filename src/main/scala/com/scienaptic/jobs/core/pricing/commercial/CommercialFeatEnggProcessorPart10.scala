@@ -192,7 +192,7 @@ object CommercialFeatEnggProcessor10 {
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
 
     //Change: Changing Week End Date format
-    commercialFinalOut = commercialFinalOut.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date")), "MM/dd/yyyy"))
+    commercialFinalOut = commercialFinalOut.withColumn("Week_End_Date", date_format(to_date(col("Week_End_Date"), "yyyy-MM-dd"),"MM/dd/yyyy"))
       .withColumn("Week_End_Date", col("Week_End_Date").cast("string"))
 
     commercialFinalOut
