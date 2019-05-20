@@ -35,7 +35,7 @@ object RetailPreRegressionPart11 {
       .join(retailWithAdj.withColumn("Week_End_Date", col("Week_End_Date")), Seq("Week_End_Date", "SKU"), "right")
 
     //write
-    retailGroupWEDSKU.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/part-11-cann-group-1.csv")
+    retailGroupWEDSKU.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/part-11-cann-group-1.csv")
 
     val retailGroupWEDL1Temp = retailGroupWEDSKU
       .groupBy("Week_End_Date", "Brand", "L1_Category")
@@ -45,7 +45,7 @@ object RetailPreRegressionPart11 {
       .join(retailGroupWEDL1Temp.withColumn("L1_Category", col("L1_Category")), Seq("Week_End_Date", "Brand", "L1_Category"), "left")
       .withColumn("L1_cannibalization", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2"))) // chenged the name to L2_cannibalization
       .drop("sum1", "sum2")
-    retailGroupWEDL1.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/part-11-cann-group-2.csv")
+    retailGroupWEDL1.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/part-11-cann-group-2.csv")
 
     val retailGroupWEDL1Temp2 = retailGroupWEDL1
       .groupBy("Week_End_Date", "Brand", "L2_Category")
@@ -55,7 +55,7 @@ object RetailPreRegressionPart11 {
     retailWithCompCannDF = retailGroupWEDL1.withColumn("L2_Category", col("L2_Category"))
       .join(retailGroupWEDL1Temp2.withColumn("L2_Category", col("L2_Category")), Seq("Week_End_Date", "Brand", "L2_Category"), "left")
       .withColumn("L2_cannibalization", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2")))
-    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/cann-group-3.csv")
+    retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/cann-group-3.csv")
 
     retailWithCompCannDF = retailWithCompCannDF
       .drop("sum1", "sum2", "sumSKU1", "sumSKU2", "Adj_Qty")
