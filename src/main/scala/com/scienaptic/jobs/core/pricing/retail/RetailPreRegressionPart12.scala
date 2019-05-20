@@ -19,6 +19,7 @@ object RetailPreRegressionPart12 {
 
   val dat2000_01_01 = to_date(unix_timestamp(lit("2000-01-01"), "yyyy-MM-dd").cast("timestamp"))
   val dat9999_12_31 = to_date(unix_timestamp(lit("9999-12-31"), "yyyy-MM-dd").cast("timestamp"))
+  val roundUDF = udf((col1: Double) => BigDecimal(col1).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble)
 
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
