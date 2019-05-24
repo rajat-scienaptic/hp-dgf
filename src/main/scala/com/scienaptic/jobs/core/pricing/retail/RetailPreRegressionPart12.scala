@@ -89,7 +89,7 @@ object RetailPreRegressionPart12 {
       .withColumn("Valid_Start_Date", when(col("Valid_Start_Date").isNull, dat2000_01_01).otherwise(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))
       //      .withColumn("Street_Price", when(col("Street_Price").isNull, col("Street_Price_Org")).otherwise(col("Street_Price")))
-      .filter((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") < col("Valid_End_Date")))
+      .filter((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") <= col("Valid_End_Date")))
     //AVIK Change: Order based on Hardware_GM and Supplies_GM
 //    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\spark-out-local\\10thMay\\retail-part12-mergeIFS2.csv")
 

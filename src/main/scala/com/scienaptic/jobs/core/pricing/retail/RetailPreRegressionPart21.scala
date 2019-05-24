@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.{Calendar, Date, Locale}
 
 import com.scienaptic.jobs.ExecutionContext
+import com.scienaptic.jobs.utility.CommercialUtility.createlist
 import com.scienaptic.jobs.utility.Utils.renameColumns
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.feature.StringIndexer
@@ -42,13 +43,41 @@ object RetailPreRegressionPart21 {
       //      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2016-07-01", col("Hardware_GM") + lit(68)).otherwise(col("Hardware_GM")))
       //      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM")))
       //      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM"))
+      /* commented out as per Canon Funding change
       .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 SMB", "A4 Enterprise") && col("Week_End_Date") >= "2016-07-01" && col("Week_End_Date") <= "2017-04-30", col("Hardware_GM") + 68).otherwise(col("Hardware_GM")))
       .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 SMB", "A4 Enterprise") && col("Week_End_Date") >= "2017-05-01" && col("Week_End_Date") <= "2017-10-30", col("Hardware_GM") + 76).otherwise(col("Hardware_GM")))
       .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2017-11-01" && col("Week_End_Date") <= "2018-10-30", col("Hardware_GM") + 68.49).otherwise(col("Hardware_GM")))
       .withColumn("Hardware_GM", when(col("Category Custom") === "A4 Enterprise" && col("Week_End_Date") >= "2017-11-01" && col("Week_End_Date") <= "2018-10-30", col("Hardware_GM") + 101.77).otherwise(col("Hardware_GM")))
       .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2018-11-01" && col("Week_End_Date") <= "2019-10-30", col("Hardware_GM") + 49.35).otherwise(col("Hardware_GM")))
       .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 Enterprise") && col("Week_End_Date") >= "2018-11-01" && col("Week_End_Date") <= "2019-10-30", col("Hardware_GM") + 150).otherwise(col("Hardware_GM")))
+      */
 
+    /* canon funding change starts May 23rd 2019*/
+    var canon = renameColumns(executionContext.spark.read.option("header","true").option("inferSchema","true").csv("D:\\files\\input\\R\\17thMay\\canon_fund.csv"))
+    //var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\April8Run_Inputs\\Aux_canon.csv"))
+    canon = canon
+      .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd-MM-yyyy").cast("timestamp")))
+      .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
+      .withColumn("wk_day_start", dayofweek(col("Start_date")))
+      .withColumn("wk_day_end", dayofweek(col("End_date")))
+      .withColumn("WSD", date_add(expr("date_sub(Start_date, wk_day_start)"),7))
+      .withColumn("WED", when(col("wk_day_end")>3,date_add(expr("date_sub(End_date, wk_day_end)"),7)).otherwise(expr("date_sub(End_date,wk_day_end)")))
+      .withColumn("WED",to_date(col("WED")))
+      .withColumn("Amount", regexp_replace(col("Amount"),lit("\\$"),lit("")).cast("double"))
+      .withColumn("week_diff", abs(datediff(col("WSD"), col("WED"))/7)+1)
+      .withColumn("repList", createlist(col("week_diff")))
+      .withColumn("repeatNum", explode(col("repList")))
+      .withColumn("repeatNum", (col("repeatNum")+1)*7)
+      .withColumn("WED", expr("date_add(WSD,repeatNum)"))
+    //.drop("repList").drop("repeatNum")
+    canon = canon.select("Category Custom","WED","Amount")
+      .withColumnRenamed("WED","Week_End_Date")
+      .withColumnRenamed("Category Custom","Category_Custom")
+    retailWithCompCann3DF = retailWithCompCann3DF.withColumnRenamed("Category Custom","Category_Custom").join(canon, Seq("Category_Custom","Week_End_Date"), "left")
+      .withColumn("Amount",when(col("Amount").isNull, 0).otherwise(col("Amount")))
+      .withColumn("Hardware_GM", col("Hardware_GM")+col("Amount"))
+      .withColumnRenamed("Category_Custom","Category Custom")
+    /* canon funding change ends  */
     // TODO : Ignore Flash.IR.dummy
     /*
     #Adjust Flash.IR dummy
@@ -140,7 +169,8 @@ object RetailPreRegressionPart21 {
     retailWithCompCann3DF = retailWithCompCann3DF
       .join(extraPol, Seq("Account", "mnth"), "left")
     retailWithCompCann3DF = retailWithCompCann3DF
-      .withColumn("instore_labor", when(col("Week_End_date") <= to_date(unix_timestamp(lit("2015-12-05"), "yyyy-MM-dd").cast("timestamp")), col("proxy_labor")).otherwise(col("instore_labor")))
+      // commented the weekend date check as R code does't reflect the same change
+      //.withColumn("instore_labor", when(col("Week_End_date") <= to_date(unix_timestamp(lit("2015-12-05"), "yyyy-MM-dd").cast("timestamp")), col("proxy_labor")).otherwise(col("instore_labor")))
       //      .withColumn("instore_labor", when(col("proxy_labor").isNull || col("proxy_labor") === "", null).otherwise(col("instore_labor")))
       .withColumn("instore_labor", when(col("Account").isin("Best Buy", "Office Depot-Max", "Staples"), col("instore_labor")).otherwise(lit(0)))
       .withColumn("instore_labor", when(col("Online") === 1, 0).otherwise(col("instore_labor")))
@@ -283,7 +313,7 @@ object RetailPreRegressionPart21 {
       "L1_competition_Lexmark", "L1_competition_Samsung", "L2_competition_Brother", "L2_competition_Canon", "L2_competition_Epson",
       "L2_competition_Lexmark", "L2_competition_Samsung", "L1_competition", "L2_competition", "L1_competition_HP_ssmodel",
       "L2_competition_HP_ssmodel", "L1_competition_ssdata_HPmodel", "L2_competition_ssdata_HPmodel", "BOGO_dummy", "BOGO",
-      "L1_cannibalization", "L2_cannibalization", "Sale_Price", "Price_Range_20_Perc_high", "seasonality_npd", "seasonality_npd2",
+      "L1_cannibalization", "L2_cannibalization", "Sale_Price", "Price_Range_20_Perc_high", "seasonality_npd", "seasonality_npd2","Fixed_Cost",
       "Hardware_GM", "Supplies_GM", "Hardware_Rev", "Supplies_Rev", "Valid_Start_Date", "Valid_End_Date", "aveHWGM", "aveSuppliesGM",
       "avg_discount_SKU_Account", "supplies_GM_scaling_factor", "Supplies_GM_unscaled", "Supplies_GM_no_promo", "Supplies_Rev_unscaled",
       "Supplies_Rev_no_promo", "L1_cannibalization_log", "L2_cannibalization_log", "L1_competition_log", "L2_competition_log",

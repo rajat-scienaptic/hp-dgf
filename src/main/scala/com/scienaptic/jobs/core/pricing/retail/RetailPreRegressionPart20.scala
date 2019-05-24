@@ -99,10 +99,23 @@ object RetailPreRegressionPart20 {
       .withColumn("Direct_Cann_277", when(col("Direct_Cann_277").isNull, 0).otherwise(col("Direct_Cann_277")))
       .withColumn("Direct_Cann_Weber", when(col("Direct_Cann_Weber").isNull, 0).otherwise(col("Direct_Cann_Weber")))
       .withColumn("Direct_Cann_Muscatel_Weber", when(col("Direct_Cann_Muscatel_Weber").isNull, 0).otherwise(col("Direct_Cann_Muscatel_Weber")))
-      .withColumn("Direct_Cann_Muscatel_Palermo", when(col("Direct_Cann_Muscatel_Palermo").isNull, 0).otherwise(col("Direct_Cann_Muscatel_Palermo")))
+     // .withColumn("Direct_Cann_Muscatel_Palermo", when(col("Direct_Cann_Muscatel_Palermo").isNull, 0).otherwise(col("Direct_Cann_Muscatel_Palermo")))
       .withColumn("Direct_Cann_Palermo", when(col("Direct_Cann_Palermo").isNull, 0).otherwise(col("Direct_Cann_Palermo")))
       .withColumn("LBB", when(col("Account") === "Amazon-Proper", col("LBB")).otherwise(lit(0)))
       .withColumn("LBB", when(col("LBB").isNull, 0).otherwise(col("LBB")))
+        .withColumnRenamed("Direct_Cann_Muscatel_Palermo", "Direct_Cann_Muscatel_Palermo2")
+      .drop("Direct_Cann_Muscatel_Palermo")
+
+    //Muscatel Palermo change
+    var tempMeanIR = retailWithCompCann3DF.where(col("cann_group")==="Palermo")
+      .select("cann_group","Week_End_Date","NP_IR","ASP_IR")
+    tempMeanIR = tempMeanIR.groupBy("Week_End_Date")
+      .agg(mean(col("NP_IR")+col("ASP_IR")).as("Direct_Cann_Muscatel_Palermo"))
+
+    retailWithCompCann3DF = retailWithCompCann3DF.join(tempMeanIR, Seq("Week_End_Date"), "left")
+    retailWithCompCann3DF = retailWithCompCann3DF.withColumn("Direct_Cann_Muscatel_Palermo",
+    when(col("cann_group")==="Muscatel",col("Direct_Cann_Muscatel_Palermo")).otherwise(0))
+      .na.fill(0, Seq("Direct_Cann_Muscatel_Palermo"))
 
     retailWithCompCann3DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART20.csv")
 
