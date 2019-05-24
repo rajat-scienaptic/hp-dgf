@@ -56,15 +56,16 @@ object RetailPreRegressionPart01 {
 
     var retailMergeIFS2DF = retail
       //      .drop("Street_Price") // removed to avoid ambiguity
-      .join(IFS2.dropDuplicates("SKU", "Street_Price").select("SKU", "Changed_Street_Price", "Street_Price", "Valid_Start_Date", "Valid_End_Date"), Seq("SKU"), "left")
-      .withColumn("Changed_Street_Price", when(col("Changed_Street_Price").isNull, 0).otherwise(col("Changed_Street_Price")))
-      .withColumn("Changed_Street_Price", when((col("Changed_Street_Price") === 1) && (col("Category").isin("Home","SMB")), 0).otherwise(col("Changed_Street_Price")))
+      .join(IFS2.dropDuplicates("SKU", "Street_Price").select("SKU", "Changed_Street_Price", "Street_Price", "Valid_Start_Date", "Valid_End_Date", "Fixed_Cost"), Seq("SKU"), "left")
+      /*.withColumn("Changed_Street_Price", when(col("Changed_Street_Price").isNull, 0).otherwise(col("Changed_Street_Price")))
+      .withColumn("Changed_Street_Price", when((col("Changed_Street_Price") === 1) && (col("Category").isin("Home","SMB")), 0).otherwise(col("Changed_Street_Price")))*/
       .withColumn("Special_Programs", lit("None"))
       .withColumn("Valid_Start_Date", when(col("Valid_Start_Date").isNull, dat2000_01_01).otherwise(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))
       .withColumn("Street_Price", when(col("Street_Price").isNull, col("Street_Price_Org")).otherwise(col("Street_Price")))
-      .where((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") < col("Valid_End_Date")))
+      .where((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") <= col("Valid_End_Date")))
       .drop("Street_Price_Org", "Valid_Start_Date", "Valid_End_Date")
+      .withColumn("Fixed_Cost", when(col("Fixed_Cost").isNull, 0).otherwise(col("Fixed_Cost"))) // added new change
 
     var retailBBYBundleAccountDF = retailMergeIFS2DF.filter((col("Account") === "Best Buy") &&
       (col("Raw_POS_Qty") > col("POS_Qty")))
@@ -88,31 +89,32 @@ object RetailPreRegressionPart01 {
 
     val retailAggregatePOSDF = retailMergeIFS2DF
       .groupBy("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
-      .agg(sum(col("POS_Qty")).as("POS_Qty"))
+      .agg(sum(col("POS_Qty")).as("POS_Qty"),
+        mean(col("Distribution_Inv")).as("Distribution_Inv"))
 
-    retailMergeIFS2DF = retailMergeIFS2DF.drop("POS_Qty")
+    retailMergeIFS2DF = retailMergeIFS2DF.drop("POS_Qty", "Distribution_Inv")
       .join(retailAggregatePOSDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
 
     //Change May 10: Drop duplicate section start
-    var restOfRetailDF = retailMergeIFS2DF
+    /*var restOfRetailDF = retailMergeIFS2DF
       .filter(col("Account") === "Rest of Retail")
 
     val restOfRetailGroupedDF = restOfRetailDF
       .groupBy("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
       .agg(mean(col("Distribution_Inv")).as("Distribution_Inv2"),
-        mean(col("Street_Price")).as("Street_Price2"),
+       /* mean(col("Street_Price")).as("Street_Price2"),*/
         sum(col("POS_Qty")).as("POS_Qty2")
       )
 
     restOfRetailDF = restOfRetailDF.join(restOfRetailGroupedDF, Seq("SKU", "Account", "Week_End_Date", "Online", "Special_Programs"), "left")
-      .drop("Distribution_Inv", "Street_Price", "POS_Qty")
+      .drop("Distribution_Inv",/* "Street_Price",*/ "POS_Qty")
       .withColumnRenamed("Distribution_Inv2", "Distribution_Inv")
-      .withColumnRenamed("Street_Price2", "Street_Price")
+      /*.withColumnRenamed("Street_Price2", "Street_Price")*/
       .withColumnRenamed("POS_Qty2", "POS_Qty")
       .dropDuplicates("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
 
     var nonRestOfRetailAcounts = retailMergeIFS2DF
-      .filter(col("Account") =!= "Rest of Retail")
+      .filter(col("Account") =!= "Rest of Retail")*/
 
    /* val groupedStreetPrice = nonRestOfRetailAcounts
       .groupBy("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
@@ -122,18 +124,19 @@ object RetailPreRegressionPart01 {
       .drop("Street_Price")
       .withColumnRenamed("Street_Price2", "Street_Price")*/
 
-    var retailJoinRetailTreatmentAndAggregatePOSDF = nonRestOfRetailAcounts
+//    var retailJoinRetailTreatmentAndAggregatePOSDF = nonRestOfRetailAcounts
+    var retailJoinRetailTreatmentAndAggregatePOSDF = retailMergeIFS2DF
       .dropDuplicates("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
 
-    retailJoinRetailTreatmentAndAggregatePOSDF = retailJoinRetailTreatmentAndAggregatePOSDF.unionByName(restOfRetailDF)
+//    retailJoinRetailTreatmentAndAggregatePOSDF = retailJoinRetailTreatmentAndAggregatePOSDF.unionByName(restOfRetailDF)
     //Change May 10: Drop duplicate section End
 
-    var SKUMapping = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/S-Print/SKU_Mapping/s-print_SKU_mapping.csv"))
+    var SKUMapping = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("D:\\files\\input\\R\\17thMay\\s-print_SKU_mapping.csv"))
     SKUMapping.columns.toList.foreach(x => {
       SKUMapping = SKUMapping.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     SKUMapping = SKUMapping.cache()
-      .withColumn("Product", lower(col("Product")))
+//      .withColumn("Product", lower(col("Product")))
 
     var GAP1 = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/Pricing/Outputs/POS_GAP/gap_data_full_" + currentTS + ".csv")).cache()
     GAP1.columns.toList.foreach(x => {
@@ -141,11 +144,12 @@ object RetailPreRegressionPart01 {
     })
     GAP1 = GAP1.cache()
       //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
-//      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp"))) // TODO : Sandeepans WED format
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
+      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp"))) // TODO : Sandeepans WED format
+//      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "dd-MM-yyyy").cast("timestamp")))
       .withColumn("Total_IR", when(col("Account") === "Best Buy" && col("SKU") === "V1N08A", 0).otherwise(col("Total_IR")))
       .withColumn("Total_IR", when(col("Account") === "Office Depot-Max" && col("SKU") === "V1N07A", 0).otherwise(col("Total_IR")))
-      .withColumn("Product", lower(col("Product")))
+      .withColumn("Total_IR", when(col("Account") === "Staples" && col("SKU") === "K4T97A", 0).otherwise(col("Total_IR")))
+//      .withColumn("Product", lower(col("Product")))
     /*
      * Because Product is in lower case in S-Print_Master_Calendar source.
      * Uncomment when same implemented in R
@@ -154,7 +158,7 @@ object RetailPreRegressionPart01 {
     val adPositionDF = GAP1.filter(col("Brand").isin("HP", "Samsung"))
       .select("SKU", "Week_End_Date", "Account", "Online", "Ad_Location", "Brand", "Product")
       .filter(col("Ad_Location").isNotNull)
-      .filter(col("Ad_Location") =!= 0)
+      .filter(col("Ad_Location") =!= "0")
       .distinct()
 
     val adPositionJoinSKUMappingDF = adPositionDF.join(SKUMapping, Seq("Product"), "left")
