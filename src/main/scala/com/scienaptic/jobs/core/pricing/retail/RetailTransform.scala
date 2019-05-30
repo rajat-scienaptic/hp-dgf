@@ -70,7 +70,7 @@ object RetailTransform {
   def execute(executionContext: ExecutionContext): Unit = {
     /* Source Map with all sources' information */
     val sourceMap = executionContext.configuration.sources
-
+    val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
     /* Map with all operations source operations */
     val odomOrcaSource = sourceMap(ODOM_ONLINE_ORCA_SOURCE)
     val staplesComUnitsSource = sourceMap(STAPLES_COM_UNITS_SOURCE)
@@ -250,7 +250,7 @@ object RetailTransform {
         .otherwise(0))
       .withColumn("Max_wed", lit(maxWed))
       .cache()
-    //auxTablesOnlineFormula01DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/auxTablesOnlineFormula01DF.csv")
+    auxTablesOnlineFormula01DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/auxTablesOnlineFormula01DF.csv")
 
     // group
     val auxTablesOnlineGroup01 = auxTablesOnlineSource.groupOperation(GROUP01)
@@ -340,6 +340,10 @@ object RetailTransform {
     val amazonArapSumOrderedUnitsGreaterThanZeroDF = FilterOperation.doFilter(amazonArapSumOrderedUnitsSortDescDF, amazonArapFilter02, amazonArapFilter02.conditionTypes(NUMERAL0)).get
 
     // browse here
+    // SKU fallout
+    if (amazonArapSumOrderedUnitsGreaterThanZeroDF.count() > 0) {
+      amazonArapSumOrderedUnitsGreaterThanZeroDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/amazon-asin-fallout-" + currentTS + ".csv")
+    }
 
     // formula
     val amazonArapAddAmazonFormula01 = Utils.litColumn(amazonArapJoin01InnerDF, "Account", "Amazon.Com")

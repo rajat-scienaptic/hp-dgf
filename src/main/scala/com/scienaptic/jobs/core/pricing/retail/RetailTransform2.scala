@@ -198,7 +198,8 @@ object RetailTransform2 {
 
     // unique
     val auxTablesSKUHierarchyDistinctDF = auxTablesSKUHierarchyGroup02DF.dropDuplicates(List("Account Major", "Online", "SKU", "WED"))
-
+    // SKU fallout
+    auxTablesSKUHierarchyDistinctDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/fallout-SKUs-retail-" + currentTS + ".csv")
     // browse here
 
     // filter
