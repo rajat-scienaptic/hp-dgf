@@ -90,7 +90,7 @@ object RetailTransform {
     val odomOrcaDF = Utils.loadCSV(executionContext, odomOrcaSource.filePath).get
     val staplesDotComUnitsDF = Utils.loadCSV(executionContext, staplesComUnitsSource.filePath).get
     val hpComDF = Utils.loadCSV(executionContext, hpComSource.filePath).get
-    val amazonArapDF = Utils.loadCSV(executionContext, amazonArapSource.filePath).get
+    val amazonArapDF = executionContext.spark.read.option("header", true).option("inferschema", true).option("quote", "\"").option("escape", "\"").csv(amazonArapSource.filePath)
     val amazonAsinMapDF = Utils.loadCSV(executionContext, amazonAsinMapSource.filePath).get
     val sPrintHistoricalUnitsDF = Utils.loadCSV(executionContext, sPrintHistoricalUnitsSource.filePath).get
     val orca201416ARchive = Utils.loadCSV(executionContext, orca201416ArchiveSource.filePath).get
