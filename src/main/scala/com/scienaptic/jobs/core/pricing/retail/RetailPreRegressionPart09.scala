@@ -16,7 +16,7 @@ object RetailPreRegressionPart09 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-  var retailWithCompetitionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-L1L2-PART08.csv")
+  var retailWithCompetitionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2-PART08.csv")
     .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
     .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
     .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -77,7 +77,7 @@ object RetailPreRegressionPart09 {
       .withColumn("L2_competition_ssdata_HPmodel", when((col("L2_competition_ssdata_HPmodel").isNull) || (col("L2_competition_ssdata_HPmodel") < 0), 0).otherwise(col("L2_competition_ssdata_HPmodel")))
       .na.fill(0, Seq("L1_competition_ssdata_HPmodel", "L2_competition_ssdata_HPmodel"))
 
-    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-L1L2-HP-PART09.csv")
+    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2-HP-PART09.csv")
 
   }
 }

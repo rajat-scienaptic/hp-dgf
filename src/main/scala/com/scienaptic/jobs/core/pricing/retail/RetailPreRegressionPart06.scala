@@ -23,7 +23,7 @@ object RetailPreRegressionPart06 {
     val spark: SparkSession = executionContext.spark
 
 
-    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-EOL-half-PART05.csv")
+    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-EOL-half-PART05.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -111,6 +111,6 @@ object RetailPreRegressionPart06 {
       .withColumn("ASP_Flag", when(col("ASP_IR") > 0, 1).otherwise(lit(0)))
       .withColumn("Other_IR_Flag", when(col("Other_IR") > 0, 1).otherwise(lit(0)))
 
-        retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-BOL-PART06.csv")
+        retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-BOL-PART06.csv")
   }
 }

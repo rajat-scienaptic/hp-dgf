@@ -17,14 +17,14 @@ object RetailPreRegressionPart02 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailJoinAdPositionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-r-retailJoinAdPositionDF-PART01.csv")
+    var retailJoinAdPositionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-r-retailJoinAdPositionDF-PART01.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       //.withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
 
 
-    var GAP1JoinSKUMappingDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-r-GAP1JoinSKUMappingDF-PART01.csv")
+    var GAP1JoinSKUMappingDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-r-GAP1JoinSKUMappingDF-PART01.csv")
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
 
@@ -174,7 +174,7 @@ object RetailPreRegressionPart02 {
         .when(col("Ad_Staples") === 1 && col("Ad_Location") === "No_Ad", "No_Info")
         .otherwise(col("Ad_Location").cast("string")))
 
-    retailJoincompAdTotalDFDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-r-retailJoincompAdTotalDFDF-PART02.csv")
+    retailJoincompAdTotalDFDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-r-retailJoincompAdTotalDFDF-PART02.csv")
 
   }
 }

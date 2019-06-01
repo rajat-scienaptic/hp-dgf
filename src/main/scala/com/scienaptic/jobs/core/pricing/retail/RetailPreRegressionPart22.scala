@@ -1,183 +1,25 @@
 package com.scienaptic.jobs.core.pricing.retail
 
-import java.text.SimpleDateFormat
-import java.util.{Calendar, Date, Locale}
-
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.utility.CommercialUtility.createlist
 import com.scienaptic.jobs.utility.Utils.renameColumns
-import org.apache.spark.ml.Pipeline
-import org.apache.spark.ml.feature.StringIndexer
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{SaveMode, SparkSession}
 
-import scala.collection.mutable
-
-object RetailPreRegressionPart21 {
+object RetailPreRegressionPart22 {
 
   val TEMP_OUTPUT_DIR = "/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/temp/preregression_output_retail.csv"
 
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    val npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/NPD_weekly.csv"))
-    val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
-      .withColumn("Week_End_Date", date_sub(col("Week_End_Date"), 7)).agg(max("Week_End_Date")).head().getDate(0)
-
-    //var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/Intermediate/retail-DirectCann-PART20.csv")
-    var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-DirectCann-PART20.csv")
+    var retailWithCompCann3DF = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/preregression__before_output_retail.csv"))
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    val tableLBB = retailWithCompCann3DF
-      .filter(col("Account") === "Amazon-Proper" && col("NP_IR") === 0)
-      .groupBy("Account", "SKU", "Online")
-      .agg(mean(col("LBB")).as("LBB_adj"))
-
     retailWithCompCann3DF = retailWithCompCann3DF
-      .join(tableLBB, Seq("Account", "SKU", "Online"), "left")
-      .withColumn("LBB", when(col("Account") === "Amazon-Proper", col("LBB")).otherwise(lit(0)))
-    /* commented out as per Canon Funding change
-    .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2016-07-01", col("Hardware_GM") + lit(68)).otherwise(col("Hardware_GM")))
-    .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM")))
-    .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM"))
-    .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 SMB", "A4 Enterprise") && col("Week_End_Date") >= "2016-07-01" && col("Week_End_Date") <= "2017-04-30", col("Hardware_GM") + 68).otherwise(col("Hardware_GM")))
-    .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 SMB", "A4 Enterprise") && col("Week_End_Date") >= "2017-05-01" && col("Week_End_Date") <= "2017-10-30", col("Hardware_GM") + 76).otherwise(col("Hardware_GM")))
-    .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2017-11-01" && col("Week_End_Date") <= "2018-10-30", col("Hardware_GM") + 68.49).otherwise(col("Hardware_GM")))
-    .withColumn("Hardware_GM", when(col("Category Custom") === "A4 Enterprise" && col("Week_End_Date") >= "2017-11-01" && col("Week_End_Date") <= "2018-10-30", col("Hardware_GM") + 101.77).otherwise(col("Hardware_GM")))
-    .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2018-11-01" && col("Week_End_Date") <= "2019-10-30", col("Hardware_GM") + 49.35).otherwise(col("Hardware_GM")))
-    .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 Enterprise") && col("Week_End_Date") >= "2018-11-01" && col("Week_End_Date") <= "2019-10-30", col("Hardware_GM") + 150).otherwise(col("Hardware_GM")))
-    */
-
-    /* canon funding change starts May 23rd 2019*/
-    var canon = renameColumns(executionContext.spark.read.option("header","true").option("inferSchema","true").csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/canon_fund.csv"))
-    canon = canon
-      .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd-MM-yyyy").cast("timestamp")))
-      .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
-      .withColumn("wk_day_start", dayofweek(col("Start_date")))
-      .withColumn("wk_day_end", dayofweek(col("End_date")))
-      .withColumn("WSD", date_add(expr("date_sub(Start_date, wk_day_start)"),7))
-      .withColumn("WED", when(col("wk_day_end")>3,date_add(expr("date_sub(End_date, wk_day_end)"),7)).otherwise(expr("date_sub(End_date,wk_day_end)")))
-      .withColumn("WED",to_date(col("WED")))
-      .withColumn("Amount", regexp_replace(col("Amount"),lit("\\$"),lit("")).cast("double"))
-      .withColumn("week_diff", abs(datediff(col("WSD"), col("WED"))/7)+1)
-      .withColumn("repList", createlist(col("week_diff")))
-      .withColumn("repeatNum", explode(col("repList")))
-      .withColumn("repeatNum", (col("repeatNum")+1)*7)
-      .withColumn("WED", expr("date_add(WSD,repeatNum)"))
-    canon = canon.select("Category Custom","WED","Amount")
-      .withColumnRenamed("WED","Week_End_Date")
-      .withColumnRenamed("Category Custom","Category_Custom")
-    retailWithCompCann3DF = retailWithCompCann3DF.withColumnRenamed("Category Custom","Category_Custom").join(canon, Seq("Category_Custom","Week_End_Date"), "left")
-      .withColumn("Amount",when(col("Amount").isNull, 0).otherwise(col("Amount")))
-      .withColumn("Hardware_GM", col("Hardware_GM")+col("Amount"))
-      .withColumnRenamed("Category_Custom","Category Custom")
-    /* canon funding change ends  */
-
-    /*  CR1 - Added new variable NP.Type - start  */
-    retailWithCompCann3DF = retailWithCompCann3DF
-        .withColumn("NP_Type", when(col("Flash_IR")>0, "Flash").otherwise(when(col("Bundle_Flag")===1, "Bundle").otherwise("No_IR")))
-        .withColumn("NP_Type", when(col("NP_Type").isNull, "No_IR").otherwise(col("NP_Type")))
-        .withColumn("Days_on_Promo", when(col("Flash_IR") === 0, col("Days_on_Promo")).otherwise(4))
-    /*  CR1 - Added new variable NP.Type - End    */
-
-    /*  CR1 - Adjust Total_IR, Promo_Flag, NP_Flag - Start */
-    var retailWM = retailWithCompCann3DF.where(col("Account")==="Walmart")
-    retailWithCompCann3DF = retailWithCompCann3DF.where(col("Account")=!="Walmart")
-    retailWM = retailWM.withColumn("Total_IR", col("NP_IR"))
-        .withColumn("Promo_Flag", when(col("Total_IR")>0, 1).otherwise(0))
-        .withColumn("NP_Flag", col("Promo_Flag"))
-    /*  CR1 - Adjust Total_IR, Promo_Flag, NP_Flag - Start */
-
-    retailWithCompCann3DF = retailWithCompCann3DF
-      .withColumn("exclude", when(col("low_volume") === 0 && col("EOL_criterion") === 0 && col("BOL_criterion") === 0 &&
-        col("Week_End_Date") <= maximumRegressionDate && col("low_baseline") === 0 && col("Special_Programs").isin("None", "BOPIS"), lit(0)).otherwise(lit(1)))
-      .withColumn("exclude", when((!col("Account").isin("Amazon-Proper", "Staples")) && col("PL").isin("4X"), 1).otherwise(col("exclude")))
-      .withColumn("exclude", when((col("Account").isin("Costco", "Sam's Club")) && col("PL").isin("3Y"), 1).otherwise(col("exclude")))
-      .withColumn("exclude", when((col("PL").isin("3Y")) && (col("low_baseline") === 1) && (col("POS_Qty") > 0), 0).otherwise(col("exclude")))
-      .withColumn("exclude", when((col("SKU_Name").isin("LJP M426fdn", "LJP M477fdw")) && (col("low_baseline") === 1) && (col("POS_Qty") > 0), 0).otherwise(col("exclude")))
-      .withColumn("exclude", when(col("Brand").isin("Samsung"), 1).otherwise(col("exclude")))
-      .withColumn("exclude", when(col("Account").isin("Sam's Club"), 1).otherwise(col("exclude")))
-      .withColumn("exclude", when(col("SKU_Name").contains("Sprocket"), 1).otherwise(col("exclude")))
-      .withColumn("exclude", when(col("Account").isin(/*"Walmart", */"HP Shopping", "Rest of Retail"), 1).otherwise(col("exclude"))) //CR1 - Remove Walmart from filter
-      .withColumn("exclude", when((col("SKU").isin("V1N07A") && col("Season").isin("HOL'18")), 1).otherwise(col("exclude")))
-
-    /* CR1 - Bind retail with retailWM - Start */
-    retailWithCompCann3DF = retailWithCompCann3DF.unionByName(retailWM)
-    /* CR1 - Bind retail with retailWM - End */
-
-    retailWithCompCann3DF = retailWithCompCann3DF
-      .withColumn("ImpMin_AmazonProper", when(col("Account").isin("Amazon-Proper"), col("ImpMin")).otherwise(col("ImpMin_AmazonProper")))
-      .withColumn("Street_PriceWhoChange_log", when(col("Changed_Street_Price") === 0, 0).otherwise(log(col("Street_Price") * col("Changed_Street_Price"))))
-      .withColumn("SKUWhoChange", when(col("Changed_Street_Price") === 0, 0).otherwise(col("SKU")))
-      .withColumn("PriceChange_HPS_OPS", when(col("Changed_Street_Price") === 0, 0).otherwise(col("HPS/OPS")))
-
-    val streetPriceChanged = retailWithCompCann3DF
-      .groupBy("SKU")
-      .agg(max("Street_Price").as("Org_SP"))
-
-    retailWithCompCann3DF = retailWithCompCann3DF
-      .join(streetPriceChanged, Seq("SKU"), "left")
-      .withColumn("Pec_Street_Price_Changed_BeforeSqr", col("Street_Price") / col("Org_SP"))
-      .withColumn("Pec_Street_Price_Changed", pow(col("Pec_Street_Price_Changed_BeforeSqr"), lit(2)))
-
-    retailWithCompCann3DF = retailWithCompCann3DF
-      .withColumn("ImpMin", when(col("Street_Price") - col("ImpMin") < 0, col("Street_Price")).otherwise(col("ImpMin")))
-      .withColumn("ImpMin_AmazonProper", when(col("Street_Price") - col("ImpMin_AmazonProper") < 0, col("Street_Price")).otherwise(col("ImpMin_AmazonProper")))
-      .withColumn("ImpMin_BestBuy", when(col("Street_Price") - col("ImpMin_BestBuy") < 0, col("Street_Price")).otherwise(col("ImpMin_BestBuy")))
-      .withColumn("ImpMin_HPShopping", when(col("Street_Price") - col("ImpMin_HPShopping") < 0, col("Street_Price")).otherwise(col("ImpMin_HPShopping")))
-      .withColumn("ImpMin_OfficeDepotMax", when(col("Street_Price") - col("ImpMin_OfficeDepotMax") < 0, col("Street_Price")).otherwise(col("ImpMin_OfficeDepotMax")))
-      .withColumn("ImpMin_Staples", when(col("Street_Price") - col("ImpMin_Staples") < 0, col("Street_Price")).otherwise(col("ImpMin_Staples")))
-      .withColumn("ImpAve", when(col("Street_Price") - col("ImpAve") < 0, col("Street_Price")).otherwise(col("ImpAve")))
-      .withColumn("ImpAve_AmazonProper", when(col("Street_Price") - col("ImpAve_AmazonProper") < 0, col("Street_Price")).otherwise(col("ImpAve_AmazonProper")))
-      .withColumn("ImpAve_BestBuy", when(col("Street_Price") - col("ImpAve_BestBuy") < 0, col("Street_Price")).otherwise(col("ImpAve_BestBuy")))
-      .withColumn("ImpAve_HPShopping", when(col("Street_Price") - col("ImpAve_HPShopping") < 0, col("Street_Price")).otherwise(col("ImpAve_HPShopping")))
-      .withColumn("ImpAve_OfficeDepotMax", when(col("Street_Price") - col("ImpAve_OfficeDepotMax") < 0, col("Street_Price")).otherwise(col("ImpAve_OfficeDepotMax")))
-      .withColumn("ImpAve_Staples", when(col("Street_Price") - col("ImpAve_Staples") < 0, col("Street_Price")).otherwise(col("ImpAve_Staples")))
-      .withColumn("AE_NP_IR", col("NP_IR"))
-      .withColumn("AE_ASP_IR", col("ASP_IR"))
-      .withColumn("AE_Other_IR", col("Other_IR"))
-      .withColumn("ASP_IR", when(col("Account").isin("Amazon-Proper"), col("ASP_IR") + col("Other_IR")).otherwise(col("ASP_IR")))
-      .withColumn("Other_IR", when(col("Account").isin("Amazon-Proper"), 0).otherwise(col("Other_IR")))
-      .withColumn("ASP_Flag", when(col("ASP_IR") > 0, 1).otherwise(lit(0)))
-      .withColumn("Other_IR_Flag", when(col("Other_IR") > 0, 1).otherwise(lit(0)))
-
-    retailWithCompCann3DF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/preregression__before_output_retail.csv")
-
-    /*  CR1 - Code removed in R Code - Start  */
-    /*var inStore = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/Instore/instore_labor_final.csv"))
-    inStore.columns.toList.foreach(x => {
-      inStore = inStore.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
-    })
-    inStore = inStore.cache()
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp"))) // check date format
-
-    var extraPol = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/Instore/instore_labor_proxy.csv"))
-    extraPol.columns.toList.foreach(x => {
-      extraPol = extraPol.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
-    })
-    extraPol = extraPol.cache()
-
-    retailWithCompCann3DF = retailWithCompCann3DF
-      .join(inStore, Seq("Account", "Week_End_Date"), "left")
-      .withColumn("mnth", month(col("Week_End_Date")))
-
-    retailWithCompCann3DF = retailWithCompCann3DF
-      .join(extraPol, Seq("Account", "mnth"), "left")
-    retailWithCompCann3DF = retailWithCompCann3DF
-      /* commented the weekend date check as R code does't reflect the same change
-      .withColumn("instore_labor", when(col("Week_End_date") <= to_date(unix_timestamp(lit("2015-12-05"), "yyyy-MM-dd").cast("timestamp")), col("proxy_labor")).otherwise(col("instore_labor")))
-      .withColumn("instore_labor", when(col("proxy_labor").isNull || col("proxy_labor") === "", null).otherwise(col("instore_labor")))*/
-      .withColumn("instore_labor", when(col("Account").isin("Best Buy", "Office Depot-Max", "Staples"), col("instore_labor")).otherwise(lit(0)))
-      .withColumn("instore_labor", when(col("Online") === 1, 0).otherwise(col("instore_labor")))
-      .withColumn("instore_labor", when(col("instore_labor").isNull || col("instore_labor") === "", 0).otherwise(col("instore_labor")))
-      .drop("proxy_labor")
-      .withColumn("GC_SKU_Name", when(col("GC_SKU_Name").isNull, "NA").otherwise(col("GC_SKU_Name")))*/
-    /*  CR1 - Code removed in R Code - End  */
-
-    /*retailWithCompCann3DF = retailWithCompCann3DF
       //AVIK Change: When total ir is null, it gives Selling price as null too instead of Street Price
       .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
       .withColumn("Selling_Price", col("Street_Price") - col("Total_IR"))
@@ -374,6 +216,6 @@ object RetailPreRegressionPart21 {
         sum(col("Promo_Flag")).as("Total_IR")
       )
       .orderBy(col("Account"), col("Total_qty").desc)
-    //excluded.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/Excluded_" + currentTS + ".csv")*/
+    //excluded.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/Excluded_" + currentTS + ".csv")
   }
 }

@@ -17,7 +17,7 @@ object RetailPreRegressionPart11 {
     val spark: SparkSession = executionContext.spark
 
 
-    var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-L1L2Cann-half-PART10.csv")
+    var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2Cann-half-PART10.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -34,9 +34,6 @@ object RetailPreRegressionPart11 {
       .withColumn("Week_End_Date", col("Week_End_Date"))
       .join(retailWithAdj.withColumn("Week_End_Date", col("Week_End_Date")), Seq("Week_End_Date", "SKU"), "right")
 
-    //write
-    retailGroupWEDSKU.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/part-11-cann-group-1.csv")
-
     val retailGroupWEDL1Temp = retailGroupWEDSKU
       .groupBy("Week_End_Date", "Brand", "L1_Category")
       .agg(sum(col("Promo_Pct") * col("Adj_Qty")).as("sum1"), sum("Adj_Qty").as("sum2"))
@@ -45,7 +42,6 @@ object RetailPreRegressionPart11 {
       .join(retailGroupWEDL1Temp.withColumn("L1_Category", col("L1_Category")), Seq("Week_End_Date", "Brand", "L1_Category"), "left")
       .withColumn("L1_cannibalization", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2"))) // chenged the name to L2_cannibalization
       .drop("sum1", "sum2")
-    retailGroupWEDL1.write.option("header", true).mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\part-11-cann-group-2.csv")
 
     val retailGroupWEDL1Temp2 = retailGroupWEDL1
       .groupBy("Week_End_Date", "Brand", "L2_Category")
@@ -54,7 +50,6 @@ object RetailPreRegressionPart11 {
     retailWithCompCannDF = retailGroupWEDL1.withColumn("L2_Category", col("L2_Category"))
       .join(retailGroupWEDL1Temp2.withColumn("L2_Category", col("L2_Category")), Seq("Week_End_Date", "Brand", "L2_Category"), "left")
       .withColumn("L2_cannibalization", (col("sum1") - col("sumSKU1")) / (col("sum2") - col("sumSKU2")))
-    //retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/cann-group-3.csv")
 
     retailWithCompCannDF = retailWithCompCannDF
       .drop("sum1", "sum2", "sumSKU1", "sumSKU2", "Adj_Qty")
@@ -67,7 +62,7 @@ object RetailPreRegressionPart11 {
       .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
       .withColumn("Sale_Price", col("Street_Price") - col("Total_IR"))
       .withColumn("Price_Range_20_Perc_high", lit(1.2) * col("Sale_Price"))
-    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-L1L2Cann-PART11.csv")
+    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2Cann-PART11.csv")
 
   }
 }

@@ -1,5 +1,5 @@
 {
-  "config": "preregression-retail-AD",
+  "config": "preregression-retail-AGGUPSTREAM_INITIAL_JOIN",
   "sparkConfig": {
     "master": "local[*]",
     "appName": "hp-R-retail"
