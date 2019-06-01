@@ -20,12 +20,12 @@ object RetailPreRegressionPart04 {
 
     val focusedAccounts = List("HP Shopping", "Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples")
 
-    var retailJoinAggUpstreamDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamDF-PART03.csv")
+    var retailJoinAggUpstreamDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-retailJoinAggUpstreamDF-PART03.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
 
-    var retailJoinAggUpstreamWithNATreatmentDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamWithNATreatmentDF-PART03.csv")
+    var retailJoinAggUpstreamWithNATreatmentDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-retailJoinAggUpstreamWithNATreatmentDF-PART03.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -33,10 +33,7 @@ object RetailPreRegressionPart04 {
     var spreadPriceDF = retailJoinAggUpstreamDF
       .filter(col("Special_Programs").isin("None"))
 
-
-    // TODO done : reshape(timevar = "Account", idvar = c("SKU", "Week.End.Date","Online"), direction = "wide")
-    // reshape starts
-
+    /*  Reshape Starts  */
     val distinctAccounts = spreadPriceDF.select("Account").distinct().collect().map(_ (0).asInstanceOf[String]).toList
 
     var reshapewithImpAveAndMin = spreadPriceDF
@@ -67,10 +64,11 @@ object RetailPreRegressionPart04 {
       .join(reshapewithImpAveAndMin, Seq("Account", "SKU", "Week_End_Date", "Online"), "inner")
       .drop("Account")
       .groupBy("SKU", "Week_End_Date", "Online")
-      .agg(max("ImpAve_AmazonProper").as("ImpAve_AmazonProper"), max("ImpMin_AmazonProper").as("ImpMin_AmazonProper"), max("ImpAve_BestBuy").as("ImpAve_BestBuy"), max("ImpMin_BestBuy").as("ImpMin_BestBuy"), max("ImpAve_HPShopping").as("ImpAve_HPShopping"), max("ImpMin_HPShopping").as("ImpMin_HPShopping"), max("ImpAve_OfficeDepotMax").as("ImpAve_OfficeDepotMax"), max("ImpMin_OfficeDepotMax").as("ImpMin_OfficeDepotMax"), max("ImpAve_Staples").as("ImpAve_Staples"), max("ImpMin_Staples").as("ImpMin_Staples"))
-    //      .na.fill(0)
+      .agg(max("ImpAve_AmazonProper").as("ImpAve_AmazonProper"), max("ImpMin_AmazonProper").as("ImpMin_AmazonProper"), max("ImpAve_BestBuy").as("ImpAve_BestBuy"),
+        max("ImpMin_BestBuy").as("ImpMin_BestBuy"), max("ImpAve_HPShopping").as("ImpAve_HPShopping"), max("ImpMin_HPShopping").as("ImpMin_HPShopping"), max("ImpAve_OfficeDepotMax").as("ImpAve_OfficeDepotMax"),
+        max("ImpMin_OfficeDepotMax").as("ImpMin_OfficeDepotMax"), max("ImpAve_Staples").as("ImpAve_Staples"), max("ImpMin_Staples").as("ImpMin_Staples"))
+    /*  Reshape Ends  */
 
-    // reshape ends
     spreadPriceDF = spreadPriceDF
       .select("SKU", "Week_End_Date", "Online", "ImpAve_AmazonProper", "ImpMin_AmazonProper", "ImpAve_BestBuy", "ImpMin_BestBuy", "ImpAve_HPShopping", "ImpMin_HPShopping", "ImpAve_OfficeDepotMax", "ImpMin_OfficeDepotMax", "ImpAve_Staples", "ImpMin_Staples")
 
@@ -87,16 +85,9 @@ object RetailPreRegressionPart04 {
       .withColumn("ImpAve_Staples", when(col("ImpAve_Staples").isNull, col("Street_Price")).otherwise(col("ImpAve_Staples")))
       .withColumn("ImpMin_Staples", when(col("ImpMin_Staples").isNull, col("Street_Price")).otherwise(col("ImpMin_Staples")))
 
-
-    // remove or comment retailJoinAggUpstreamDF and retailJoinSpreadPrice
-    //    retailJoinSpreadPrice.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-Feb06-492.csv")
-    //        var retailJoinAggUpstreamDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("D:\\files\\temp\\retailJoinAggUpstreamDF.csv").cache()
-    // comment till here as not needed
-
-    //    retailJoinSpreadPrice.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-Feb07-364.csv")
     val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
-    var amz = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/etherData/Pricing/Outputs/POS_Amazon/amazon_sales_price_"+currentTS+".csv")).cache()
-//      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+    var amz = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\amazon_sales_price.csv")).cache()
+      //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
     amz.columns.toList.foreach(x => {
       amz = amz.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
@@ -111,14 +102,6 @@ object RetailPreRegressionPart04 {
         when((col("Street_Price") - col("ImpMin") - col("NP_IR") - col("ASP_IR")) > 5, col("Street_Price") - col("ImpMin") - col("NP_IR") - col("ASP_IR")).otherwise(0))
         .otherwise(col("Other_IR")))
       .withColumn("Total_IR", col("NP_IR") + col("ASP_IR") + col("Other_IR"))
-
-
-    // comment this line
-    //    val retailAMZMergeDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("D:\\files\\temp\\retail-r-514.csv").cache()
-    //      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("GA_Date", to_date(unix_timestamp(col("GA_Date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("ES_Date", to_date(unix_timestamp(col("ES_Date"), "yyyy-MM-dd").cast("timestamp")))
-    // comment till here
 
     val retailOtherAccounts = retailJoinAggUpstreamWithNATreatmentDF
       .filter(!col("Account").isin(focusedAccounts: _*))
@@ -138,13 +121,7 @@ object RetailPreRegressionPart04 {
       .withColumn("price", log(lit(1) - col("Promo_Pct")))
 
 
-    retailUnionRetailOtherAccountsDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailUnionRetailOtherAccountsDF-part04.csv")
-
-    /*do not uncomment
-     following are omitted variables
-    .withColumn("log_POS_Qty", log(col("POS_Qty")))
-    .withColumn("log_POS_Qty", when(col("log_POS_Qty").isNull, 0).otherwise(col("log_POS_Qty")))
-    .withColumn("log_POS_Qty", log(lit(1) - col("POS_Qty")))*/
+    retailUnionRetailOtherAccountsDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-r-retailUnionRetailOtherAccountsDF-part04.csv")
 
   }
 }

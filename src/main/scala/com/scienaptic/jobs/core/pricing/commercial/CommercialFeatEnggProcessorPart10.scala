@@ -30,11 +30,10 @@ object CommercialFeatEnggProcessor10 {
       .config(sparkConf)
       .getOrCreate
 
-    val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
-    val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    //val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
+    //val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
-    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeCannGroups.csv")
-    //var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\commercialBeforeCannGroups.csv")
+    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeCannGroups.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
@@ -58,7 +57,6 @@ object CommercialFeatEnggProcessor10 {
       .withColumn("cann_receiver", when(col("SKU_Name").contains("8710") || col("SKU_Name").contains("8720"), "Weber").otherwise(col("cann_receiver")))
       .withColumn("cann_receiver", when(col("SKU_Name").contains("6968") || col("SKU_Name").contains("6978"), "Muscatel").otherwise(col("cann_receiver")))
       .withColumn("cann_receiver", when(col("SKU_Name").contains("6255") || col("SKU_Name").contains("7155") || col("SKU_Name").contains("7855"), "Palermo").otherwise(col("cann_receiver")))
-    //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_AFTER_CANN_RECEIVER_CALC")
 
     commercial=commercial
       .withColumn("is201",when(col("SKU_Name").contains("M201") or col("SKU_Name").contains("M203"),1).otherwise(0))
@@ -95,10 +93,39 @@ object CommercialFeatEnggProcessor10 {
       .withColumn("Direct_Cann_225", when(col("Direct_Cann_225").isNull,0).otherwise(col("Direct_Cann_225")))
       .withColumn("Direct_Cann_252", when(col("Direct_Cann_252").isNull,0).otherwise(col("Direct_Cann_252")))
       .withColumn("Direct_Cann_277", when(col("Direct_Cann_277").isNull,0).otherwise(col("Direct_Cann_277")))
-    //writeDF(commercialWithCompCannDF, "commercialWithCompCannDF_WITH_DIRECT_CANN")
 
     commercial = commercial.drop("is225","is201","is252","is277","isM40","isM42","isM45","isM47")
-      /* Code Change: Avik April 6: VApr6: No more required to check these */
+
+    /* CR1 - Direct Cann optimization - Start */
+    //Direct_Cann_Weber
+    var tempMeanIR = commercial.where(col("cann_group")==="Muscatel").select("cann_group","Week_End_Date","IR")
+      .groupBy("Week_End_Date").agg(mean("IR").as("Direct_Cann_Weber"))
+    commercial = commercial.join(tempMeanIR, Seq("Week_End_Date"), "left")
+      .withColumn("Direct_Cann_Weber", when(col("cann_group")==="Weber", col("Direct_Cann_Weber")).otherwise(0))
+
+    //Direct_Cann_Muscatel_Weber
+    tempMeanIR = commercial.where(col("cann_group")==="Weber").select("cann_group","Week_End_Date","IR")
+      .groupBy("Week_End_Date").agg(mean("IR").as("Direct_Cann_Muscatel_Weber"))
+    commercial = commercial.join(tempMeanIR, Seq("Week_End_Date"), "left")
+      .withColumn("Direct_Cann_Muscatel_Weber", when(col("cann_group")==="Muscatel", col("Direct_Cann_Muscatel_Weber")).otherwise(0))
+
+    //Direct_Cann_Muscatel_Palermo
+    tempMeanIR = commercial.where(col("cann_group")==="Palermo").select("cann_group","Week_End_Date","IR")
+      .groupBy("Week_End_Date").agg(mean("IR").as("Direct_Cann_Muscatel_Palermo"))
+    commercial = commercial.join(tempMeanIR, Seq("Week_End_Date"), "left")
+      .withColumn("Direct_Cann_Muscatel_Palermo", when(col("cann_group")==="Muscatel", col("Direct_Cann_Muscatel_Palermo")).otherwise(0))
+
+    //Direct_Cann_Palermo
+    tempMeanIR = commercial.where(col("cann_group")==="Muscatel").select("cann_group","Week_End_Date","IR")
+      .groupBy("Week_End_Date").agg(mean("IR").as("Direct_Cann_Palermo"))
+    commercial = commercial.join(tempMeanIR, Seq("Week_End_Date"), "left")
+      .withColumn("Direct_Cann_Palermo", when(col("cann_group")==="Palermo", col("Direct_Cann_Palermo")).otherwise(0))
+
+    commercial = commercial
+        .na.fill(0, Seq("Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","Direct_Cann_Weber","Direct_Cann_Muscatel_Weber","Direct_Cann_Muscatel_Palermo","Direct_Cann_Palermo"))
+    /* CR1 - Direct Cann optimization - End */
+
+    /* Code Change: Avik April 6: VApr6: No more required to check these */
       /*
       .withColumn("Hardware_GM", when(col("Category_1")==="Value" && col("Week_End_Date")>="2016-07-01", col("Hardware_GM")+lit(68)).otherwise(col("Hardware_GM")))
       .withColumn("Hardware_GM", when(col("Category_1")==="Value" && col("Week_End_Date")>="2017-05-01", col("Hardware_GM")+lit(8)).otherwise(col("Hardware_GM")))
@@ -106,9 +133,8 @@ object CommercialFeatEnggProcessor10 {
       .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 Value","A3 Value") && col("Week_End_Date")>="2017-11-01", col("Hardware_GM")+lit(33.28)).otherwise(col("Hardware_GM")))
       */
 
-    /* Code Change: Avik April 6: VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund) */
-    var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/AUX/Aux_canon.csv"))
-    //var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\April8Run_Inputs\\Aux_canon.csv"))
+    /* Code Change: Avik April 6: VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund) - Start */
+    var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\Aux_canon.csv"))
     canon = canon
       .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd-MM-yyyy").cast("timestamp")))
       .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
@@ -123,7 +149,6 @@ object CommercialFeatEnggProcessor10 {
       .withColumn("repeatNum", explode(col("repList")))
       .withColumn("repeatNum", (col("repeatNum")+1)*7)
       .withColumn("WED", expr("date_add(WSD,repeatNum)"))
-      //.drop("repList").drop("repeatNum")
     canon = canon.select("Category Custom","WED","Amount")
       .withColumnRenamed("WED","Week_End_Date")
       .withColumnRenamed("Category Custom","Category_Custom")
@@ -131,15 +156,16 @@ object CommercialFeatEnggProcessor10 {
       .withColumn("Amount",when(col("Amount").isNull, 0).otherwise(col("Amount")))
       .withColumn("Hardware_GM", col("Hardware_GM")+col("Amount"))
         .withColumnRenamed("Category_Custom","Category Custom")
-    /* Code change END: Avik April 6 : VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund)*/
+    /* Code change END: Avik April 6 : VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund) - End */
 
     commercial = commercial
       .withColumn("Supplies_GM", when(col("L1_Category")==="Scanners",0).otherwise(col("Supplies_GM")))
-    //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_DIRECT_CANN_20")
 
     commercial = commercial
-      .withColumn("exclude", when(!col("PL").isin("3Y"),when(col("Reseller_Cluster").isin("Other - Option C", "eTailerOther - Option C", "Stockpiler & Deal Chaser", "eTailerStockpiler & Deal Chaser") || col("low_volume")===1 || col("low_baseline")===1 || col("spike")===1 || col("opposite")===1 || col("EOL")===1 || col("BOL")===1 || col("no_promo_sales")===1,1).otherwise(0)).otherwise(0))
-      .withColumn("exclude", when(col("PL").isin("3Y"),when(col("Reseller_Cluster").isin("Other - Option C", "eTailerOther - Option C", "Stockpiler & Deal Chaser", "eTailerStockpiler & Deal Chaser") || col("low_volume")===1 || /*col("low_baseline")===1 ||*/ col("spike")===1 || col("opposite")===1 || col("EOL")===1 || col("BOL")===1 || col("no_promo_sales")===1,1).otherwise(0)).otherwise(col("exclude")))
+      .withColumn("exclude", when(!col("PL").isin("3Y"),when(col("Reseller_Cluster").isin("Other - Option C", "eTailerOther - Option C", "Stockpiler & Deal Chaser", "eTailerStockpiler & Deal Chaser") ||
+        col("low_volume")===1 || col("low_baseline")===1 || col("spike")===1 || col("opposite")===1 || col("EOL")===1 || col("BOL")===1 || col("no_promo_sales")===1,1).otherwise(0)).otherwise(0))
+      .withColumn("exclude", when(col("PL").isin("3Y"),when(col("Reseller_Cluster").isin("Other - Option C", "eTailerOther - Option C", "Stockpiler & Deal Chaser", "eTailerStockpiler & Deal Chaser") ||
+        col("low_volume")===1 || /*col("low_baseline")===1 ||*/ col("spike")===1 || col("opposite")===1 || col("EOL")===1 || col("BOL")===1 || col("no_promo_sales")===1,1).otherwise(0)).otherwise(col("exclude")))
       .withColumn("exclude", when(col("SKU_Name").contains("Sprocket"), 1).otherwise(col("exclude")))
       .withColumn("AE_NP_IR", col("NP_IR"))
       .withColumn("AE_ASP_IR", lit(0))
@@ -147,8 +173,6 @@ object CommercialFeatEnggProcessor10 {
       .withColumn("Street_PriceWhoChange_log", when(col("Changed_Street_Price")===0, 0).otherwise(log(col("Street Price")*col("Changed_Street_Price"))))
       .withColumn("SKUWhoChange", when(col("Changed_Street_Price")===0, 0).otherwise(col("SKU")))
       .withColumn("PriceChange_HPS_OPS", when(col("Changed_Street_Price")===0, 0).otherwise(col("HPS_OPS")))
-
-
 
     val maxWED = commercial.agg(max("Week_End_Date")).head().getDate(0)
     val maxWEDSeason = commercial.where(col("Week_End_Date")===maxWED).sort(col("Week_End_Date").desc).select("Season").head().getString(0)
@@ -161,12 +185,12 @@ object CommercialFeatEnggProcessor10 {
     val latestSeason = latestSeasonCommercial.select("Week_End_Date").distinct().count()
     if (latestSeason<13) {
       commercial = commercial.withColumn("Season_most_recent", when(col("Season")===maxWEDSeason,uniqueSeason).otherwise(col("Season")))
-    }else {
+    } else {
       commercial = commercial.withColumn("Season_most_recent", col("Season"))
     }
     val Oct72017Date = to_date(unix_timestamp(lit("2017-10-07"),"yyyy-MM-dd").cast("timestamp"))
 
-    commercial = commercial.select("SKU_Name","Reseller_Cluster","SKU","Week_End_Date","L1_Category","L2_Category","Season","Street Price","IPSLES","HPS_OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Category Custom","Line","PL","PLC Status","GA date","ES date","Inv_Qty","Special_Programs","Qty","IR","Big_Deal_Qty","Non_Big_Deal_Qty","Brand","Consol SKU","Full Name","VPA","Promo_Flag","Promo_Pct","Discount_Depth_Category","log_Qty","price","Inv_Qty_log","USChristmasDay","USColumbusDay","USIndependenceDay","USLaborDay","USLincolnsBirthday","USMemorialDay","USMLKingsBirthday","USNewYearsDay","USPresidentsDay","USVeteransDay","USWashingtonsBirthday","USThanksgivingDay","USCyberMonday","L1_competition_Brother","L1_competition_Canon","L1_competition_Epson","L1_competition_Lexmark","L1_competition_Samsung","L2_competition_Brother","L2_competition_Canon","L2_competition_Epson","L2_competition_Lexmark","L2_competition_Samsung","L1_competition","L2_competition","L1_competition_HP_ssmodel","L2_competition_HP_ssmodel","L1_cannibalization","L2_cannibalization","Sale_Price","seasonality_npd","seasonality_npd2","Hardware_GM","Supplies_GM","Hardware_Rev","Supplies_Rev","Changed_Street_Price","Valid_Start_Date","Valid_End_Date","Hardware_GM_type","Hardware_Rev_type","Supplies_GM_type","Supplies_Rev_type","avg_discount_SKU_Account","supplies_GM_scaling_factor","Supplies_GM_unscaled","Supplies_GM_no_promo","Supplies_Rev_unscaled","Supplies_Rev_no_promo","L1_cannibalization_log","L2_cannibalization_log","L1_competition_log","L2_competition_log","Big_Deal","Big_Deal_Qty_log","outlier","spike","spike2","no_promo_avg","no_promo_med","low_baseline","low_volume","raw_bl_avg","raw_bl_med","EOL","BOL","opposite","no_promo_sales","NP_Flag","NP_IR","high_disc_Flag","always_promo_Flag","cann_group","cann_receiver","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","exclude","AE_NP_IR","AE_ASP_IR","AE_Other_IR","Street_PriceWhoChange_log","SKUWhoChange","PriceChange_HPS_OPS","Season_most_recent")
+    commercial = commercial//.select("SKU_Name","Reseller_Cluster","SKU","Week_End_Date","L1_Category","L2_Category","Season","Street Price","IPSLES","HPS_OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Category Custom","Line","PL","PLC Status","GA date","ES date","Inv_Qty","Special_Programs","Qty","IR","Big_Deal_Qty","Non_Big_Deal_Qty","Brand","Consol SKU","Full Name","VPA","Promo_Flag","Promo_Pct","Discount_Depth_Category","log_Qty","price","Inv_Qty_log","USChristmasDay","USColumbusDay","USIndependenceDay","USLaborDay","USLincolnsBirthday","USMemorialDay","USMLKingsBirthday","USNewYearsDay","USPresidentsDay","USVeteransDay","USWashingtonsBirthday","USThanksgivingDay","USCyberMonday","L1_competition_Brother","L1_competition_Canon","L1_competition_Epson","L1_competition_Lexmark","L1_competition_Samsung","L2_competition_Brother","L2_competition_Canon","L2_competition_Epson","L2_competition_Lexmark","L2_competition_Samsung","L1_competition","L2_competition","L1_competition_HP_ssmodel","L2_competition_HP_ssmodel","L1_cannibalization","L2_cannibalization","Sale_Price","seasonality_npd","seasonality_npd2","Hardware_GM","Supplies_GM","Hardware_Rev","Supplies_Rev","Changed_Street_Price","Valid_Start_Date","Valid_End_Date","Hardware_GM_type","Hardware_Rev_type","Supplies_GM_type","Supplies_Rev_type","avg_discount_SKU_Account","supplies_GM_scaling_factor","Supplies_GM_unscaled","Supplies_GM_no_promo","Supplies_Rev_unscaled","Supplies_Rev_no_promo","L1_cannibalization_log","L2_cannibalization_log","L1_competition_log","L2_competition_log","Big_Deal","Big_Deal_Qty_log","outlier","spike","spike2","no_promo_avg","no_promo_med","low_baseline","low_volume","raw_bl_avg","raw_bl_med","EOL","BOL","opposite","no_promo_sales","NP_Flag","NP_IR","high_disc_Flag","always_promo_Flag","cann_group","cann_receiver","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","exclude","AE_NP_IR","AE_ASP_IR","AE_Other_IR","Street_PriceWhoChange_log","SKUWhoChange","PriceChange_HPS_OPS","Season_most_recent")
       .withColumnRenamed("Street Price","Street_Price")
       .withColumnRenamed("Category Subgroup","Category_Subgroup")
       .withColumnRenamed("Category Custom","Category_Custom")
@@ -183,7 +207,6 @@ object CommercialFeatEnggProcessor10 {
 
     commercial.write.option("header","true").mode(SaveMode.Overwrite).csv(TEMP_OUTPUT_DIR)
 
-
     var commercialFinalOut = spark.read.option("header","true").option("inferSchema","true").csv(TEMP_OUTPUT_DIR)
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
@@ -196,9 +219,18 @@ object CommercialFeatEnggProcessor10 {
       .withColumn("Week_End_Date", col("Week_End_Date").cast("string"))
 
     commercialFinalOut
-      .select("SKU_Name","Reseller_Cluster","SKU","Week_End_Date","L1_Category","L2_Category","Season","Street_Price","IPSLES","HPS_OPS","Series","Category","Category_Subgroup","Category_1","Category_2","Category_3","Category_Custom","Line","PL","PLC_Status","GA date","ES date","Inv_Qty","Special_Programs","Qty","IR","Big_Deal_Qty","Non_Big_Deal_Qty","Brand","Consol_SKU","Full_Name","VPA","Promo_Flag","Promo_Pct","Discount_Depth_Category","log_Qty","price","Inv_Qty_log","USChristmasDay","USColumbusDay","USIndependenceDay","USLaborDay","USLincolnsBirthday","USMemorialDay","USMLKingsBirthday","USNewYearsDay","USPresidentsDay","USVeteransDay","USWashingtonsBirthday","USThanksgivingDay","USCyberMonday","L1_competition_Brother","L1_competition_Canon","L1_competition_Epson","L1_competition_Lexmark","L1_competition_Samsung","L2_competition_Brother","L2_competition_Canon","L2_competition_Epson","L2_competition_Lexmark","L2_competition_Samsung","L1_competition","L2_competition","L1_competition_HP_ssmodel","L2_competition_HP_ssmodel","L1_cannibalization","L2_cannibalization","Sale_Price","seasonality_npd","seasonality_npd2","Hardware_GM","Supplies_GM","Hardware_Rev","Supplies_Rev","Changed_Street_Price","Valid_Start_Date","Valid_End_Date","Hardware_GM_type","Hardware_Rev_type","Supplies_GM_type","Supplies_Rev_type","avg_discount_SKU_Account","supplies_GM_scaling_factor","Supplies_GM_unscaled","Supplies_GM_no_promo","Supplies_Rev_unscaled","Supplies_Rev_no_promo","L1_cannibalization_log","L2_cannibalization_log","L1_competition_log","L2_competition_log","Big_Deal","Big_Deal_Qty_log","outlier","spike","spike2","no_promo_avg","no_promo_med","low_baseline","low_volume","raw_bl_avg","raw_bl_med","EOL","BOL","opposite","no_promo_sales","NP_Flag","NP_IR","high_disc_Flag","always_promo_Flag","cann_group","cann_receiver","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","exclude","AE_NP_IR","AE_ASP_IR","AE_Other_IR","Street_PriceWhoChange_log","SKUWhoChange","PriceChange_HPS_OPS","Season_most_recent")
-      .coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/Preregression_Commercial/preregresion_commercial_output_"+currentTS+".csv")
-      //.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\preregresion_commercial_output.csv")
+      .select("SKU_Name","Reseller_Cluster","SKU","Week_End_Date","L1_Category","L2_Category","Season","Street_Price","IPSLES","HPS_OPS","Series","Category","Category_Subgroup","Category_1","Category_2","Category_3",
+        "Category_Custom","Line","PL","PLC_Status","GA date","ES date","Inv_Qty","Special_Programs","Qty","IR","Big_Deal_Qty","Non_Big_Deal_Qty","Brand","Consol_SKU","Full_Name","VPA","Promo_Flag","Promo_Pct",
+        "Discount_Depth_Category","log_Qty","price","Inv_Qty_log","Fixed_Cost","USChristmasDay","USColumbusDay","USIndependenceDay","USLaborDay","USLincolnsBirthday","USMemorialDay","USMLKingsBirthday",
+        "USNewYearsDay","USPresidentsDay","USVeteransDay","USWashingtonsBirthday","USThanksgivingDay","USCyberMonday","L1_competition_Brother","L1_competition_Canon","L1_competition_Epson","L1_competition_Lexmark",
+        "L1_competition_Samsung","L2_competition_Brother","L2_competition_Canon","L2_competition_Epson","L2_competition_Lexmark","L2_competition_Samsung","L1_competition","L2_competition","L1_competition_HP_ssmodel",
+        "L2_competition_HP_ssmodel","L1_cannibalization","L2_cannibalization","Sale_Price","seasonality_npd","seasonality_npd2","Hardware_GM","Supplies_GM","Hardware_Rev","Supplies_Rev","Changed_Street_Price",
+        "Valid_Start_Date","Valid_End_Date","Hardware_GM_type","Hardware_Rev_type","Supplies_GM_type","Supplies_Rev_type","avg_discount_SKU_Account","supplies_GM_scaling_factor","Supplies_GM_unscaled",
+        "Supplies_GM_no_promo","Supplies_Rev_unscaled","Supplies_Rev_no_promo","L1_cannibalization_log","L2_cannibalization_log","L1_competition_log","L2_competition_log","Big_Deal","Big_Deal_Qty_log","outlier",
+        "spike","spike2","no_promo_avg","no_promo_med","low_baseline","low_volume","raw_bl_avg","raw_bl_med","EOL","BOL","opposite","no_promo_sales","NP_Flag","NP_IR","high_disc_Flag","always_promo_Flag","cann_group",
+        "cann_receiver","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","Direct_Cann_Weber","Direct_Cann_Muscatel_Weber","Direct_Cann_Muscatel_Palermo","Direct_Cann_Palermo","Amount","exclude",
+        "AE_NP_IR","AE_ASP_IR","AE_Other_IR","Street_PriceWhoChange_log","SKUWhoChange","PriceChange_HPS_OPS","Season_most_recent")
+      .coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\preregresion_commercial_output.csv")
   }
 
 }

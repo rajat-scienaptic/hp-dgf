@@ -20,13 +20,12 @@ object RetailPreRegressionPart21 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv"))
-    //val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp"))).agg(max("Week_End_Date")).head().getDate(0)
+    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\NPD_weekly.csv"))
     val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
       .withColumn("Week_End_Date", date_sub(col("Week_End_Date"), 7)).agg(max("Week_End_Date")).head().getDate(0)
 
     //var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/Intermediate/retail-DirectCann-PART20.csv")
-    var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART20.csv")
+    var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-DirectCann-PART20.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -40,21 +39,20 @@ object RetailPreRegressionPart21 {
     retailWithCompCann3DF = retailWithCompCann3DF
       .join(tableLBB, Seq("Account", "SKU", "Online"), "left")
       .withColumn("LBB", when(col("Account") === "Amazon-Proper", col("LBB")).otherwise(lit(0)))
-      //      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2016-07-01", col("Hardware_GM") + lit(68)).otherwise(col("Hardware_GM")))
-      //      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM")))
-      //      .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM"))
-      /* commented out as per Canon Funding change
-      .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 SMB", "A4 Enterprise") && col("Week_End_Date") >= "2016-07-01" && col("Week_End_Date") <= "2017-04-30", col("Hardware_GM") + 68).otherwise(col("Hardware_GM")))
-      .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 SMB", "A4 Enterprise") && col("Week_End_Date") >= "2017-05-01" && col("Week_End_Date") <= "2017-10-30", col("Hardware_GM") + 76).otherwise(col("Hardware_GM")))
-      .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2017-11-01" && col("Week_End_Date") <= "2018-10-30", col("Hardware_GM") + 68.49).otherwise(col("Hardware_GM")))
-      .withColumn("Hardware_GM", when(col("Category Custom") === "A4 Enterprise" && col("Week_End_Date") >= "2017-11-01" && col("Week_End_Date") <= "2018-10-30", col("Hardware_GM") + 101.77).otherwise(col("Hardware_GM")))
-      .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2018-11-01" && col("Week_End_Date") <= "2019-10-30", col("Hardware_GM") + 49.35).otherwise(col("Hardware_GM")))
-      .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 Enterprise") && col("Week_End_Date") >= "2018-11-01" && col("Week_End_Date") <= "2019-10-30", col("Hardware_GM") + 150).otherwise(col("Hardware_GM")))
-      */
+    /* commented out as per Canon Funding change
+    .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2016-07-01", col("Hardware_GM") + lit(68)).otherwise(col("Hardware_GM")))
+    .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM")))
+    .withColumn("Hardware_GM", when(col("Category_1") === "Value" && col("Week_End_Date") >= "2017-05-01", col("Hardware_GM") + lit(8)).otherwise(col("Hardware_GM"))
+    .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 SMB", "A4 Enterprise") && col("Week_End_Date") >= "2016-07-01" && col("Week_End_Date") <= "2017-04-30", col("Hardware_GM") + 68).otherwise(col("Hardware_GM")))
+    .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 SMB", "A4 Enterprise") && col("Week_End_Date") >= "2017-05-01" && col("Week_End_Date") <= "2017-10-30", col("Hardware_GM") + 76).otherwise(col("Hardware_GM")))
+    .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2017-11-01" && col("Week_End_Date") <= "2018-10-30", col("Hardware_GM") + 68.49).otherwise(col("Hardware_GM")))
+    .withColumn("Hardware_GM", when(col("Category Custom") === "A4 Enterprise" && col("Week_End_Date") >= "2017-11-01" && col("Week_End_Date") <= "2018-10-30", col("Hardware_GM") + 101.77).otherwise(col("Hardware_GM")))
+    .withColumn("Hardware_GM", when(col("Category Custom") === "A4 SMB" && col("Week_End_Date") >= "2018-11-01" && col("Week_End_Date") <= "2019-10-30", col("Hardware_GM") + 49.35).otherwise(col("Hardware_GM")))
+    .withColumn("Hardware_GM", when(col("Category Custom").isin("A4 Enterprise") && col("Week_End_Date") >= "2018-11-01" && col("Week_End_Date") <= "2019-10-30", col("Hardware_GM") + 150).otherwise(col("Hardware_GM")))
+    */
 
     /* canon funding change starts May 23rd 2019*/
-    var canon = renameColumns(executionContext.spark.read.option("header","true").option("inferSchema","true").csv("D:\\files\\input\\R\\17thMay\\canon_fund.csv"))
-    //var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\April8Run_Inputs\\Aux_canon.csv"))
+    var canon = renameColumns(executionContext.spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\canon_fund.csv"))
     canon = canon
       .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd-MM-yyyy").cast("timestamp")))
       .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
@@ -69,7 +67,6 @@ object RetailPreRegressionPart21 {
       .withColumn("repeatNum", explode(col("repList")))
       .withColumn("repeatNum", (col("repeatNum")+1)*7)
       .withColumn("WED", expr("date_add(WSD,repeatNum)"))
-    //.drop("repList").drop("repeatNum")
     canon = canon.select("Category Custom","WED","Amount")
       .withColumnRenamed("WED","Week_End_Date")
       .withColumnRenamed("Category Custom","Category_Custom")
@@ -78,14 +75,21 @@ object RetailPreRegressionPart21 {
       .withColumn("Hardware_GM", col("Hardware_GM")+col("Amount"))
       .withColumnRenamed("Category_Custom","Category Custom")
     /* canon funding change ends  */
-    // TODO : Ignore Flash.IR.dummy
-    /*
-    #Adjust Flash.IR dummy
-    retail$Flash.IR.dummy <- ifelse(retail$Flash.IR == 0, 0, 1)
-    retail$Flash.IR.dummy <- ifelse(retail$Flash.IR.dummy==1, as.character("Flash"), as.character("No.IR"))
-    retail$Flash.IR.dummy <- as.factor(retail$Flash.IR.dummy)
-    retail <- within(retail, Flash.IR.dummy <- relevel(Flash.IR.dummy, ref = "No.IR"))
-     */
+
+    /*  CR1 - Added new variable NP.Type - start  */
+    retailWithCompCann3DF = retailWithCompCann3DF
+        .withColumn("NP_Type", when(col("Flash_IR")>0, "Flash").otherwise(when(col("Bundle_Flag")===1, "Bundle").otherwise(col("NP_Type"))))
+        .withColumn("NP_Type", when(col("NP_Type").isNull, "No_IR").otherwise(col("NP_Type")))
+    /*  CR1 - Added new variable NP.Type - End    */
+
+    /*  CR1 - Adjust Total_IR, Promo_Flag, NP_Flag - Start */
+    var retailWM = retailWithCompCann3DF.where(col("Account")==="Walmart")
+    retailWithCompCann3DF = retailWithCompCann3DF.where(col("Account")=!="Walmart")
+    retailWM = retailWM.withColumn("Total_IR", col("NP_IR"))
+        .withColumn("Promo_Flag", when(col("Total_IR")>0, 1).otherwise(0))
+        .withColumn("NP_Flag", col("Promo_Flag"))
+    /*  CR1 - Adjust Total_IR, Promo_Flag, NP_Flag - Start */
+
     retailWithCompCann3DF = retailWithCompCann3DF
       .withColumn("Days_on_Promo", when(col("Flash_IR") === 0, col("Days_on_Promo")).otherwise(4))
       .withColumn("exclude", when(col("low_volume") === 0 && col("EOL_criterion") === 0 && col("BOL_criterion") === 0 &&
@@ -97,20 +101,20 @@ object RetailPreRegressionPart21 {
       .withColumn("exclude", when(col("Brand").isin("Samsung"), 1).otherwise(col("exclude")))
       .withColumn("exclude", when(col("Account").isin("Sam's Club"), 1).otherwise(col("exclude")))
       .withColumn("exclude", when(col("SKU_Name").contains("Sprocket"), 1).otherwise(col("exclude")))
-      .withColumn("exclude", when(col("Account").isin("Walmart", "HP Shopping", "Rest of Retail"), 1).otherwise(col("exclude")))
+      .withColumn("exclude", when(col("Account").isin(/*"Walmart", */"HP Shopping", "Rest of Retail"), 1).otherwise(col("exclude"))) //CR1 - Remove Walmart from filter
       .withColumn("exclude", when((col("SKU").isin("V1N07A") && col("Season").isin("HOL'18")), 1).otherwise(col("exclude")))
-      .withColumn("ImpMin_AmazonProper", when(col("Account").isin("Amazon-Proper"), col("ImpMin")).otherwise(col("ImpMin_AmazonProper")))
+
+    /* CR1 - Bind retail with retailWM - Start */
+    retailWithCompCann3DF = retailWithCompCann3DF.unionByName(retailWM)
+    /* CR1 - Bind retail with retailWM - End */
+
+    retailWithCompCann3DF = retailWithCompCann3DF
+      /* CR1 - ImpMin_AmazonProper removed from R Code */
+      //.withColumn("ImpMin_AmazonProper", when(col("Account").isin("Amazon-Proper"), col("ImpMin")).otherwise(col("ImpMin_AmazonProper")))
       .withColumn("Street_PriceWhoChange_log", when(col("Changed_Street_Price") === 0, 0).otherwise(log(col("Street_Price") * col("Changed_Street_Price"))))
       .withColumn("SKUWhoChange", when(col("Changed_Street_Price") === 0, 0).otherwise(col("SKU")))
       .withColumn("PriceChange_HPS_OPS", when(col("Changed_Street_Price") === 0, 0).otherwise(col("HPS/OPS"))) //TODO : input file contains HPS_OPS
-    /*
-      retail <- retail %>%
-    group_by(SKU) %>%
-    mutate(Org.SP = max(Street.Price, na.rm = T),
-           Pec.Street.Price.Changed.BeforeSqr = Street.Price/Org.SP,
-           Pec.Street.Price.Changed = Pec.Street.Price.Changed.BeforeSqr^2) %>%
-    ungroup()
-     */
+
     val streetPriceChanged = retailWithCompCann3DF
       .groupBy("SKU")
       .agg(max("Street_Price").as("Org_SP"))
@@ -119,6 +123,8 @@ object RetailPreRegressionPart21 {
       .join(streetPriceChanged, Seq("SKU"), "left")
       .withColumn("Pec_Street_Price_Changed_BeforeSqr", col("Street_Price") / col("Org_SP"))
       .withColumn("Pec_Street_Price_Changed", pow(col("Pec_Street_Price_Changed_BeforeSqr"), lit(2)))
+
+    retailWithCompCann3DF = retailWithCompCann3DF
       .withColumn("ImpMin", when(col("Street_Price") - col("ImpMin") < 0, col("Street_Price")).otherwise(col("ImpMin")))
       .withColumn("ImpMin_AmazonProper", when(col("Street_Price") - col("ImpMin_AmazonProper") < 0, col("Street_Price")).otherwise(col("ImpMin_AmazonProper")))
       .withColumn("ImpMin_BestBuy", when(col("Street_Price") - col("ImpMin_BestBuy") < 0, col("Street_Price")).otherwise(col("ImpMin_BestBuy")))
@@ -139,23 +145,14 @@ object RetailPreRegressionPart21 {
       .withColumn("ASP_Flag", when(col("ASP_IR") > 0, 1).otherwise(lit(0)))
       .withColumn("Other_IR_Flag", when(col("Other_IR") > 0, 1).otherwise(lit(0)))
 
-
-    //    retailWithCompCann3DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb07-r-1801.csv")
-    //    var retailWithCompCann3DF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("D:\\files\\temp\\retail-Feb07-r-1801.csv")
-    //      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
-    // TODO : Check ether HDFS path for the following
-    //var inStore = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/instore_labor_final.csv"))
-    var inStore = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/Instore/instore_labor_final.csv"))
+    /*  CR1 - Code removed in R Code - Start  */
+    /*var inStore = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/Instore/instore_labor_final.csv"))
     inStore.columns.toList.foreach(x => {
       inStore = inStore.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     inStore = inStore.cache()
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp"))) // check date format
 
-    //var extraPol = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/instore_labor_proxy.csv"))
     var extraPol = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/Instore/instore_labor_proxy.csv"))
     extraPol.columns.toList.foreach(x => {
       extraPol = extraPol.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
@@ -169,14 +166,17 @@ object RetailPreRegressionPart21 {
     retailWithCompCann3DF = retailWithCompCann3DF
       .join(extraPol, Seq("Account", "mnth"), "left")
     retailWithCompCann3DF = retailWithCompCann3DF
-      // commented the weekend date check as R code does't reflect the same change
-      //.withColumn("instore_labor", when(col("Week_End_date") <= to_date(unix_timestamp(lit("2015-12-05"), "yyyy-MM-dd").cast("timestamp")), col("proxy_labor")).otherwise(col("instore_labor")))
-      //      .withColumn("instore_labor", when(col("proxy_labor").isNull || col("proxy_labor") === "", null).otherwise(col("instore_labor")))
+      /* commented the weekend date check as R code does't reflect the same change
+      .withColumn("instore_labor", when(col("Week_End_date") <= to_date(unix_timestamp(lit("2015-12-05"), "yyyy-MM-dd").cast("timestamp")), col("proxy_labor")).otherwise(col("instore_labor")))
+      .withColumn("instore_labor", when(col("proxy_labor").isNull || col("proxy_labor") === "", null).otherwise(col("instore_labor")))*/
       .withColumn("instore_labor", when(col("Account").isin("Best Buy", "Office Depot-Max", "Staples"), col("instore_labor")).otherwise(lit(0)))
       .withColumn("instore_labor", when(col("Online") === 1, 0).otherwise(col("instore_labor")))
       .withColumn("instore_labor", when(col("instore_labor").isNull || col("instore_labor") === "", 0).otherwise(col("instore_labor")))
       .drop("proxy_labor")
-      .withColumn("GC_SKU_Name", when(col("GC_SKU_Name").isNull, "NA").otherwise(col("GC_SKU_Name")))
+      .withColumn("GC_SKU_Name", when(col("GC_SKU_Name").isNull, "NA").otherwise(col("GC_SKU_Name")))*/
+    /*  CR1 - Code removed in R Code - End  */
+
+    retailWithCompCann3DF = retailWithCompCann3DF
       //AVIK Change: When total ir is null, it gives Selling price as null too instead of Street Price
       .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
       .withColumn("Selling_Price", col("Street_Price") - col("Total_IR"))
@@ -184,11 +184,11 @@ object RetailPreRegressionPart21 {
 
     var retail_acc = retailWithCompCann3DF
       .filter(col("Special_Programs").isin("None", "BOPIS") && col("Brand") === "HP")
-      .filter(!col("Account").isin("Rest of Retail", "Costco", "Sam's Club", "Walmart", "HP Shopping"))
+      .filter(col("Account").isin("Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples"))  // CR1 - Account negation filter removed.
+      //.filter(!col("Account").isin("Rest of Retail", "Costco", "Sam's Club", "Walmart", "HP Shopping")) // CR1 - Negation removed.
       .select("Account", "Online", "SKU", "Street_Price", "Week_End_Date", "Selling_Price")
       .withColumn("Account", concat(col("Account"), col("Online")))
       .drop("Online")
-    //      .withColumn("Selling_Price", when(col("Selling_Price").isNull, 0).otherwise(col("Selling_Price")))  /spss
 
     var spreadAccount = retail_acc
       .groupBy("SKU", "Street_Price", "Week_End_Date")
@@ -197,9 +197,6 @@ object RetailPreRegressionPart21 {
       //AVIK Change: Best Buy1 and Amazon-Proper0 were not present
       .na.fill(0, Seq("Staples0", "Staples1", "Best Buy0", "Best Buy1", "Amazon-Proper0", "Amazon-Proper1", "Office Depot-Max0", "Office Depot-Max1"))
     retail_acc = spreadAccount
-
-
-    //retail_acc.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1869.csv")
 
     retail_acc = retail_acc
       .withColumnRenamed("Staples0", "Price_Staples")
@@ -219,12 +216,9 @@ object RetailPreRegressionPart21 {
       .withColumn("Price_Office_Depot_Max", when(col("Price_Office_Depot_Max") === 0, col("Street_Price")).otherwise(col("Price_Office_Depot_Max")))
       .withColumn("Price_Office_Depot_Max_com", when(col("Price_Office_Depot_Max_com") === 0, col("Street_Price")).otherwise(col("Price_Office_Depot_Max_com")))
 
-    //retail_acc.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1884.csv")
 
-    retailWithCompCann3DF = retailWithCompCann3DF
-      .withColumn("Week_End_Date", col("Week_End_Date"))
-      .join(retail_acc.withColumn("Week_End_Date", col("Week_End_Date"))
-        .drop("Street_Price"), Seq("SKU", "Week_End_Date"), "left")
+    retailWithCompCann3DF = retailWithCompCann3DF.withColumn("Week_End_Date", col("Week_End_Date"))
+      .join(retail_acc.withColumn("Week_End_Date", col("Week_End_Date")).drop("Street_Price"), Seq("SKU", "Week_End_Date"), "left")
       .withColumn("Price_Min_Online", when(
         col("Account") === "Amazon-Proper", least(col("Price_Staples_com"), col("Price_Best_Buy_com"), col("Price_Office_Depot_Max_com")))
         .otherwise(
@@ -248,23 +242,23 @@ object RetailPreRegressionPart21 {
       .withColumn("Price_Gap_Offline", when((col("Selling_Price") - col("Price_Min_Offline")) > 0, col("Selling_Price") - col("Price_Min_Offline")).otherwise(lit(0)))
       .withColumn("Price_Gap_Online", when(col("Price_Gap_Online").isNull, 0).otherwise(col("Price_Gap_Online")))
       .withColumn("Price_Gap_Offline", when(col("Price_Gap_Offline").isNull, 0).otherwise(col("Price_Gap_Offline")))
-    //      .withColumn("Street_Price", col("Street_Price_x"))
-    //      .drop("Street_Price_x", "Street_Price_y")
 
     // walmart
-    //val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/walmart_link.csv")
-    val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Walmart/walmart_link.csv")
+    val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\walmart_link.csv")
       .withColumnRenamed("retail_sku", "SKU")
       .withColumnRenamed("retail_sku_desc", "SKU_Name")
 
     retailWithCompCann3DF = retailWithCompCann3DF
       .join(skuWalmart.select("SKU", "walmart_sku"), Seq("SKU"), "left")
 
-    //var walmart = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/wmt_prereg_w_dropins_1_30_19.csv"))
-    var walmart = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Walmart/wmt_prereg_w_dropins_1_30_19.csv"))
+    /* CR1 - wmt_prereg_w_dropins source removed. Retail filtered for Walmart Account for this - Start */
+    var walmart = retailWithCompCann3DF.where(col("Account")==="Walmart")
+    /*var walmart = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Walmart/wmt_prereg_w_dropins_1_30_19.csv"))
     walmart.columns.toList.foreach(x => {
       walmart = walmart.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
-    })
+    })*/
+    /* CR1 - wmt_prereg_w_dropins source removed. Retail filtered for Walmart Account for this - End   */
+
     walmart = walmart
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -273,9 +267,10 @@ object RetailPreRegressionPart21 {
       .cache()
 
     val walmartGroupAndAgg = walmart.groupBy("SKU", "Week_End_Date").agg(min(col("avg_price")).as("Walmart_Price"))
+        .withColumnRenamed("SKU","walmart_sku")     // CR1 - walmart_sku created from SKU.
 
     retailWithCompCann3DF = retailWithCompCann3DF
-      .join(walmartGroupAndAgg, Seq("SKU", "Week_End_Date"), "left")
+      .join(walmartGroupAndAgg, Seq("walmart_sku", "Week_End_Date"), "left")    // CR1 - SKU modified to walmart_sku for joining criteria
       .withColumn("Delta_Price_Walmart", log("Selling_Price") - log("Walmart_Price"))
       .withColumn("Price_Gap_Walmart", when((col("Selling_Price") - col("Walmart_Price")) > 0,
         col("Selling_Price") - col("Walmart_Price")).otherwise(lit(0)))
@@ -283,15 +278,20 @@ object RetailPreRegressionPart21 {
       .withColumn("Ad", when(col("Ad").isNull, 0).otherwise(col("Ad")))
       .withColumn("exclude", when(col("exclude").isNull, 0).otherwise(col("exclude")))
       .withColumn("Days_on_Promo", when(col("Total_IR") > 0 && col("Days_on_Promo") === 0, 7).otherwise(col("Days_on_Promo")))
-    //      .filter(!col("Account") === "Walmart")
-    //      //    #Rename c_ variables for Walmart
-    //      //    colnames(retail)[colnames(retail)=="Ã¯..Online"] <- "Online"
-    //      .withColumnRenamed("Ã¯..Online", "Online")
+
+    /* CR1 - New source added EndCap - Start */
+    var endcap = spark.read.option("header", true).option("inferSchema", true).csv("endcap_weekly_prereg_2019-03-06_074509.csv")
+    endcap = endcap.groupBy("Account","SKU","Week_End_Date")
+        .agg(max("weekly_endcap_flag").as("weekly_endcap_flag"))
+    retailWithCompCann3DF = retailWithCompCann3DF.join(endcap, Seq("Account","SKU","Week_End_Date"), "left")
+        .withColumn("weekly_endcap_flag", when(col("Online")===1, 0).otherwise(col("weekly_endcap_flag")))
+        .na.fill(0, Seq("weekly_endcap_flag"))
+    /* CR1 - New source added EndCap - End */
 
     retailWithCompCann3DF = retailWithCompCann3DF.withColumn("Week_End_Date", date_format(to_date(col("Week_End_Date"), "yyyy-MM-dd"), "MM/dd/yyyy"))
       .withColumn("Week_End_Date", col("Week_End_Date").cast("string"))
 
-    val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    //val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
     retailWithCompCann3DF = retailWithCompCann3DF.select("SKU", "Week_End_Date", "Account", "mnth", "Online", "trend", "SKU_Name", "L1_Category",
       "Category", "L2_Category", "SKU_number", "Ave", "Min", "Max", "InStock", "DelayDel", "OutofStock", "OnlyInStore", "Special_Programs",
@@ -331,53 +331,7 @@ object RetailPreRegressionPart21 {
       "Price_Gap_Online", "Price_Gap_Offline", "Street_Price", "Walmart_Price", "Delta_Price_Walmart", "Price_Gap_Walmart")
 
 
-    retailWithCompCann3DF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_" + currentTS + ".csv")
-    //retailWithCompCann3DF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/Intermediate/preregression_output_retail.csv")
-
-    //    var retailFinalDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv(TEMP_OUTPUT_DIR)
-    //      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
-    //      .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
-    //
-    //    retailFinalDF.select("SKU", "Week_End_Date", "Account", "mnth", "Online", "trend", "SKU_Name", "L1_Category",
-    //      "Category", "L2_Category", "SKU_number", "Ave", "Min", "Max", "InStock", "DelayDel", "OutofStock", "OnlyInStore", "Special_Programs",
-    //      "IPSLES", "Season", "Category_Subgroup", "Line", "PL", "GA_date", "ES_date", "Distribution_Inv", "Category_1", "Category_2", "Category_3",
-    //      "HPS/OPS", "Series", "Category Custom", "Brand", "Max_Week_End_Date", "Season_Ordered", "Cal_Month", "Cal_Year", "Fiscal_Qtr", "Fiscal_Year",
-    //      "Changed_Street_Price", "POS_Qty", "Ad_Location", "GAP_IR", "Ad", "Days_on_Promo", "Ad_Best Buy", "Ad_Office Depot-Max", "Ad_Staples",
-    //      "Ad_ratio_Brother", "Ad_ratio_Canon", "Ad_ratio_Epson", "Ad_ratio_HP", "Ad_ratio_Lexmark", "Ad_ratio_Samsung", "Ad_total_Brother",
-    //      "Ad_total_Canon", "Ad_total_Epson", "Ad_total_HP", "Ad_total_Lexmark", "Ad_total_Samsung", "Ad_share_Brother", "Ad_share_Canon",
-    //      "Ad_share_Lexmark", "Ad_share_Samsung", "Ad_share_Epson", "Ad_share_HP", "NP_IR", "ASP_IR", "IPS", "NP_Program_ID", "ASP_Program_ID",
-    //      "ASP_Planned_Units", "ASP_Planned_Spend", "BOPIS", "Merchant_Gift_Card", "Flash_IR", "NP_IR_original", "ASP_IR_original",
-    //      "GC_SKU_Name", "Other_IR_original", "Total_IR_original", "Total_IR", "Other_IR", "NoAvail", "GAP_Price", "ImpAve", "ImpMin",
-    //      "ImpAve_AmazonProper", "ImpMin_AmazonProper", "ImpAve_BestBuy", "ImpMin_BestBuy", "ImpAve_HPShopping", "ImpMin_HPShopping",
-    //      "ImpAve_OfficeDepotMax", "ImpMin_OfficeDepotMax", "ImpAve_Staples", "ImpMin_Staples", "AMZ_Sales_Price", "LBB", "Promo_Flag",
-    //      "NP_Flag", "ASP_Flag", "Other_IR_Flag", "Promo_Pct", "Discount_Depth_Category", "price", "EOL_criterion", "EOL_criterion_old",
-    //      "EOL_Date", "BOL_criterion", "USChristmasDay", "USColumbusDay", "USIndependenceDay", "USLaborDay", "USLincolnsBirthday",
-    //      "USMemorialDay", "USMLKingsBirthday", "USNewYearsDay", "USPresidentsDay", "USThanksgivingDay", "USCyberMonday", "USVeteransDay",
-    //      "USWashingtonsBirthday", "Lag_USMemorialDay", "Lag_USPresidentsDay", "Lag_USThanksgivingDay", "Lag_USChristmasDay",
-    //      "Lag_USLaborDay", "Amazon_Prime_Day", "L1_competition_Brother", "L1_competition_Canon", "L1_competition_Epson",
-    //      "L1_competition_Lexmark", "L1_competition_Samsung", "L2_competition_Brother", "L2_competition_Canon", "L2_competition_Epson",
-    //      "L2_competition_Lexmark", "L2_competition_Samsung", "L1_competition", "L2_competition", "L1_competition_HP_ssmodel",
-    //      "L2_competition_HP_ssmodel", "L1_competition_ssdata_HPmodel", "L2_competition_ssdata_HPmodel", "BOGO_dummy", "BOGO",
-    //      "L1_cannibalization", "L2_cannibalization", "Sale_Price", "Price_Range_20_Perc_high", "seasonality_npd", "seasonality_npd2",
-    //      "Hardware_GM", "Supplies_GM", "Hardware_Rev", "Supplies_Rev", "Valid_Start_Date", "Valid_End_Date", "aveHWGM", "aveSuppliesGM",
-    //      "avg_discount_SKU_Account", "supplies_GM_scaling_factor", "Supplies_GM_unscaled", "Supplies_GM_no_promo", "Supplies_Rev_unscaled",
-    //      "Supplies_Rev_no_promo", "L1_cannibalization_log", "L2_cannibalization_log", "L1_competition_log", "L2_competition_log",
-    //      "SKU_category", "no_promo_avg", "no_promo_med", "no_promo_sd", "no_promo_min", "no_promo_max", "low_baseline", "low_volume",
-    //      "raw_bl_avg", "raw_bl_med", "low_confidence", "high_disc_Flag", "always_promo_Flag", "Season_most_recent", "Promo_Pct_Ave",
-    //      "Promo_Pct_Min", "L1_cannibalization_OnOffline_Min", "L1_Innercannibalization_OnOffline_Min", "L2_cannibalization_OnOffline_Min",
-    //      "L2_Innercannibalization_OnOffline_Min", "PriceBand", "PriceBand_cannibalization_OnOffline_Min", "PriceBand_Innercannibalization_OnOffline_Min",
-    //      "Cate", "Cate_cannibalization_OnOffline_Min", "Cate_Innercannibalization_OnOffline_Min", "BOPISbtbhol", "BOPISbts",
-    //      "cann_group", "cann_receiver", "Direct_Cann_201", "Direct_Cann_225", "Direct_Cann_252", "Direct_Cann_277", "Direct_Cann_Weber",
-    //      "Direct_Cann_Muscatel_Weber", "Direct_Cann_Muscatel_Palermo", "Direct_Cann_Palermo", "LBB_adj", "exclude",
-    //      "Street_PriceWhoChange_log", "SKUWhoChange", "PriceChange_HPS_OPS", "Org_SP", "Pec_Street_Price_Changed_BeforeSqr",
-    //      "Pec_Street_Price_Changed", "AE_NP_IR", "AE_ASP_IR", "AE_Other_IR", "instore_labor", "Selling_Price", "Amazon-Proper0",
-    //      "Price_Amazon_com", "Price_Best_Buy", "Price_Best_Buy_com", "Price_Office_Depot_Max", "Price_Office_Depot_Max_com",
-    //      "Price_Staples", "Price_Staples_com", "Price_Min_Online", "Price_Min_Offline", "Delta_Price_Online", "Delta_Price_Offline",
-    //      "Price_Gap_Online", "Price_Gap_Offline", "Street_Price")
-    //      .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_" + currentTS + ".csv")
-
+    retailWithCompCann3DF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\preregression_output_retail.csv")
 
     val regData = retailWithCompCann3DF
       .withColumn("MasterIR", col("NP_IR") + col("ASP_IR"))
@@ -395,12 +349,11 @@ object RetailPreRegressionPart21 {
       // Note that weighted mean takes data and weight columns but in this case as only one column is specified so its just the MEAN that we need to calculate
       .agg(mean(col("POS_Qty")).as("POS_Qty"))
       .drop("POS_Qty")
+        .where(col("MasterIR")=!=0)   // CR1 - Filter was missing
 
     discount2 = discount2
       .join(regData.dropDuplicates("SKU").select("SKU", "SKU_Name"), Seq("SKU"), "left")
-
-    // write
-    //    discount2.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\ExecutivePromo2.csv")
+    //discount2.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/ExecutivePromo2_" + currentTS + ".csv")
 
     val excluded = retailWithCompCann3DF
       .filter(col("exclude") === 1 && col("low_volume") === 0 && col("Special_Programs").isin("None", "BOPIS") &&
@@ -415,8 +368,6 @@ object RetailPreRegressionPart21 {
         sum(col("Promo_Flag")).as("Total_IR")
       )
       .orderBy(col("Account"), col("Total_qty").desc)
-
-    // write
-    //    excluded.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\Excluded.csv")
+    //excluded.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/Excluded_" + currentTS + ".csv")
   }
 }

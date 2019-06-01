@@ -23,9 +23,7 @@ object RetailPreRegressionPart05 {
   val baselineThreshold = if (min_baseline / 2 > 0) min_baseline / 2 else 0
 
   val concatenateRankWithDist = udf((x: mutable.WrappedArray[String]) => {
-    //val concatenateRank = udf((x: List[List[Any]]) => {
     try {
-      //      val sortedList = x.map(x => x.getAs[Int](0).toString + "." + x.getAs[Double](1).toString).sorted
       val sortedList = x.toList.map(x => (x.split("_")(0).toInt, x.split("_")(1).toDouble))
       sortedList.sortBy(x => x._1).map(x => x._2.toDouble)
     } catch {
@@ -55,13 +53,12 @@ object RetailPreRegressionPart05 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailUnionRetailOtherAccountsDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailUnionRetailOtherAccountsDF-part04.csv")
+    var retailUnionRetailOtherAccountsDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-r-retailUnionRetailOtherAccountsDF-part04.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
 
-    /*do not uncomment
-     following are omitted variables
+    /* CR1 - Variables removed from R code
     .withColumn("log_POS_Qty", log(col("POS_Qty")))
     .withColumn("log_POS_Qty", when(col("log_POS_Qty").isNull, 0).otherwise(col("log_POS_Qty")))
     .withColumn("log_POS_Qty", log(lit(1) - col("POS_Qty")))*/
@@ -77,7 +74,7 @@ object RetailPreRegressionPart05 {
       .drop("GA_date_wday", "ES_date_wday")
 
 
-    val windForSKUAndAccount = Window.partitionBy("SKU&Account" /*, "uuid"*/).orderBy(/*"SKU", "Account",*/ "Week_End_Date")
+    val windForSKUAndAccount = Window.partitionBy("SKU&Account").orderBy(/*"SKU", "Account",*/ "Week_End_Date")
     var EOLcriterion = retailUnionRetailOtherAccountsDF
       .groupBy("SKU", "Account", "Week_End_Date")
       .agg(max("Distribution_Inv").as("Distribution_Inv"))
@@ -105,31 +102,21 @@ object RetailPreRegressionPart05 {
         .otherwise(checkPrevDistInvGTBaseline(col("DistInvArray"), col("rank"), col("Distribution_Inv"))))
       .drop("rank", "DistInvArray", "SKU&Account", "Distribution_Inv2", "dist_threshold", "uuid")
 
-    //    EOLcriterion.where(col("SKU") === "1AS85A" && col("Account") === "Best Buy").show(50,false)
     val EOLCriterionLast = EOLcriterion.where(col("EOL_criterion") === 1)
       .groupBy("SKU", "Account")
       .agg(max("Week_End_Date").as("last_date"))
-    //      .join(EOLcriterion.where(col("EOL_criterion") === 1), Seq("SKU_Name", "Account"), "right")
 
     val EOLCriterionMax = retailUnionRetailOtherAccountsDF
       .groupBy("SKU", "Account")
       .agg(max("Week_End_Date").as("max_date"))
-    //      .join(retailEOL, Seq("SKU", "Account"), "right")
 
     val EOLCriterionMin = retailUnionRetailOtherAccountsDF
       .groupBy("SKU", "Account")
       .agg(min("Week_End_Date").as("min_date"))
-    //      .join(retailEOL, Seq("SKU", "Account"), "right")
 
-    val EOLMaxJoinLastDF = EOLCriterionMax
-      .join(EOLCriterionLast, Seq("SKU", "Account"), "left")
+    val EOLMaxJoinLastDF = EOLCriterionMax.join(EOLCriterionLast, Seq("SKU", "Account"), "left")
 
-    val EOLMaxLastJoinMinDF = EOLMaxJoinLastDF
-      .join(EOLCriterionMin, Seq("SKU", "Account"), "left")
-
-    // comment below 2 lines
-    //    EOLMaxLastJoinMinDF.write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\EOLMaxLastJoinMinDF")
-    //    var EOLMaxLastJoinMinDF =  executionContext.spark.read.option("header", true).option("inferSchema", true).csv("D:\\files\\temp\\EOLMaxLastJoinMinDF")
+    val EOLMaxLastJoinMinDF = EOLMaxJoinLastDF.join(EOLCriterionMin, Seq("SKU", "Account"), "left")
 
     val maxMaxDate = EOLMaxLastJoinMinDF.agg(max("max_date")).head().getDate(0)
 
@@ -139,33 +126,21 @@ object RetailPreRegressionPart05 {
       .filter(col("max_date") =!= col("last_date") || col("max_date") =!= maxMaxDate)
       .withColumn("diff_weeks", ((datediff(to_date(col("max_date")), to_date(col("last_date")))) / 7) + 1)
 
-    //    EOL_criterion <- EOL_criterion[rep(row.names(EOL_criterion), EOL_criterion$diff_weeks),]
-    //      EOL_criterion$add <- t(as.data.frame(strsplit(row.names(EOL_criterion), "\\.")))[,2]# t = transpose
-    //      EOL_criterion$add <- ifelse(grepl("\\.",row.names(EOL_criterion))==FALSE,0,as.numeric(EOL_criterion$add))
-    //      EOL_criterion$add <- EOL_criterion$add*7
-    //      EOL_criterion$Week.End.Date <- EOL_criterion$last_date+EOL_criterion$add
-
     EOLNATreatmentDF = EOLNATreatmentDF.withColumn("diff_weeks", when(col("diff_weeks").isNull || col("diff_weeks") <= 0, 0).otherwise(col("diff_weeks")))
       .withColumn("diff_weeks", col("diff_weeks").cast("int"))
       .withColumn("repList", createlist(col("diff_weeks"))).withColumn("add", explode(col("repList"))).drop("repList")
       .withColumn("add", col("add") * lit(7))
-      .withColumn("Week_End_Date", expr("date_add(last_date, add)")) //CHECK: check if min_date is in timestamp format!
+      .withColumn("Week_End_Date", expr("date_add(last_date, add)"))
       .drop("max_date", "last_date", "diff_weeks", "add")
       .withColumn("EOL_criterion", lit(1))
 
 
-    retailEOL = retailUnionRetailOtherAccountsDF.withColumn("Week_End_Date", to_date(col("Week_End_Date"))) // cast needed as join WED has datetype format
+    retailEOL = retailUnionRetailOtherAccountsDF.withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .join(EOLNATreatmentDF, Seq("SKU", "Account", "Week_End_Date"), "left")
       .withColumn("EOL_criterion", when(col("EOL_criterion").isNull, 0).otherwise(col("EOL_criterion")))
       .withColumn("EOL_criterion_old", col("EOL_criterion")) // Variable omitted
 
-    // comment ends here
-
-
-    // comment below 2 lines
-    //    retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb07-r-670.csv")
-
-    var retailEOLDates = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Calendar/EOL_Dates/EOL_Dates_Retail.csv")).cache()
+    var retailEOLDates = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\EOL_Dates_Retail.csv")).cache()
     retailEOLDates.columns.toList.foreach(x => {
       retailEOLDates = retailEOLDates.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -189,6 +164,6 @@ object RetailPreRegressionPart05 {
 
      retailEOL = EOLCriterion2
 
-     retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-EOL-half-PART05.csv")
+     retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-EOL-half-PART05.csv")
   }
 }

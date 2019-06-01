@@ -17,27 +17,25 @@ object RetailPreRegressionPart02 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailJoinAdPositionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoinAdPositionDF-PART01.csv")
+    var retailJoinAdPositionDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-r-retailJoinAdPositionDF-PART01.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       //.withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
 
 
-    var GAP1JoinSKUMappingDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-GAP1JoinSKUMappingDF-PART01.csv")
+    var GAP1JoinSKUMappingDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-r-GAP1JoinSKUMappingDF-PART01.csv")
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-
-
-    //GAP_1$SKU <- as.character(GAP_1$SKU)
-    //GAP_1$SKU_HP <- as.character(GAP_1$SKU_HP)
 
     val GAP1AggregateDF = GAP1JoinSKUMappingDF
       .filter(col("Account").isin("Best Buy", "Office Depot-Max", "Staples") && col("Brand").isin("HP", "Samsung"))
       .groupBy("SKU", "Account", "Week_End_Date", "Online")
-      .agg(max(col("Ad")).as("Ad"), max(col("Total_IR")).as("GAP_IR"))
-      //      .withColumn("GAP_IR", lit(null).cast(StringType))
-      //      .withColumn("Days_on_Promo", lit(null).cast(StringType))
+      // CR1 - NA.RM=T not present in R code. Need to handle nulls withing group
+      .agg(max(col("Ad")).as("Ad2"), sum(when(col("Ad").isNull,1).otherwise(0)).as("Ad_NCount"),
+        max(col("Total_IR")).as("GAP_IR"), sum(when(col("Total_IR").isNull,1).otherwise(0)).as("GAP_IR_NCount"))
+      .withColumn("Ad", when(col("Ad_NCount")>1, null).otherwise(col("Ad2"))).drop("Ad2")
+      .withColumn("GAP_IR", when(col("GAP_IR_NCount")>1, null).otherwise(col("GAP_IR")))
 
     val retailJoinGAP1AggregateDF = retailJoinAdPositionDF
       .join(GAP1AggregateDF.select("SKU", "Account", "Week_End_Date", "Online", "GAP_IR", "Ad"), Seq("SKU", "Account", "Week_End_Date", "Online"), "left")
@@ -54,6 +52,8 @@ object RetailPreRegressionPart02 {
 
     val retailJoinAggregateGAP1DaysDF = retailJoinGAP1AggregateDF
       .join(aggregateGAP1Days.select("SKU", "Account", "Week_End_Date", "Days_on_Promo"), Seq("SKU", "Account", "Week_End_Date"), "left")
+    //CR1 - Optimize null impute for GAP_IR and Ad and remove null impute for Days_on_Promo
+      //.na.fill(0, Seq("GAP_IR","Ad"))
       .withColumn("Days_on_Promo", when(col("Days_on_Promo").isNull, 0).otherwise(col("Days_on_Promo")))
 
     var adAccountDF = GAP1AggregateDF
@@ -61,8 +61,7 @@ object RetailPreRegressionPart02 {
       .pivot("Account")
       .agg(first(col("Ad")))
     adAccountDF = adAccountDF
-      //      .join(GAP1AggregateDF, Seq("uuid"), "right")
-      .drop("uuid", "Account", "Ad") // check account if needed
+      .drop("uuid", "Account", "Ad")
 
 
     val accountList = List("Best Buy", "Office Depot-Max", "Staples")
@@ -74,18 +73,18 @@ object RetailPreRegressionPart02 {
         adAccountDF = adAccountDF.withColumn(x, lit(null).cast(StringType))
     })
 
-    // NA treatment
     accountList.foreach(account => {
       adAccountDF = adAccountDF.withColumn(account, when(col(account).isNull, 0).otherwise(col(account)))
         .withColumnRenamed(account, "Ad_" + account)
     })
 
-    // TODO done: is NA treatment necessary here ?
     val retailJoinAdAccountDF = retailJoinAggregateGAP1DaysDF
       .join(adAccountDF, Seq("SKU", "Week_End_Date", "Online"), "left")
-      .withColumn("Ad_Best Buy", when(col("Ad_Best Buy").isNull, 0).otherwise(col("Ad_Best Buy")))
+      //CR1 - Optimize null imputation
+      .na.fill(0, Seq("Ad_Best Buy","Ad_Office Depot-Max","Ad_Staples"))
+      /*.withColumn("Ad_Best Buy", when(col("Ad_Best Buy").isNull, 0).otherwise(col("Ad_Best Buy")))
       .withColumn("Ad_Office Depot-Max", when(col("Ad_Office Depot-Max").isNull, 0).otherwise(col("Ad_Office Depot-Max")))
-      .withColumn("Ad_Staples", when(col("Ad_Staples").isNull, 0).otherwise(col("Ad_Staples")))
+      .withColumn("Ad_Staples", when(col("Ad_Staples").isNull, 0).otherwise(col("Ad_Staples")))*/
 
 
     val GAP2 = GAP1JoinSKUMappingDF
@@ -101,7 +100,6 @@ object RetailPreRegressionPart02 {
       .groupBy("L2_Category", "Week_End_Date", "Account")
       .pivot("Brand")
       .agg(first("Ad_avg"))
-      //      .join(compAd, Seq("uuid"), "right") // check if needed
       .drop("uuid", "Brand", "Ad_avg") // check brand if needed
 
     val allBrands = List("Brother", "Canon", "Epson", "Lexmark", "Samsung", "HP")
@@ -118,38 +116,47 @@ object RetailPreRegressionPart02 {
     var retailJoinCompAdAvgDF = retailJoinAdAccountDF
       .join(compAdAvgDF, Seq("L2_Category", "Week_End_Date", "Account"), "left")
 
-    allBrands.foreach(brand => {
+    /* CR1 - optimize na imputation - start */
+    retailJoinCompAdAvgDF = retailJoinCompAdAvgDF
+        .na.fill(0, Seq("Ad_ratio_Brother","Ad_ratio_Canon","Ad_ratio_Lexmark","Ad_ratio_Samsung","Ad_ratio_Epson","Ad_ratio_HP"))
+    /*allBrands.foreach(brand => {
       retailJoinCompAdAvgDF = retailJoinCompAdAvgDF.withColumn("Ad_ratio_" + brand, when(col("Ad_ratio_" + brand).isNull, 0).otherwise(col("Ad_ratio_" + brand)))
-    })
+    })*/
+    /* CR1 - optimize na imputation - End */
 
     compAdAvgDF = compAdAvgDF.drop("Ad_avg")
 
-    // TODO done : Need to verify Ad_total for aggregation
     var compAdTotalDF = compAd
       .groupBy("L2_Category", "Week_End_Date", "Account")
       .pivot("Brand")
       .agg(first("Ad_total"))
-      //      .join(compAd, Seq("uuid"), "right") // check if needed
-      .drop("uuid", "Ad_total", "Brand") // check brand if needed
+      .drop("uuid", "Ad_total", "Brand")
 
     val compAdTotalColumns = compAdTotalDF.columns
     allBrands.foreach(x => {
       if (!compAdTotalColumns.contains(x))
         compAdTotalDF = compAdTotalDF.withColumn(x, lit(null).cast(StringType))
     })
+
+    /* CR1 - Null imputation optimize - Start */
+    compAdTotalDF = compAdTotalDF
+        .na.fill(0, Seq("Canon","Lexmark","Samsung","Epson","HP"))
     allBrands.foreach(brand => {
-      compAdTotalDF = compAdTotalDF.withColumn(brand, when(col(brand).isNull, 0).otherwise(col(brand)))
+      compAdTotalDF = compAdTotalDF//.withColumn(brand, when(col(brand).isNull, 0).otherwise(col(brand)))
         .withColumnRenamed(brand, "Ad_total_" + brand)
     })
+    /* CR1 - Null imputation optimize - End */
 
     var retailJoincompAdTotalDFDF = retailJoinCompAdAvgDF
       .join(compAdTotalDF, Seq("L2_Category", "Week_End_Date", "Account"), "left")
 
-    allBrands.foreach(brand => {
+    /* CR1 - Optimize null impute */
+    retailJoincompAdTotalDFDF = retailJoincompAdTotalDFDF
+        .na.fill(0, Seq("Ad_total_Brother","Ad_total_Canon","Ad_total_Lexmark","Ad_total_Samsung","Ad_total_Epson","Ad_total_HP"))
+    /*allBrands.foreach(brand => {
       retailJoincompAdTotalDFDF = retailJoincompAdTotalDFDF.withColumn("Ad_total_" + brand, when(col("Ad_total_" + brand).isNull, 0).otherwise(col("Ad_total_" + brand)))
-    })
+    })*/
 
-    // need utility for the below
     retailJoincompAdTotalDFDF = retailJoincompAdTotalDFDF.withColumn("Total_Ad_No_", col("Ad_total_Brother") +
       col("Ad_total_Canon") + col("Ad_total_Lexmark") + col("Ad_total_Samsung") + col("Ad_total_Epson") + col("Ad_total_HP"))
 
@@ -166,10 +173,8 @@ object RetailPreRegressionPart02 {
         .when(col("Ad_Office Depot-Max") === 1 && col("Ad_Location") === "No_Ad", "No_Info")
         .when(col("Ad_Staples") === 1 && col("Ad_Location") === "No_Ad", "No_Info")
         .otherwise(col("Ad_Location").cast("string")))
-//      .dropDuplicates() //All Ad variables match till here
 
-    retailJoincompAdTotalDFDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoincompAdTotalDFDF-PART02.csv")
-    // Part 1 Ends here
+    retailJoincompAdTotalDFDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-r-retailJoincompAdTotalDFDF-PART02.csv")
 
   }
 }

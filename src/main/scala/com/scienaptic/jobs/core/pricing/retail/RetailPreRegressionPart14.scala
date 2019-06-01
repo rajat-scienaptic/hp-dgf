@@ -19,7 +19,7 @@ object RetailPreRegressionPart14 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCannDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-SuppliesGM-PART13.csv")
+    var retailWithCompCannDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-SuppliesGM-PART13.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -78,8 +78,6 @@ object RetailPreRegressionPart14 {
       //AVIK change: For null values spark returns 1 expected 0
       .withColumn("high_disc_Flag", when(col("Promo_Pct") <= 0.55 || col("Promo_Pct").isNull, 0).otherwise(lit(1)))
 
-    // CHECK  -> always_promo <- ave(retail$Promo.Flag, retail$Account, retail$SKU, retail$Season, FUN=mean)
-    //  retail$always_promo.Flag <- ifelse(always_promo==1,1,0)
     val retailPromoMean = retailWithCompCannDF
       .groupBy("Account", "SKU_Name", "Season")
       .agg(mean(col("Promo_Flag")).as("PromoFlagAvg"))
@@ -87,7 +85,13 @@ object RetailPreRegressionPart14 {
     retailWithCompCannDF = retailWithCompCannDF.join(retailPromoMean, Seq("Account", "SKU_Name", "Season"), "left")
       .withColumn("always_promo_Flag", when(col("PromoFlagAvg") === 1, 1).otherwise(0)).drop("PromoFlagAvg")
 
-    retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-NoPromo-SkuCategory-PART14.csv")
+    /* CR1 - GC_SKU_NAME new variable introduced - Start */
+    retailWithCompCannDF = retailWithCompCannDF
+      .withColumn("GC_SKU_Name", when(col("GC_SKU_Name").isNull, "NA").otherwise(col("GC_SKU_Name")))
+      .withColumn("GC_SKU_Name", when(col("GC_SKU_Name").isNull, "NA").otherwise(col("GC_SKU_Name")))
+    /* CR1 - GC_SKU_NAME new variable introduced - End */
+
+    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-NoPromo-SkuCategory-PART14.csv")
 
 
 

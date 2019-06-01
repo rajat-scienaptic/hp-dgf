@@ -24,13 +24,13 @@ object RetailPreRegressionPart12 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCannDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART11.csv")
+    var retailWithCompCannDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-L1L2Cann-PART11.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv")).cache()
+    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\NPD_weekly.csv")).cache()
     npd.columns.toList.foreach(x => {
       npd = npd.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -40,7 +40,7 @@ object RetailPreRegressionPart12 {
           .otherwise(to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
       ))
 
-    var IFS2 = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/etherData/managedSources/IFS2/IFS2_most_recent.csv"))
+    var IFS2 = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\IFS2_most_recent.csv"))
     IFS2.columns.toList.foreach(x => {
       IFS2 = IFS2.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -85,60 +85,28 @@ object RetailPreRegressionPart12 {
 
     retailWithCompCannDF = retailWithCompCannDF
       .join(IFS2.filter(col("Account").isin("Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples", "Costco", "Sam's Club", "HP Shopping", "Walmart"))
-        .select("SKU", "Account", "Street_Price", "Hardware_GM", "Supplies_GM", "Hardware_Rev", "Supplies_Rev", "Valid_Start_Date", "Valid_End_Date", "supplies_GM_scaling_factor"), Seq("SKU", "Account", "Street_Price"), "left")
+        .select("SKU", "Account", "Street_Price", "Hardware_GM", "Supplies_GM", "Hardware_Rev", "Supplies_Rev", "Valid_Start_Date", "Valid_End_Date", "supplies_GM_scaling_factor","Fixed_Cost"), Seq("SKU", "Account", "Street_Price"), "left")
       .withColumn("Valid_Start_Date", when(col("Valid_Start_Date").isNull, dat2000_01_01).otherwise(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", when(col("Valid_End_Date").isNull, dat9999_12_31).otherwise(col("Valid_End_Date")))
-      //      .withColumn("Street_Price", when(col("Street_Price").isNull, col("Street_Price_Org")).otherwise(col("Street_Price")))
       .filter((col("Week_End_Date") >= col("Valid_Start_Date")) && (col("Week_End_Date") <= col("Valid_End_Date")))
-    //AVIK Change: Order based on Hardware_GM and Supplies_GM
-//    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\spark-out-local\\10thMay\\retail-part12-mergeIFS2.csv")
+    /* AVIK Change: Remove ordering inside group for Hardware and Supplies GM variables. */
 
-    //May10 Change: Drop duplicate based on SKU, Account Start
-    /*val restOfRetailGroupedDF = retailWithCompCannDF
-      .groupBy("SKU", "Account")
-      .agg(mean(col("Hardware_Rev")).as("Hardware_Rev2"),
-        mean(col("Hardware_GM")).as("Hardware_GM2"),
-        mean(col("Supplies_Rev")).as("Supplies_Rev2"),
-        mean(col("Supplies_GM")).as("Supplies_GM2"),
-        mean(col("supplies_GM_scaling_factor")).as("supplies_GM_scaling_factor2")
-      )
-
-    retailWithCompCannDF = retailWithCompCannDF.join(restOfRetailGroupedDF, Seq("SKU", "Account"), "left")
-      .drop("Hardware_Rev", "Hardware_GM", "Supplies_Rev", "Supplies_GM","supplies_GM_scaling_factor")
-      .withColumnRenamed("Hardware_Rev2", "Hardware_Rev")
-      .withColumnRenamed("Hardware_GM2", "Hardware_GM")
-      .withColumnRenamed("Supplies_Rev2", "Supplies_Rev")
-      .withColumnRenamed("Supplies_GM2", "Supplies_GM")
-      .withColumnRenamed("supplies_GM_scaling_factor2", "supplies_GM_scaling_factor")*/
-      //.dropDuplicates("SKU", "Account")
-    /*
- //    val windForSKUnAccount = Window.partitionBy("SKU","Account").orderBy("Hardware_GM","Supplies_GM")
-     //val windForSKUnAccountSupplies = Window.partitionBy("SKU","Account").orderBy("Supplies_GM")
-     var aveGM = retailWithCompCannDF/*.drop("Supplies_GM")*/.withColumn("row_num", row_number().over(windForSKUnAccount))
-       .where(col("row_num")===1).drop("row_num")
-     val aveGMSupplies = retailWithCompCannDF.select("SKU","Account","Supplies_GM").withColumn("row_num", row_number().over(windForSKUnAccountSupplies))
-       .where(col("row_num")===1).drop("row_num")
-     aveGM = aveGM.join(aveGMSupplies, Seq("SKU","Account"), "left")*/
     var aveGM = retailWithCompCannDF
         .dropDuplicates("SKU", "Account", "Street_Price")
 
-    aveGM = aveGM //retailWithCompCannDF.dropDuplicates("SKU", "Account")
+    aveGM = aveGM
       .groupBy("SKU")
       .agg(mean(col("Hardware_GM")).as("aveHWGM"),
         mean(col("Supplies_GM")).as("aveSuppliesGM"))
 
-    //    aveGM.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\retail-r-1419.csv")
 
     retailWithCompCannDF = retailWithCompCannDF
       .join(aveGM, Seq("SKU"), "left")
       .withColumn("Hardware_GM", when(col("Hardware_GM").isNull, col("aveHWGM")).otherwise(col("Hardware_GM")))
-//      .withColumn("Hardware_GM", when(col("aveHWGM").isNull, lit(null).cast(StringType)).otherwise(col("Hardware_GM")))
       .withColumn("Supplies_GM", when(col("Supplies_GM").isNull, col("aveSuppliesGM")).otherwise(col("Supplies_GM")))
-//      .withColumn("Supplies_GM", when(col("aveSuppliesGM").isNull, lit(null).cast(StringType)).otherwise(col("Supplies_GM")))
       .withColumn("Supplies_GM", when(col("PL") === "4X", 0).otherwise(col("Supplies_GM")))
 
-    // write
-    retailWithCompCannDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Seasonality-Hardware-PART12.csv")
+    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-Seasonality-Hardware-PART12.csv")
 
   }
 }

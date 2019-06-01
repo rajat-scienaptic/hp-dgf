@@ -23,7 +23,7 @@ class App(args: Array[String]) extends ConfigurationFactory[AppConfiguration](ar
       .master(configuration.sparkConfig.master)
       .appName(configuration.sparkConfig.appName)
       .config(sparkConf)
-      .enableHiveSupport()
+      //.enableHiveSupport()
       .getOrCreate
     val executionContext = ExecutionContext(spark, configuration)
     try {

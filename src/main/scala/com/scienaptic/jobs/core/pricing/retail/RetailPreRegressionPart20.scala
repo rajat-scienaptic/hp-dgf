@@ -16,7 +16,7 @@ object RetailPreRegressionPart20 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCann3DF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-CateCannOfflineOnline-PART19.csv")
+    var retailWithCompCann3DF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-CateCannOfflineOnline-PART19.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -37,19 +37,6 @@ object RetailPreRegressionPart20 {
       .withColumn("cann_receiver", when(col("SKU_Name").contains("M45"), "M452").otherwise(col("cann_receiver")))
       .withColumn("cann_receiver", when(col("SKU_Name").contains("M47"), "M477").otherwise(col("cann_receiver")))
 
-    //    retailWithCompCann3DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1683.csv")
-
-    // Direct Cann
-    // TODO : check the following with Commercial code
-    /*retail$Direct.Cann.201[i]<-ifelse(grepl("M201",retail$SKU.Name[i]) | grepl("M203", retail$SKU.Name[i]), mean(retail$NP.IR[grepl("M40", retail$SKU.Name) & retail$Week.End.Date==retail$Week.End.Date[i]]+retail$ASP.IR[grepl("M40", retail$SKU.Name) & retail$Week.End.Date==retail$Week.End.Date[i]]),0)
-        retail$Direct.Cann.225[i]<-ifelse(grepl("M225",retail$SKU.Name[i]) | grepl("M227", retail$SKU.Name[i]), mean(retail$NP.IR[grepl("M42", retail$SKU.Name) & retail$Week.End.Date==retail$Week.End.Date[i]]+retail$ASP.IR[grepl("M42", retail$SKU.Name) & retail$Week.End.Date==retail$Week.End.Date[i]]),0)
-        retail$Direct.Cann.252[i]<-ifelse(grepl("M252",retail$SKU.Name[i]) | grepl("M254", retail$SKU.Name[i]), mean(retail$NP.IR[grepl("M45", retail$SKU.Name) & retail$Week.End.Date==retail$Week.End.Date[i]]+retail$ASP.IR[grepl("M45", retail$SKU.Name) & retail$Week.End.Date==retail$Week.End.Date[i]]),0)
-        retail$Direct.Cann.277[i]<-ifelse(grepl("M277",retail$SKU.Name[i]) | grepl("M281", retail$SKU.Name[i]), mean(retail$NP.IR[grepl("M47", retail$SKU.Name) & retail$Week.End.Date==retail$Week.End.Date[i]]+retail$ASP.IR[grepl("M47", retail$SKU.Name) & retail$Week.End.Date==retail$Week.End.Date[i]]),0)
-        retail$Direct.Cann.Weber[i]<-ifelse(retail$cann_group[i] == "Weber", mean(retail$NP.IR[retail$cann_group == "Muscatel" & retail$Week.End.Date==retail$Week.End.Date[i]]+retail$ASP.IR[retail$cann_group == "Muscatel" & retail$Week.End.Date==retail$Week.End.Date[i]]),0)
-        retail$Direct.Cann.Muscatel.Weber[i]<-ifelse(retail$cann_group[i] == "Muscatel", mean(retail$NP.IR[retail$cann_group == "Weber" & retail$Week.End.Date==retail$Week.End.Date[i]]+retail$ASP.IR[retail$cann_group == "Weber" & retail$Week.End.Date==retail$Week.End.Date[i]]),0)
-        retail$Direct.Cann.Muscatel.Palermo[i]<-ifelse(retail$cann_group[i] == "Muscatel", mean(retail$NP.IR[retail$cann_group == "Palermo" & retail$Week.End.Date==retail$Week.End.Date[i]]+retail$ASP.IR[retail$cann_group == "Palermo" & retail$Week.End.Date==retail$Week.End.Date[i]]),0)
-        retail$Direct.Cann.Palermo[i]<-ifelse(retail$cann_group[i] == "Palermo", mean(retail$NP.IR[retail$cann_group == "Muscatel" & retail$Week.End.Date==retail$Week.End.Date[i]]+retail$ASP.IR[retail$cann_group == "Muscatel" & retail$Week.End.Date==retail$Week.End.Date[i]]),0)
-        */
     retailWithCompCann3DF = retailWithCompCann3DF
       .withColumn("is201", when(col("SKU_Name").contains("M201") or col("SKU_Name").contains("M203"), 1).otherwise(0))
       .withColumn("is225", when(col("SKU_Name").contains("M225") or col("SKU_Name").contains("M227"), 1).otherwise(0))
@@ -99,11 +86,10 @@ object RetailPreRegressionPart20 {
       .withColumn("Direct_Cann_277", when(col("Direct_Cann_277").isNull, 0).otherwise(col("Direct_Cann_277")))
       .withColumn("Direct_Cann_Weber", when(col("Direct_Cann_Weber").isNull, 0).otherwise(col("Direct_Cann_Weber")))
       .withColumn("Direct_Cann_Muscatel_Weber", when(col("Direct_Cann_Muscatel_Weber").isNull, 0).otherwise(col("Direct_Cann_Muscatel_Weber")))
-     // .withColumn("Direct_Cann_Muscatel_Palermo", when(col("Direct_Cann_Muscatel_Palermo").isNull, 0).otherwise(col("Direct_Cann_Muscatel_Palermo")))
       .withColumn("Direct_Cann_Palermo", when(col("Direct_Cann_Palermo").isNull, 0).otherwise(col("Direct_Cann_Palermo")))
       .withColumn("LBB", when(col("Account") === "Amazon-Proper", col("LBB")).otherwise(lit(0)))
       .withColumn("LBB", when(col("LBB").isNull, 0).otherwise(col("LBB")))
-        .withColumnRenamed("Direct_Cann_Muscatel_Palermo", "Direct_Cann_Muscatel_Palermo2")
+      .withColumnRenamed("Direct_Cann_Muscatel_Palermo", "Direct_Cann_Muscatel_Palermo2")
       .drop("Direct_Cann_Muscatel_Palermo")
 
     //Muscatel Palermo change
@@ -113,11 +99,10 @@ object RetailPreRegressionPart20 {
       .agg(mean(col("NP_IR")+col("ASP_IR")).as("Direct_Cann_Muscatel_Palermo"))
 
     retailWithCompCann3DF = retailWithCompCann3DF.join(tempMeanIR, Seq("Week_End_Date"), "left")
-    retailWithCompCann3DF = retailWithCompCann3DF.withColumn("Direct_Cann_Muscatel_Palermo",
-    when(col("cann_group")==="Muscatel",col("Direct_Cann_Muscatel_Palermo")).otherwise(0))
-      .na.fill(0, Seq("Direct_Cann_Muscatel_Palermo"))
+    retailWithCompCann3DF = retailWithCompCann3DF.withColumn("Direct_Cann_Muscatel_Palermo", when(col("cann_group")==="Muscatel",col("Direct_Cann_Muscatel_Palermo")).otherwise(0))
+      .na.fill(0, Seq("Direct_Cann_Muscatel_Palermo","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","Direct_Cann_Weber","Direct_Cann_Muscatel_Weber","Direct_Cann_Palermo"))
 
-    retailWithCompCann3DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART20.csv")
+    retailWithCompCann3DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-DirectCann-PART20.csv")
 
   }
 }

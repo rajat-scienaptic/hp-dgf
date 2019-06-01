@@ -19,7 +19,7 @@ object RetailPreRegressionPart07 {
     val spark: SparkSession = executionContext.spark
     import spark.implicits._
 
-    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-BOL-PART06.csv")
+    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-BOL-PART06.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -59,20 +59,12 @@ object RetailPreRegressionPart07 {
       .foreach(x => {
         retailEOL = retailEOL.withColumn(x, when(col(x).isNull, 0).otherwise(col(x)))
       })
-    /*
-     TODO : consider the above dataframe , value of each DF is 1 and pmax below would be 1 as assumption
-    retail$hol.dummy <- pmax(retail$USChristmasDay, retail$USColumbusDay, retail$USLaborDay, retail$USLincolnsBirthday, retail$USMemorialDay, retail$USMLKingsBirthday,
-      retail$USVeteransDay, retail$USWashingtonsBirthday, retail$USCyberMonday, retail$USIndependenceDay, retail$USNewYearsDay,
-      retail$USPresidentsDay, retail$USThanksgivingDay)*/
 
     val holidaysListNATreatment = Seq("USChristmasDay", "USThanksgivingDay", "USMemorialDay", "USPresidentsDay", "USLaborDay")
 
     var reatilWithHolidaysDF = retailEOL
-      .select("Week_End_Date", "USLaborDay", "USMemorialDay", "USPresidentsDay", "USThanksgivingDay", "USChristmasDay") //   retail_hol <- retail[,colnames(retail) %in% holidays]
+      .select("Week_End_Date", "USLaborDay", "USMemorialDay", "USPresidentsDay", "USThanksgivingDay", "USChristmasDay")
 
-
-    // TODO : retail_hol <- gather(retail_hol, holidays, holiday.dummy, USLaborDay:USChristmasDay) // also this variable is omitted line 886
-    // gather starts
     implicit val retailHolidayEncoder = Encoders.product[RetailHoliday]
     implicit val retailHolidayTranspose = Encoders.product[RetailHolidayTranspose]
 
@@ -83,45 +75,33 @@ object RetailPreRegressionPart07 {
       RetailHolidayTranspose(row.Week_End_Date, row.USMemorialDay, row.USPresidentsDay, row.USThanksgivingDay, names(5), row.USChristmasDay)
     ))
     reatilWithHolidaysDF = transposedData.toDF()
-    // gather ends
 
     reatilWithHolidaysDF = reatilWithHolidaysDF
       .withColumn("holiday_dummy", col("holiday_dummy").cast(IntegerType))
       .filter(col("holiday_dummy") === 1).distinct().drop("holiday_dummy")
-      // TODO done: check the format of Week_Ento_dated_Date
       .withColumn("lag_week", date_sub(to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp"), "yyyy-MM-dd"), 7))
       .withColumn("holiday_dummy", lit(1))
-    // TODO : verify -> spread(retail_hol, holidays, Week.End.Date) : 896
 
-    var spreadHolidays = reatilWithHolidaysDF
+    val spreadHolidays = reatilWithHolidaysDF
       .groupBy("Week_End_Date")
       .pivot("holidays")
       .agg(first(col("holiday_dummy")))
-    //      .withColumn("USChristmasDay", when(col("USChristmasDay") === 1, col("Week_End_Date").cast(StringType)).otherwise(col("USChristmasDay")))
-    //      .withColumn("USLaborDay", when(col("USLaborDay") === 1, col("Week_End_Date").cast(StringType)).otherwise(col("USLaborDay")))
 
     reatilWithHolidaysDF = spreadHolidays
       .join(reatilWithHolidaysDF, Seq("Week_End_Date"), "right")
       .drop("holiday_dummy", "holidays", "Week_End_Date")
       .withColumnRenamed("lag_week", "Week_End_Date")
 
-    holidaysListNATreatment.foreach(holiday => {
-      reatilWithHolidaysDF = reatilWithHolidaysDF.withColumnRenamed(holiday, "Lag_" + holiday)
-    })
+    holidaysListNATreatment.foreach(holiday => {   reatilWithHolidaysDF = reatilWithHolidaysDF.withColumnRenamed(holiday, "Lag_" + holiday)   })
 
-    retailEOL = retailEOL
-      .join(reatilWithHolidaysDF, Seq("Week_End_Date"), "left")
-
-    //    retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-914.csv")
+    retailEOL = retailEOL.join(reatilWithHolidaysDF, Seq("Week_End_Date"), "left")
 
     holidaysListNATreatment.foreach(holiday => {
       retailEOL = retailEOL.withColumn("Lag_" + holiday, when(col("Lag_" + holiday).isNull || col("Lag_" + holiday) === "", 0).otherwise(lit(1)))
     })
 
-    retailEOL = retailEOL
-      .withColumn("Amazon_Prime_Day", when(col("Week_End_Date") === "2018-07-21", 1).otherwise(0))
+    retailEOL = retailEOL.withColumn("Amazon_Prime_Day", when(col("Week_End_Date") === "2018-07-21", 1).otherwise(0))
 
-    // write
-    retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-Holidays-PART07.csv")
+    retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-Holidays-PART07.csv")
   }
 }

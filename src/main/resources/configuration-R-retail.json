@@ -1,5 +1,5 @@
 {
-  "config": "preregression-retail-21",
+  "config": "preregression-retail-AD",
   "sparkConfig": {
     "master": "local[*]",
     "appName": "hp-R-retail"

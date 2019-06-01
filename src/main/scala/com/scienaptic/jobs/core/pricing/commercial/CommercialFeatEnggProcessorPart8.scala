@@ -27,10 +27,7 @@ object CommercialFeatEnggProcessor8 {
       .config(sparkConf)
       .getOrCreate
 
-    val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
-    
-    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeBOL.csv")
-    //var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\R\\SPARK_DEBUG_OUTPUTS\\commercialBeforeBOL.csv")
+    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeBOL.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
@@ -39,12 +36,9 @@ object CommercialFeatEnggProcessor8 {
       .persist(StorageLevel.MEMORY_AND_DISK).cache()
     
     var BOL = commercial.select("SKU","ES date","GA date")
-      //.withColumnRenamed("ES date_LEVELS","ES date").withColumnRenamed("GA date_LEVELS","GA date")
       .dropDuplicates().cache()
-    //writeDF(BOL,"BOL_WITH_DROP_DUPLICATES")
 
     BOL = BOL.where((col("ES date").isNotNull) || (col("GA date").isNotNull))
-    //writeDF(BOL,"BOL_WITH_ES_GA_DATE_CHECK")
 
     BOL = BOL
       .withColumn("ES date_wday", dayofweek(col("ES date")).cast("int"))  //As dayofweek returns in range 1-7 we want 0-6
@@ -53,8 +47,7 @@ object CommercialFeatEnggProcessor8 {
       .withColumn("GA date_wday_sub", lit(7)-col("GA date_wday"))
       .withColumn("ES date_wday_sub", when(col("ES date_wday_sub").isNull,0).otherwise(col("ES date_wday_sub")))
       .withColumn("GA date_wday_sub", when(col("GA date_wday_sub").isNull,0).otherwise(col("GA date_wday_sub")))
-    //writeDF(BOL,"BOL_WITH_WDAYs")
-    commercial.printSchema()
+
     BOL = BOL
       .withColumnRenamed("GA date","GA_date").withColumnRenamed("ES date","ES_date")
       .withColumnRenamed("GA date_wday_sub","GA_date_wday_sub").withColumnRenamed("ES date_wday_sub","ES_date_wday_sub")
@@ -63,7 +56,6 @@ object CommercialFeatEnggProcessor8 {
       .withColumnRenamed("GA_date","GA date").withColumnRenamed("ES_date","ES date")
       .withColumnRenamed("GA_date_wday_sub","GA date_wday_sub").withColumnRenamed("ES_date_wday_sub","ES date_wday_sub")
       .drop("GA date_wday","ES date_wday","GA date_wday_sub","ES date_wday_sub")
-    //writeDF(BOL,"BOL_WITH_WDAY_MODIFIED")
 
     val windForSKUnReseller = Window.partitionBy("SKU$Reseller").orderBy(/*"SKU","Reseller_Cluster","Reseller_Cluster_LEVELS",*/"Week_End_Date")
     //TODO: Too heavy from here till max, min, last date joins
@@ -75,37 +67,33 @@ object CommercialFeatEnggProcessor8 {
       .withColumn("rank", row_number().over(windForSKUnReseller))
       .withColumn("BOL_criterion", when(col("rank")<intro_weeks, 0).otherwise(1))
       .drop("rank","Qty").cache()
-    //writeDF(BOLCriterion,"BOLCriterion_Before_MinWedDATE")
 
     BOLCriterion = BOLCriterion
       .join(BOL.select("SKU","GA date"), Seq("SKU"), "left")
     val minWEDDate = to_date(unix_timestamp(lit(BOLCriterion.agg(min("Week_End_Date")).head().getDate(0)),"yyyy-MM-dd").cast("timestamp"))
     BOLCriterion = BOLCriterion.withColumn("GA date", when(col("GA date").isNull, minWEDDate).otherwise(col("GA date")))
       .where(col("Week_End_Date")>=col("GA date"))
-    //writeDF(BOLCriterion,"BOLCriterion_WITH_WEEK_END_DATE_FILTER_AGAINST_GA")
+
     val BOLCriterionFirst = BOLCriterion.where(col("BOL_criterion")===1)
       .groupBy("SKU","Reseller_Cluster")
       .agg(min("Week_End_Date").as("first_date"))
-    //writeDF(BOLCriterionFirst,"BOLCriterionFirst")
+
     val BOLCriterionMax = commercial
       .groupBy("SKU","Reseller_Cluster")
       .agg(max("Week_End_Date").as("max_date"))
-    //writeDF(BOLCriterionMax,"BOLCriterionMax")
+
     val BOLCriterionMin = commercial//.where(col("BOL_criterion")===1)
       .groupBy("SKU","Reseller_Cluster")
       .agg(min("Week_End_Date").as("min_date"))
-    //writeDF(BOLCriterionMin,"BOLCriterionMin")
 
     BOLCriterion =  BOLCriterionMax.withColumn("SKU",col("SKU")).withColumn("Reseller_Cluster",col("Reseller_Cluster"))
       .join(BOLCriterionFirst.withColumn("SKU",col("SKU")).withColumn("Reseller_Cluster",col("Reseller_Cluster")), Seq("SKU","Reseller_Cluster"), "left")
       .join(BOLCriterionMin.withColumn("SKU",col("SKU")).withColumn("Reseller_Cluster",col("Reseller_Cluster")), Seq("SKU","Reseller_Cluster"), "left")
         .persist(StorageLevel.MEMORY_AND_DISK)
-    //writeDF(BOLCriterion,"BOLCriterion_AFTER_FIRST_MIN_MAX_JOIN")
-
 
     BOLCriterion = BOLCriterion.withColumn("first_date", when(col("first_date").isNull, col("max_date")).otherwise(col("first_date")))
       .drop("max_date")
-    //writeDF(BOLCriterion,"BOLCriterion_WITH_FIRST_DATE")
+
     val minMinDateBOL = BOLCriterion.agg(min("min_date")).head().getDate(0)
     BOLCriterion = BOLCriterion
       .where(!((col("min_date")===col("first_date")) && (col("first_date")===minMinDateBOL)))
@@ -113,27 +101,22 @@ object CommercialFeatEnggProcessor8 {
 
     BOLCriterion = BOLCriterion.withColumn("diff_weeks", when(col("diff_weeks").isNull || col("diff_weeks")<=0, 0).otherwise(col("diff_weeks")))
     BOLCriterion = BOLCriterion.withColumn("diff_weeks", col("diff_weeks").cast("int"))
-    //writeDF(BOLCriterion,"BOLCriterion_WITH_DIFF_WEEKS")
 
     BOLCriterion = BOLCriterion
       .withColumn("repList", createlist(col("diff_weeks").cast("int")))
       .withColumn("add", explode(col("repList"))).drop("repList")
       .withColumn("add", col("add"))
-    //writeDF(BOLCriterion,"BOLCriterion_AFTER_EXPLODE")
+
     BOLCriterion = BOLCriterion
       .withColumn("add", col("add")*lit(7))
       .withColumn("Week_End_Date", expr("date_add(min_date,add)"))
-    //.withColumn("Week_End_Date", addDaystoDateStringUDF(col("min_date"), col("add")))   //CHECK: check if min_date is in timestamp format!
 
     BOLCriterion = BOLCriterion.drop("min_date","fist_date","diff_weeks","add")
       .withColumn("BOL_criterion", lit(1))
-    //writeDF(BOLCriterion, "BOLCriterion_FINAL_DF")
 
     commercial = commercial
-      //.drop("GA date").withColumn("GA date",col("GA date_LEVELS"))//TODO Remove this
       .withColumn("SKU",col("SKU")).withColumn("Reseller_Cluster",col("Reseller_Cluster")).withColumn("Week_End_Date",col("Week_End_Date"))
       .join(BOLCriterion.withColumn("SKU",col("SKU")).withColumn("Reseller_Cluster",col("Reseller_Cluster")).withColumn("Week_End_Date",col("Week_End_Date")), Seq("SKU","Reseller_Cluster","Week_End_Date"), "left")
-    //writeDF(commercialWithCompCannDF,"commercialWithCompCannDF_WITH_BOL_JOINED_BEFORE_NULL_IMPUTATION")
 
     commercial = commercial
       .withColumn("BOL", when(col("EOL")===1,0).otherwise(col("BOL_criterion")))
@@ -141,8 +124,7 @@ object CommercialFeatEnggProcessor8 {
       .withColumn("BOL", when(col("GA date").isNull, 0).otherwise(col("BOL"))) //Important: Dont comment this!
       .withColumn("BOL", when(col("BOL").isNull, 0).otherwise(col("BOL"))).cache()
 
-    //writeDF(commercial,"commercialBeforeOpposite")
-    commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeOpposite.csv")
+    commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeOpposite.csv")
   }
 
 }

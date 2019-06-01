@@ -16,7 +16,7 @@ object RetailPreRegressionPart13 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCannDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Seasonality-Hardware-PART12.csv")
+    var retailWithCompCannDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-Seasonality-Hardware-PART12.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -102,17 +102,18 @@ object RetailPreRegressionPart13 {
       .withColumn("Supplies_Rev", col("Supplies_Rev_unscaled") * (lit(1) + ((col("Promo_Pct") - col("avg_discount_SKU_Account")) * col("supplies_GM_scaling_factor"))))
       .withColumn("Supplies_GM", col("Supplies_GM_unscaled") * (lit(1) + ((col("Promo_Pct") - col("avg_discount_SKU_Account")) * col("supplies_GM_scaling_factor"))))
       .withColumn("Supplies_Rev_no_promo", col("Supplies_Rev_unscaled") * (lit(1) + ((lit(0) - col("avg_discount_SKU_Account")) * col("supplies_GM_scaling_factor"))))
-      .withColumn("L1_cannibalization_log", log(lit(1) - col("L1_cannibalization")))
+      // CR1 - No longer variables required as commented in R code
+      /*.withColumn("L1_cannibalization_log", log(lit(1) - col("L1_cannibalization")))
       .withColumn("L2_cannibalization_log", log(lit(1) - col("L2_cannibalization")))
       .withColumn("L1_competition_log", log(lit(1) - col("L1_competition")))
       .withColumn("L2_competition_log", log(lit(1) - col("L2_competition")))
       .withColumn("L1_cannibalization_log", when(col("L1_cannibalization_log").isNull, 0).otherwise(col("L1_cannibalization_log")))
       .withColumn("L2_cannibalization_log", when(col("L2_cannibalization_log").isNull, 0).otherwise(col("L2_cannibalization_log")))
       .withColumn("L1_competition_log", when(col("L1_competition_log").isNull, 0).otherwise(col("L1_competition_log")))
-      .withColumn("L2_competition_log", when(col("L2_competition_log").isNull, 0).otherwise(col("L2_competition_log")))
+      .withColumn("L2_competition_log", when(col("L2_competition_log").isNull, 0).otherwise(col("L2_competition_log")))*/
       .drop("SKU_category")
 
-    retailWithCompCannDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-SuppliesGM-PART13.csv")
+    retailWithCompCannDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-SuppliesGM-PART13.csv")
 
 
   }

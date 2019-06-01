@@ -23,7 +23,7 @@ object RetailPreRegressionPart06 {
     val spark: SparkSession = executionContext.spark
 
 
-    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-EOL-half-PART05.csv")
+    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-EOL-half-PART05.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -34,16 +34,13 @@ object RetailPreRegressionPart06 {
       .where((col("ES_date").isNotNull) || (col("GA_date").isNotNull))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
-      .withColumn("ES_date_wday", lit(7) - dayofweek(col("ES_date")).cast("int")) //As dayofweek returns in range 1-7 we want 0-6
+      .withColumn("ES_date_wday", lit(7) - dayofweek(col("ES_date")).cast("int"))
       .withColumn("GA_date_wday", lit(7) - dayofweek(col("GA_date")).cast("int"))
       .withColumn("GA_date", to_date(expr("date_add(GA_date, GA_date_wday)")))
       .withColumn("ES_date", to_date(expr("date_add(ES_date, ES_date_wday)")))
       .drop("GA_date_wday", "ES_date_wday")
 
-    // write
-    //    BOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-694.csv")
-
-    val windForSKUnAccount = Window.partitionBy("SKU&Account").orderBy(/*"SKU", "Account", */ "Week_End_Date")
+    val windForSKUnAccount = Window.partitionBy("SKU&Account").orderBy("Week_End_Date")
     var BOLCriterion = retailEOL
       .groupBy("SKU", "Account", "Week_End_Date")
       .agg(max("Distribution_Inv").as("Distribution_Inv")) //TODO: Changed from sum to max
@@ -60,30 +57,17 @@ object RetailPreRegressionPart06 {
     BOLCriterion = BOLCriterion.withColumn("GA_date", when(col("GA_date").isNull, minWEDDate).otherwise(col("GA_date")))
       .where(col("Week_End_Date") >= col("GA_date") && col("GA_date").isNotNull)
 
-    ////////////
-    // write
-    //    BOLCriterion.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-762.csv")
-
     val BOLCriterionFirst = BOLCriterion.where(col("BOL_criterion") === 1)
       .groupBy("SKU", "Account")
       .agg(min("Week_End_Date").as("first_date"))
-    //      .join(BOLCriterion.where(col("BOL_criterion") === 1), Seq("SKU", "Account"), "right")
-    //write
-    //    BOLCriterionFirst.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-770.csv")
 
     val BOLCriterionMax = retailEOL
       .groupBy("SKU", "Account")
       .agg(max("Week_End_Date").as("max_date"))
-    //      .join(retailEOL, Seq("SKU", "Account"), "right")
-    // max
-    //    BOLCriterionMax.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-777.csv")
 
     val BOLCriterionMin = retailEOL
       .groupBy("SKU", "Account")
       .agg(min("Week_End_Date").as("min_date"))
-    //      .join(retailEOL, Seq("SKU", "Account"), "right")
-    // write
-    //    BOLCriterionMin.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-783.csv")
 
     BOLCriterion = BOLCriterionMax.withColumn("Account", col("Account")) // with column is on purpose as join cannot find Account from max dataframe
       .join(BOLCriterionFirst, Seq("SKU", "Account"), "left")
@@ -113,12 +97,6 @@ object RetailPreRegressionPart06 {
     BOLCriterion = BOLCriterion.drop("min_date", "fist_date", "diff_weeks", "add")
       .withColumn("BOL_criterion", lit(1))
 
-    // write
-    //    BOLCriterion.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-818.csv")
-
-    // write
-    //     BOLCriterion.write.mode(SaveMode.Overwrite).option("header", true).csv("D:\\files\\temp\\BOLCriterion.csv")
-
     retailEOL = retailEOL.join(BOLCriterion, Seq("SKU", "Account", "Week_End_Date"), "left")
       .withColumn("BOL_criterion", when(col("BOL_criterion").isNull, 0).otherwise(col("BOL_criterion")))
       .withColumn("BOL_criterion", when(col("EOL_criterion").isNull, null).otherwise(col("BOL_criterion")))
@@ -133,7 +111,6 @@ object RetailPreRegressionPart06 {
       .withColumn("ASP_Flag", when(col("ASP_IR") > 0, 1).otherwise(lit(0)))
       .withColumn("Other_IR_Flag", when(col("Other_IR") > 0, 1).otherwise(lit(0)))
 
-    // comment this 2 line
-        retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-BOL-PART06.csv")
+        retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-BOL-PART06.csv")
   }
 }

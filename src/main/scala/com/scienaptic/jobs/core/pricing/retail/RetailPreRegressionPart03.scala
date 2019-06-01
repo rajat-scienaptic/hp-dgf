@@ -18,20 +18,19 @@ object RetailPreRegressionPart03 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailJoincompAdTotalDFDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoincompAdTotalDFDF-PART02.csv")
+    var retailJoincompAdTotalDFDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-r-retailJoincompAdTotalDFDF-PART02.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
 
-    var calendar = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Calendar/Retail/master_calendar_retail.csv")).cache()
+    var calendar = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\master_calendar_retail.csv")).cache()
     calendar.columns.toList.foreach(x => {
       calendar = calendar.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     calendar = calendar.cache()
       .filter(!col("Account").isin("Rest of Retail"))
       .withColumn("Account", when(col("Account").isin("Amazon.Com"), "Amazon-Proper").otherwise(col("Account")))
-      //      .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", null).otherwise(to_date(unix_timestamp(convertFaultyDateFormat(col("Week_End_Date")), "yyyy-MM-dd").cast("timestamp"))))
-      //      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
+      //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
       .withColumn("NP_IR_original", col("NP_IR"))
       .withColumn("ASP_IR_original", col("ASP_IR").cast(DoubleType))
       .withColumn("Week_End_Date", when(col("Week_End_Date").isNull || col("Week_End_Date") === "", lit(null)).otherwise(
@@ -47,20 +46,23 @@ object RetailPreRegressionPart03 {
       .withColumn("Flash_IR", when(col("Online") === 0, 0).otherwise(col("Flash_IR")))
       .withColumn("Flash_IR", when(col("Flash_IR").isNull, 0).otherwise(col("Flash_IR")))
 
-    // write
-    //    retailJoinCalendarDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-371.csv")
-
     val uniqueSKUNames = retailJoinCalendarDF.filter(col("Merchant_Gift_Card") > 0).select("SKU_Name").distinct().collect().map(_ (0).asInstanceOf[String]).toList
 
     retailJoinCalendarDF = retailJoinCalendarDF.withColumn("GC_SKU_Name", when(col("SKU_Name").isin(uniqueSKUNames: _*), col("SKU_Name").cast("string"))
       .otherwise(lit("NA")))
 
+    /* CR1 - New source added, Bundle Program Master.csv - Start */
+    val bundle = spark.read.option("header",true).option("inferSchema",true).csv("Bundle_Program_master.csv")
+      .withColumn("Week_End_Date", to_date(col("Week_End_Date")))   //TODO: Check format of Week_End_Date on local and server both
+    retailJoinCalendarDF = retailJoinCalendarDF.join(bundle, Seq("SKU","Week_End_Date"), "left")
+    /* CR1 - New source added, Bundle Program Master.csv - End */
+
     val SKUWhoChange = retailJoinCalendarDF.filter(col("Changed_Street_Price") =!= 0).select("SKU").distinct().collect().map(_ (0)).toList
 
-    // TODO done : check col data type for pmax UDF
     retailJoinCalendarDF = retailJoinCalendarDF.withColumn("GAP_IR", when((col("SKU").isin(SKUWhoChange: _*)) && (col("Season").isin("BTB'18")), col("NP_IR"))
       .otherwise(col("GAP_IR")))
       .withColumn("GAP_IR", when(col("GAP_IR").isNull, 0).otherwise(col("GAP_IR")))
+      .withColumn("GAP_IR", when(col("GAP_IR")>col("Street_Price"),0).otherwise(col("GAP_IR")))  /* CR1 - Added GAP_IR logic :  Change GAP.IR to 0 for incorrect cases */
       .withColumn("Other_IR_original", when(col("NP_IR_original").isNull && col("ASP_IR_original").isNull, col("GAP_IR")).otherwise(0))
       .withColumn("NP_IR_original", when(col("NP_IR_original").isNull, 0).otherwise(col("NP_IR_original")))
       .withColumn("ASP_IR_original", when(col("ASP_IR_original").isNull, 0).otherwise(col("ASP_IR_original")))
@@ -73,9 +75,7 @@ object RetailPreRegressionPart03 {
       .withColumn("Other_IR", col("Total_IR") - (col("NP_IR") + col("ASP_IR")))
       .withColumn("Ad", when(col("Total_IR") === 0, 0).otherwise(col("Ad")))
 
-    // write
-    //        retailJoinCalendarDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb07-r-424.csv")
-    var masterSprintCalendar = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/S-Print/Master_Calendar/Master_Calender_s-print.csv")).cache()
+    var masterSprintCalendar = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\Master_Calender_s-print.csv")).cache()
     masterSprintCalendar.columns.toList.foreach(x => {
       masterSprintCalendar = masterSprintCalendar.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -86,11 +86,11 @@ object RetailPreRegressionPart03 {
     val retailJoinMasterSprintCalendarDF = retailJoinCalendarDF
       .join(masterSprintCalendar, Seq("SKU", "Account", "Week_End_Date"), "left")
       .withColumn("NP_IR", when(col("Brand").isin("Samsung"), col("Rebate_SS")).otherwise(col("NP_IR")))
-      //      .withColumn("NP_IR", when(col("Rebate_SS").isNull, null).otherwise(col("NP_IR")))
+      //.withColumn("NP_IR", when(col("Rebate_SS").isNull, null).otherwise(col("NP_IR")))
       .withColumn("NP_IR", when(col("NP_IR").isNull, 0).otherwise(col("NP_IR")))
       .drop("Rebate_SS")
 
-    var aggUpstream = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Upstream/AggUpstream.csv")).cache()
+    var aggUpstream = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\AggUpstream.csv")).cache()
     aggUpstream.columns.toList.foreach(x => {
       aggUpstream = aggUpstream.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -121,9 +121,8 @@ object RetailPreRegressionPart03 {
     var retailJoinAggUpstreamDF = retailJoinAggUpstreamWithNATreatmentDF
       .filter(col("Account").isin(focusedAccounts: _*))
 
-    // remove write
-      retailJoinAggUpstreamWithNATreatmentDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamWithNATreatmentDF-PART03.csv")
-      retailJoinAggUpstreamDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamDF-PART03.csv")
+      retailJoinAggUpstreamWithNATreatmentDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-retailJoinAggUpstreamWithNATreatmentDF-PART03.csv")
+      retailJoinAggUpstreamDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-retailJoinAggUpstreamDF-PART03.csv")
 
   }
 }

@@ -18,13 +18,13 @@ object RetailPreRegressionPart08 {
     val spark: SparkSession = executionContext.spark
     val allBrands = List("Brother", "Canon", "Epson", "Lexmark", "Samsung", "HP")
 
-    var retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-Holidays-PART07.csv")
+    val retailEOL  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-Holidays-PART07.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv")).cache()
+    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\NPD_weekly.csv")).cache()
     npd.columns.toList.foreach(x => {
       npd = npd.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -34,9 +34,7 @@ object RetailPreRegressionPart08 {
           .otherwise(to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
       ))
 
-
-    /*================= Brand not Main Brands =======================*/
-
+    /* ================= Brand not Main Brands ======================= */
     val npdChannelBrandFilterRetail = npd.where((col("Channel") === "Retail") && (col("Brand").isin("Canon", "Epson", "Brother", "Lexmark", "Samsung")))
       .where((col("DOLLARS") > 0) && (col("MSRP__") > 0))
 
@@ -44,10 +42,8 @@ object RetailPreRegressionPart08 {
       .groupBy("L1_Category", "Week_End_Date", "Brand")
       .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
       .withColumn("L1_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannelBrandFilterNotRetail, Seq("L1_Category","Week_End_Date","Brand"), "right")
 
     var L1Comp = L1Competition
-      /*.withColumn("uuid", generateUUID())*/
       .groupBy("L1_Category", "Week_End_Date" /*, "uuid"*/).pivot("Brand").agg(first("L1_competition")).drop("uuid")
     val L1CompColumns = L1Comp.columns
     allBrands.foreach(x => {
@@ -59,14 +55,12 @@ object RetailPreRegressionPart08 {
         .withColumnRenamed(x, "L1_competition_" + x)
     })
 
-
     val L2Competition = npdChannelBrandFilterRetail
       .groupBy("L2_Category", "Week_End_Date", "Brand")
       .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
       .withColumn("L2_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannel6FilterNotRetail, Seq("L2_Category","Week_End_Date","Brand"), "right")
 
-    var L2Comp = L2Competition /*.withColumn("uuid", generateUUID())*/
+    var L2Comp = L2Competition
       .groupBy("L2_Category", "Week_End_Date" /*, "uuid"*/)
       .pivot("Brand")
       .agg(first("L2_competition")).drop("uuid")
@@ -94,7 +88,6 @@ object RetailPreRegressionPart08 {
       .na.fill(0, Seq("L2_competition_Brother", "L2_competition_Epson", "L2_competition_Canon", "L2_competition_Lexmark", "L2_competition_Samsung"))
 
     /*====================================== Brand Not HP ================================= */
-
     val npdChannelNotRetailBrandNotHP = npd.where((col("Channel") === "Retail") && (col("Brand") =!= "HP"))
       .where((col("DOLLARS") > 0) && (col("MSRP__") > 0))
 
@@ -102,13 +95,11 @@ object RetailPreRegressionPart08 {
       .groupBy("L1_Category", "Week_End_Date")
       .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
       .withColumn("L1_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannelNotRetailBrandNotHP, Seq("L1_Category","Week_End_Date"), "right")
 
     val L2CompetitionNonHP = npdChannelNotRetailBrandNotHP
       .groupBy("L2_Category", "Week_End_Date")
       .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
       .withColumn("L2_competition", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannelNotRetailBrandNotHP, Seq("L2_Category","Week_End_Date"), "right")
 
     retailWithCompetitionDF = retailWithCompetitionDF.join(L1CompetitionNonHP, Seq("L1_Category", "Week_End_Date"), "left")
       .join(L2CompetitionNonHP, Seq("L2_Category", "Week_End_Date"), "left")
@@ -116,29 +107,21 @@ object RetailPreRegressionPart08 {
       .withColumn("L2_competition", when((col("L2_competition").isNull) || (col("L2_competition") < 0), 0).otherwise(col("L2_competition")))
       .na.fill(0, Seq("L1_competition", "L2_competition"))
 
-    // write
-
     /*=================================== Brand Not Samsung ===================================*/
-
     val npdChannelNotRetailBrandNotSamsung = npd.where((col("Channel") === "Retail") && (col("Brand") =!= "Samsung"))
       .where((col("DOLLARS") > 0) && (col("MSRP__") > 0))
     val L1CompetitionSS = npdChannelNotRetailBrandNotSamsung
       .groupBy("L1_Category", "Week_End_Date")
       .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
       .withColumn("L1_competition_ss", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannelNotRetailBrandNotSamsung, Seq("L1_Category","Week_End_Date"), "right")
 
     val L2CompetitionSS = npdChannelNotRetailBrandNotSamsung
       .groupBy("L2_Category", "Week_End_Date")
       .agg((sum("DOLLARS") / sum("MSRP__")).as("dolMSRPRatio"))
       .withColumn("L2_competition_ss", lit(1) - col("dolMSRPRatio")).drop("dolMSRPRatio")
-    //.join(npdChannelNotRetailBrandNotSamsung, Seq("L2_Category","Week_End_Date"), "right")
 
     retailWithCompetitionDF = retailWithCompetitionDF.join(L1CompetitionSS, Seq("L1_Category", "Week_End_Date"), "left")
       .join(L2CompetitionSS, Seq("L2_Category", "Week_End_Date"), "left")
-
-    //write
-    //    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("D:\\files\\temp\\retail-Feb06-r-1110.csv")
 
     retailWithCompetitionDF = retailWithCompetitionDF
       .withColumn("L1_competition_ss", when((col("L1_competition_ss").isNull) || (col("L1_competition_ss") < 0), 0).otherwise(col("L1_competition_ss")))
@@ -149,8 +132,7 @@ object RetailPreRegressionPart08 {
       .withColumn("L1_competition", when(col("Brand").isin("Samsung"), col("L1_competition_ss")).otherwise(col("L1_competition")))
       .withColumn("L2_competition", when(col("Brand").isin("Samsung"), col("L2_competition_ss")).otherwise(col("L2_competition")))
       .drop("L2_competition_ss", "L1_competition_ss")
-    /* ========================================================================================== */
 
-    retailWithCompetitionDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-PART08.csv")
+    retailWithCompetitionDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_out_retail\\retail-L1L2-PART08.csv")
   }
 }
