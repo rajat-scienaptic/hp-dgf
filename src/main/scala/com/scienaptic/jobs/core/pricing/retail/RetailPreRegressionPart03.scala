@@ -59,10 +59,12 @@ object RetailPreRegressionPart03 {
 
     val SKUWhoChange = retailJoinCalendarDF.filter(col("Changed_Street_Price") =!= 0).select("SKU").distinct().collect().map(_ (0)).toList
 
-    retailJoinCalendarDF = retailJoinCalendarDF.withColumn("GAP_IR", when((col("SKU").isin(SKUWhoChange: _*)) && (col("Season").isin("BTB'18")), col("NP_IR"))
-      .otherwise(col("GAP_IR")))
+    retailJoinCalendarDF = retailJoinCalendarDF
+      .withColumn("GAP_IR", when((col("SKU").isin(SKUWhoChange: _*)) && (col("Season").isin("BTB'18")), col("NP_IR"))
+        .otherwise(col("GAP_IR")))
       .withColumn("GAP_IR", when(col("GAP_IR").isNull, 0).otherwise(col("GAP_IR")))
       .withColumn("GAP_IR", when(col("GAP_IR")>col("Street_Price"),0).otherwise(col("GAP_IR")))  /* CR1 - Added GAP_IR logic :  Change GAP.IR to 0 for incorrect cases */
+    retailJoinCalendarDF = retailJoinCalendarDF
       .withColumn("Other_IR_original", when(col("NP_IR_original").isNull && col("ASP_IR_original").isNull, col("GAP_IR")).otherwise(0))
       .withColumn("NP_IR_original", when(col("NP_IR_original").isNull, 0).otherwise(col("NP_IR_original")))
       .withColumn("ASP_IR_original", when(col("ASP_IR_original").isNull, 0).otherwise(col("ASP_IR_original")))
@@ -95,7 +97,9 @@ object RetailPreRegressionPart03 {
       aggUpstream = aggUpstream.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     aggUpstream = aggUpstream.cache()
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+      //CR1- Locally it reads it as timestamp. TODO: Check for production
+        .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
+      //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("Ave", when(col("Ave") === "NA" || col("Ave") === "", null).otherwise(col("Ave")))
       .withColumn("Min", when(col("Min") === "NA" || col("Min") === "", null).otherwise(col("Min")))
       .withColumn("Max", when(col("Max") === "NA" || col("Max") === "", null).otherwise(col("Max")))
@@ -105,10 +109,6 @@ object RetailPreRegressionPart03 {
     val retailJoinAggUpstreamWithNATreatmentDF = aggUpstream
       .join(retailJoinMasterSprintCalendarDF, Seq("SKU", "Account", "Week_End_Date", "Online"), "right")
       //Avik Change: When Total IR is null, it should give Street price as sale price
-      .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
-      .withColumn("GAP_Price", col("Street_Price") - col("Total_IR"))
-      .withColumn("ImpAve", when((col("Ave").isNull) && (col("GAP_Price").isNotNull), col("GAP_Price")).otherwise(col("Ave")))
-      .withColumn("ImpMin", when((col("Min").isNull) && (col("GAP_Price").isNotNull), col("GAP_Price")).otherwise(col("Min")))
       .withColumn("NoAvail", when(col("InStock").isNull && col("OnlyInStore").isNull && col("OutofStock").isNull && col("DelayDel").isNull, 1).otherwise(0))
       .withColumn("NoAvail", when(col("POS_Qty") > 0 && col("OutofStock").isin(7), 1).otherwise(col("NoAvail")))
       .withColumn("OutofStock", when(col("POS_Qty") > 0 && col("OutofStock").isin(7), 0).otherwise(col("OutofStock")))
@@ -117,6 +117,10 @@ object RetailPreRegressionPart03 {
       .withColumn("OutofStock", when(col("OutofStock").isNull, 0).otherwise(col("OutofStock")))
       .withColumn("OnlyInStore", when(col("OnlyInStore").isNull, 0).otherwise(col("OnlyInStore")))
       .withColumn("NoAvail", when(col("NoAvail").isNull, 0).otherwise(col("NoAvail")))
+      .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
+      .withColumn("GAP_Price", col("Street_Price") - col("Total_IR"))
+      .withColumn("ImpAve", when((col("Ave").isNull) && (col("GAP_Price").isNotNull), col("GAP_Price")).otherwise(col("Ave")))
+      .withColumn("ImpMin", when((col("Min").isNull) && (col("GAP_Price").isNotNull), col("GAP_Price")).otherwise(col("Min")))
 
     var retailJoinAggUpstreamDF = retailJoinAggUpstreamWithNATreatmentDF
       .filter(col("Account").isin(focusedAccounts: _*))

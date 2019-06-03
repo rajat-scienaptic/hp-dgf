@@ -162,11 +162,22 @@ object CommercialFeatEnggProcessor10 {
       .withColumn("Supplies_GM", when(col("L1_Category")==="Scanners",0).otherwise(col("Supplies_GM")))
 
     commercial = commercial
-      .withColumn("exclude", when(!col("PL").isin("3Y"),when(col("Reseller_Cluster").isin("Other - Option C", "eTailerOther - Option C", "Stockpiler & Deal Chaser", "eTailerStockpiler & Deal Chaser") ||
-        col("low_volume")===1 || col("low_baseline")===1 || col("spike")===1 || col("opposite")===1 || col("EOL")===1 || col("BOL")===1 || col("no_promo_sales")===1,1).otherwise(0)).otherwise(0))
-      .withColumn("exclude", when(col("PL").isin("3Y"),when(col("Reseller_Cluster").isin("Other - Option C", "eTailerOther - Option C", "Stockpiler & Deal Chaser", "eTailerStockpiler & Deal Chaser") ||
-        col("low_volume")===1 || /*col("low_baseline")===1 ||*/ col("spike")===1 || col("opposite")===1 || col("EOL")===1 || col("BOL")===1 || col("no_promo_sales")===1,1).otherwise(0)).otherwise(col("exclude")))
-      .withColumn("exclude", when(col("SKU_Name").contains("Sprocket"), 1).otherwise(col("exclude")))
+      .withColumn("exclude",
+          when(!col("PL").isin("3Y"),
+            when(col("Reseller_Cluster").isin("Other - Option C", "eTailerOther - Option C", "Stockpiler & Deal Chaser", "eTailerStockpiler & Deal Chaser") ||
+                col("low_volume")===1 || col("low_baseline")===1 || col("spike")===1 || col("opposite")===1 || col("EOL")===1 ||
+                col("BOL")===1 || col("no_promo_sales")===1,1)
+            .otherwise(0))
+          .otherwise(0))
+      .withColumn("exclude",
+          when(col("PL").isin("3Y"),
+            when(col("Reseller_Cluster").isin("Other - Option C", "eTailerOther - Option C", "Stockpiler & Deal Chaser", "eTailerStockpiler & Deal Chaser") ||
+              col("low_volume")===1 || /*col("low_baseline")===1 ||*/ col("spike")===1 || col("opposite")===1 || col("EOL")===1 ||
+              col("BOL")===1 || col("no_promo_sales")===1,1)
+            .otherwise(0))
+          .otherwise(col("exclude")))
+      .withColumn("exclude", when(col("SKU_Name").contains("Sprocket"), 1)
+          .otherwise(col("exclude")))
       .withColumn("AE_NP_IR", col("NP_IR"))
       .withColumn("AE_ASP_IR", lit(0))
       .withColumn("AE_Other_IR", lit(0))
@@ -190,7 +201,7 @@ object CommercialFeatEnggProcessor10 {
     }
     val Oct72017Date = to_date(unix_timestamp(lit("2017-10-07"),"yyyy-MM-dd").cast("timestamp"))
 
-    commercial = commercial//.select("SKU_Name","Reseller_Cluster","SKU","Week_End_Date","L1_Category","L2_Category","Season","Street Price","IPSLES","HPS_OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Category Custom","Line","PL","PLC Status","GA date","ES date","Inv_Qty","Special_Programs","Qty","IR","Big_Deal_Qty","Non_Big_Deal_Qty","Brand","Consol SKU","Full Name","VPA","Promo_Flag","Promo_Pct","Discount_Depth_Category","log_Qty","price","Inv_Qty_log","USChristmasDay","USColumbusDay","USIndependenceDay","USLaborDay","USLincolnsBirthday","USMemorialDay","USMLKingsBirthday","USNewYearsDay","USPresidentsDay","USVeteransDay","USWashingtonsBirthday","USThanksgivingDay","USCyberMonday","L1_competition_Brother","L1_competition_Canon","L1_competition_Epson","L1_competition_Lexmark","L1_competition_Samsung","L2_competition_Brother","L2_competition_Canon","L2_competition_Epson","L2_competition_Lexmark","L2_competition_Samsung","L1_competition","L2_competition","L1_competition_HP_ssmodel","L2_competition_HP_ssmodel","L1_cannibalization","L2_cannibalization","Sale_Price","seasonality_npd","seasonality_npd2","Hardware_GM","Supplies_GM","Hardware_Rev","Supplies_Rev","Changed_Street_Price","Valid_Start_Date","Valid_End_Date","Hardware_GM_type","Hardware_Rev_type","Supplies_GM_type","Supplies_Rev_type","avg_discount_SKU_Account","supplies_GM_scaling_factor","Supplies_GM_unscaled","Supplies_GM_no_promo","Supplies_Rev_unscaled","Supplies_Rev_no_promo","L1_cannibalization_log","L2_cannibalization_log","L1_competition_log","L2_competition_log","Big_Deal","Big_Deal_Qty_log","outlier","spike","spike2","no_promo_avg","no_promo_med","low_baseline","low_volume","raw_bl_avg","raw_bl_med","EOL","BOL","opposite","no_promo_sales","NP_Flag","NP_IR","high_disc_Flag","always_promo_Flag","cann_group","cann_receiver","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","exclude","AE_NP_IR","AE_ASP_IR","AE_Other_IR","Street_PriceWhoChange_log","SKUWhoChange","PriceChange_HPS_OPS","Season_most_recent")
+    commercial = commercial
       .withColumnRenamed("Street Price","Street_Price")
       .withColumnRenamed("Category Subgroup","Category_Subgroup")
       .withColumnRenamed("Category Custom","Category_Custom")

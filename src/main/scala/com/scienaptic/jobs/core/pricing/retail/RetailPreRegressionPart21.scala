@@ -85,10 +85,11 @@ object RetailPreRegressionPart21 {
 
     /*  CR1 - Adjust Total_IR, Promo_Flag, NP_Flag - Start */
     var retailWM = retailWithCompCann3DF.where(col("Account")==="Walmart")
-    retailWithCompCann3DF = retailWithCompCann3DF.where(col("Account")=!="Walmart")
     retailWM = retailWM.withColumn("Total_IR", col("NP_IR"))
         .withColumn("Promo_Flag", when(col("Total_IR")>0, 1).otherwise(0))
         .withColumn("NP_Flag", col("Promo_Flag"))
+
+    retailWithCompCann3DF = retailWithCompCann3DF.where(col("Account")=!="Walmart")
     /*  CR1 - Adjust Total_IR, Promo_Flag, NP_Flag - Start */
 
     retailWithCompCann3DF = retailWithCompCann3DF
