@@ -72,7 +72,7 @@ object RetailPreRegressionPart10 {
     /* CR1 - Walmart Source - Start */
     val walmartRetail = retailWithCompCannDF.where(col("Account")==="Walmart")
 
-    var walmartPOS = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/WalmartPOS_2019-05-31.csv"))
+    var walmartPOS = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/walmart_posqty.csv"))
     walmartPOS = walmartPOS.where(!col("Store Type Desc").isin("Unknown","BASE STR Nghbrhd Mkt") && (col("POS Sales") > 0) && (col("POS Qty") > 0))
         .withColumn("SKU", substring(col("Vendor Stk/Part Nbr"), 0, 6))
     walmartPOS = walmartPOS
@@ -85,12 +85,19 @@ object RetailPreRegressionPart10 {
       .drop("Day","Month","Year")
     /*  Average Weekly price  */
     walmartPOS = walmartPOS.groupBy("SKU","Week_End_Date","Outlet")
-        .agg(sum("POS Qty").as("Walmart_Qty"),
-          mean("Unit Retail").as("retail_price"),
-          (sum("POS Sales")/sum("POS Qty")).as("avg_price"),
-          min(col("POS Sales")/col("POS Qty")).as("min_price"),
-          (sum("POS Cost")/sum("POS Qty")).as("avg_cost"),
-          sum("POS Sales").as("total_sales"))
+        .agg(sum("POS Qty").as("Walmart_Qty"), sum(when(col("POS Qty").isNull, 1).otherwise(0)).as("WQty_NCount"),
+          mean("Unit Retail").as("retail_price"), sum(when(col("Unit Retail").isNull, 1).otherwise(0)).as("rPrice_NCount"),
+          (sum("POS Sales")/sum("POS Qty")).as("avg_price"), sum(when(col("POS Sales").isNull || col("POS Qty").isNull, 1).otherwise(0)).as("aPrice_NCount"),
+          min(col("POS Sales")/col("POS Qty")).as("min_price"), sum(when(col("POS Sales").isNull || col("POS Qty").isNull, 1).otherwise(0)).as("mPrice_NCount"),
+          (sum("POS Cost")/sum("POS Qty")).as("avg_cost"), sum(when(col("POS Cost").isNull || col("POS Qty").isNull, 1).otherwise(0)).as("aCost_NCount"),
+          sum("POS Sales").as("total_sales"), sum(when(col("POS Sales").isNull, 1).otherwise(0)).as("tSales_NCount"))
+        .withColumn("Walmart_Qty", when(col("WQty_NCount")>0, null).otherwise(col("Walmart_Qty")))
+        .withColumn("retail_price", when(col("rPrice_NCount")>0, null).otherwise(col("retail_price")))
+        .withColumn("avg_price", when(col("aPrice_NCount")>0, null).otherwise(col("avg_price")))
+        .withColumn("min_price", when(col("mPrice_NCount")>0, null).otherwise(col("min_price")))
+        .withColumn("avg_cost", when(col("aCost_NCount")>0, null).otherwise(col("avg_cost")))
+        .withColumn("total_sales", when(col("tSales_NCount")>0, null).otherwise(col("total_sales")))
+        .drop("WQty_NCount","rPrice_NCount","aPrice_NCount","mPrice_NCount","aCost_NCount","tSales_NCount")
 
     walmartPOS = walmartPOS
         .withColumn("Account", lit("Walmart"))
@@ -145,7 +152,7 @@ object RetailPreRegressionPart10 {
       .withColumn("c_quantity_f", when(col("avg_c_quantity").between(0, 200), lit("<200"))
         .when(col("avg_c_quantity").between(200, 1500), lit("200-1500"))
         .when(col("avg_c_quantity").between(1500, 6000), lit("1500-6000"))
-        .when(col("avg_c_quantity").between(6000, 50000), lit("6000+")))
+        .when(col("avg_c_quantity").between(6000, 50000), lit("6000-50000")))
     val jan10Date = to_date(lit("2015-01-10"))
     walmartPOS = walmartPOS.withColumn("drop_in_week", when(col("c_quantity")===col("Walmart_Qty"), 0).otherwise(1))
         .withColumn("exclude", lit(0))

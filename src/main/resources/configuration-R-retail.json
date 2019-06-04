@@ -1,5 +1,5 @@
 {
-  "config": "preregression-commercial-spike",
+  "config": "preregression-retail-BOGO",
   "sparkConfig": {
     "master": "local[*]",
     "appName": "hp-R-retail"
