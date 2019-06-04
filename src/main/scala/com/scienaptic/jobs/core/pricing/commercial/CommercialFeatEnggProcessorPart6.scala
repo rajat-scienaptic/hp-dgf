@@ -59,7 +59,7 @@ object CommercialFeatEnggProcessor6 {
       .drop("percentile_0_75", "percentile_0_25","IQR")
       .withColumn("Qty", col("Qty").cast("int"))//.repartition(1000).cache()
 
-    commercial = commercial.withColumn("Qty",col("Qty").cast("int"))
+    commercial = commercial.withColumn("Qty",col("Qty"))//.cast("int"))
     val commercialWithHolidayAndQtyFilter = commercial//.withColumn("Qty",col("Qty").cast("int"))
       .where((col("Promo_Flag")===0) && (col("USThanksgivingDay")===0) && (col("USCyberMonday")===0) && (col("spike")===0))
       .where(col("Qty")>0).cache()
@@ -67,7 +67,7 @@ object CommercialFeatEnggProcessor6 {
     var npbl = commercialWithHolidayAndQtyFilter
       .groupBy("Reseller_Cluster","SKU_Name")
       .agg(mean("Qty").as("no_promo_avg"),
-        stddev("Qty").as("no_promo_sd"),
+        stddev("Qty").as("no_promo_sd"),  //TODO: Spark returns stdeev as NaN for some groups. Check why!!
         min("Qty").as("no_promo_min"),
         max("Qty").as("no_promo_max"))
 
