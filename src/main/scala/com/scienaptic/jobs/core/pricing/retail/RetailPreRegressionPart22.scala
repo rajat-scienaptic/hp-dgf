@@ -19,73 +19,6 @@ object RetailPreRegressionPart22 {
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    retailWithCompCann3DF = retailWithCompCann3DF
-      //AVIK Change: When total ir is null, it gives Selling price as null too instead of Street Price
-      .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
-      .withColumn("Selling_Price", col("Street_Price") - col("Total_IR"))
-
-
-    var retail_acc = retailWithCompCann3DF
-      .filter(col("Special_Programs").isin("None", "BOPIS") && col("Brand") === "HP")
-      .filter(col("Account").isin("Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples"))  // CR1 - Account negation filter removed.
-      //.filter(!col("Account").isin("Rest of Retail", "Costco", "Sam's Club", "Walmart", "HP Shopping")) // CR1 - Negation removed.
-      .select("Account", "Online", "SKU", "Street_Price", "Week_End_Date", "Selling_Price")
-      .withColumn("Account", concat(col("Account"), col("Online")))
-      .drop("Online")
-
-    val spreadAccount = retail_acc
-      .groupBy("SKU", "Street_Price", "Week_End_Date")
-      .pivot("Account")
-      .agg(first(col("Selling_Price")).as("Selling_Price"))
-      //AVIK Change: Best Buy1 and Amazon-Proper0 were not present
-      .na.fill(0, Seq("Staples0", "Staples1", "Best Buy0", "Best Buy1", "Amazon-Proper0", "Amazon-Proper1", "Office Depot-Max0", "Office Depot-Max1"))
-    retail_acc = spreadAccount
-
-    retail_acc = retail_acc
-      .withColumnRenamed("Staples0", "Price_Staples")
-      .withColumnRenamed("Staples1", "Price_Staples_com")
-      .withColumnRenamed("Best Buy0", "Price_Best_Buy")
-      .withColumnRenamed("Best Buy1", "Price_Best_Buy_com")
-      //AVIK Change: Rename of Amazon-Proper0 not present
-      //.withColumnRenamed("Amazon-Proper0", "Price_Amazon")
-      .withColumnRenamed("Amazon-Proper1", "Price_Amazon_com")
-      .withColumnRenamed("Office Depot-Max0", "Price_Office_Depot_Max")
-      .withColumnRenamed("Office Depot-Max1", "Price_Office_Depot_Max_com")
-      .withColumn("Price_Amazon_com", when(col("Price_Amazon_com") === 0, col("Street_Price")).otherwise(col("Price_Amazon_com")))
-      .withColumn("Price_Staples", when(col("Price_Staples") === 0, col("Street_Price")).otherwise(col("Price_Staples")))
-      .withColumn("Price_Staples_com", when(col("Price_Staples_com") === 0, col("Street_Price")).otherwise(col("Price_Staples_com")))
-      .withColumn("Price_Best_Buy", when(col("Price_Best_Buy") === 0, col("Street_Price")).otherwise(col("Price_Best_Buy")))
-      .withColumn("Price_Best_Buy_com", when(col("Price_Best_Buy_com") === 0, col("Street_Price")).otherwise(col("Price_Best_Buy_com")))
-      .withColumn("Price_Office_Depot_Max", when(col("Price_Office_Depot_Max") === 0, col("Street_Price")).otherwise(col("Price_Office_Depot_Max")))
-      .withColumn("Price_Office_Depot_Max_com", when(col("Price_Office_Depot_Max_com") === 0, col("Street_Price")).otherwise(col("Price_Office_Depot_Max_com")))
-
-
-    retailWithCompCann3DF = retailWithCompCann3DF.withColumn("Week_End_Date", col("Week_End_Date"))
-      .join(retail_acc.withColumn("Week_End_Date", col("Week_End_Date")).drop("Street_Price"), Seq("SKU", "Week_End_Date"), "left")
-      .withColumn("Price_Min_Online", when(
-        col("Account") === "Amazon-Proper", least(col("Price_Staples_com"), col("Price_Best_Buy_com"), col("Price_Office_Depot_Max_com")))
-        .otherwise(
-          when(col("Account") === "Best Buy" && col("Online") === 1, least(col("Price_Amazon_com"), col("Price_Staples_com"), col("Price_Office_Depot_Max_com")))
-            .otherwise(when(col("Account") === "Office Depot-Max" && col("Online") === 1, least(col("Price_Amazon_com"), col("Price_Best_Buy_com"), col("Price_Staples_com")))
-              //AVIK Change: Online filter missing
-              .otherwise(when(col("Account") === "Staples" && col("Online") === 1, least(col("Price_Amazon_com"), col("Price_Best_Buy_com"), col("Price_Office_Depot_Max_com")))
-              .otherwise(least(col("Price_Best_Buy_com"), col("Price_Office_Depot_Max_com"), col("Price_Amazon_com"), col("Price_Staples_com")))))
-        ))
-      .withColumn("Price_Min_Offline", when(
-        col("Account") === "Best Buy" && col("Online") === 0, least(col("Price_Staples"), col("Price_Office_Depot_Max")))
-        .otherwise(
-          when(col("Account") === "Office Depot-Max" && col("Online") === 0, least(col("Price_Best_Buy"), col("Price_Staples")))
-            //AVIK Change: Online filter missing
-            .otherwise(when(col("Account") === "Staples" && col("Online") === 0, least(col("Price_Best_Buy"), col("Price_Office_Depot_Max")))
-            .otherwise(least(col("Price_Best_Buy"), col("Price_Office_Depot_Max"), col("Price_Staples"))))
-        ))
-      .withColumn("Delta_Price_Online", log("Selling_Price") - log("Price_Min_Online"))
-      .withColumn("Delta_Price_Offline", log("Selling_Price") - log("Price_Min_Offline"))
-      .withColumn("Price_Gap_Online", when((col("Selling_Price") - col("Price_Min_Online")) > 0, col("Selling_Price") - col("Price_Min_Online")).otherwise(lit(0)))
-      .withColumn("Price_Gap_Offline", when((col("Selling_Price") - col("Price_Min_Offline")) > 0, col("Selling_Price") - col("Price_Min_Offline")).otherwise(lit(0)))
-      .withColumn("Price_Gap_Online", when(col("Price_Gap_Online").isNull, 0).otherwise(col("Price_Gap_Online")))
-      .withColumn("Price_Gap_Offline", when(col("Price_Gap_Offline").isNull, 0).otherwise(col("Price_Gap_Offline")))
-
     // walmart
     val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/walmart_link.csv")
       .withColumnRenamed("retail_sku", "SKU")
@@ -123,6 +56,7 @@ object RetailPreRegressionPart22 {
 
     /* CR1 - New source added EndCap - Start */
     var endcap = renameColumns(spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/endcap_weekly_prereg_2019-03-06_074509.csv"))
+      //TODO: Check format in production
         .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
     endcap = endcap.groupBy("Account","SKU","Week_End_Date")
         .agg(max("weekly_endcap_flag").as("weekly_endcap_flag"))
@@ -197,7 +131,7 @@ object RetailPreRegressionPart22 {
       // Note that weighted mean takes data and weight columns but in this case as only one column is specified so its just the MEAN that we need to calculate
       .agg(mean(col("POS_Qty")).as("POS_Qty"))
       .drop("POS_Qty")
-        .where(col("MasterIR")=!=0)   // CR1 - Filter was missing
+        //.where(col("MasterIR")=!=0)   // CR1 - Filter was missing
 
     discount2 = discount2
       .join(regData.dropDuplicates("SKU").select("SKU", "SKU_Name"), Seq("SKU"), "left")

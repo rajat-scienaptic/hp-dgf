@@ -54,8 +54,9 @@ object RetailPreRegressionPart21 {
     /* canon funding change starts May 23rd 2019*/
     var canon = renameColumns(executionContext.spark.read.option("header","true").option("inferSchema","true").csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/canon_fund.csv"))
     canon = canon
-      .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd-MM-yyyy").cast("timestamp")))
-      .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
+      //TODO: Check what format read in production
+      .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd/MM/yyyy").cast("timestamp")))
+      .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd/MM/yyyy").cast("timestamp")))
       .withColumn("wk_day_start", dayofweek(col("Start_date")))
       .withColumn("wk_day_end", dayofweek(col("End_date")))
       .withColumn("WSD", date_add(expr("date_sub(Start_date, wk_day_start)"),7))
@@ -74,6 +75,7 @@ object RetailPreRegressionPart21 {
       .withColumn("Amount",when(col("Amount").isNull, 0).otherwise(col("Amount")))
       .withColumn("Hardware_GM", col("Hardware_GM")+col("Amount"))
       .withColumnRenamed("Category_Custom","Category Custom")
+      .withColumn("ImpMin_AmazonProper", when(col("Account").isin("Amazon-Proper"), col("ImpMin")).otherwise(col("ImpMin_AmazonProper")))
     /* canon funding change ends  */
 
     /*  CR1 - Added new variable NP.Type - start  */
@@ -85,7 +87,8 @@ object RetailPreRegressionPart21 {
 
     /*  CR1 - Adjust Total_IR, Promo_Flag, NP_Flag - Start */
     var retailWM = retailWithCompCann3DF.where(col("Account")==="Walmart")
-    retailWM = retailWM.withColumn("Total_IR", col("NP_IR"))
+    retailWM = retailWM
+        .withColumn("Total_IR", col("NP_IR"))
         .withColumn("Promo_Flag", when(col("Total_IR")>0, 1).otherwise(0))
         .withColumn("NP_Flag", col("Promo_Flag"))
 
@@ -100,7 +103,7 @@ object RetailPreRegressionPart21 {
       .withColumn("exclude", when((col("PL").isin("3Y")) && (col("low_baseline") === 1) && (col("POS_Qty") > 0), 0).otherwise(col("exclude")))
       .withColumn("exclude", when((col("SKU_Name").isin("LJP M426fdn", "LJP M477fdw")) && (col("low_baseline") === 1) && (col("POS_Qty") > 0), 0).otherwise(col("exclude")))
       .withColumn("exclude", when(col("Brand").isin("Samsung"), 1).otherwise(col("exclude")))
-      .withColumn("exclude", when(col("Account").isin("Sam's Club"), 1).otherwise(col("exclude")))
+      /*.withColumn("exclude", when(col("Account").isin("Sam's Club"), 1).otherwise(col("exclude")))*/  //CR1 - Code removed from R code
       .withColumn("exclude", when(col("SKU_Name").contains("Sprocket"), 1).otherwise(col("exclude")))
       .withColumn("exclude", when(col("Account").isin(/*"Walmart", */"HP Shopping", "Rest of Retail"), 1).otherwise(col("exclude"))) //CR1 - Remove Walmart from filter
       .withColumn("exclude", when((col("SKU").isin("V1N07A") && col("Season").isin("HOL'18")), 1).otherwise(col("exclude")))
@@ -110,7 +113,6 @@ object RetailPreRegressionPart21 {
     /* CR1 - Bind retail with retailWM - End */
 
     retailWithCompCann3DF = retailWithCompCann3DF
-      .withColumn("ImpMin_AmazonProper", when(col("Account").isin("Amazon-Proper"), col("ImpMin")).otherwise(col("ImpMin_AmazonProper")))
       .withColumn("Street_PriceWhoChange_log", when(col("Changed_Street_Price") === 0, 0).otherwise(log(col("Street_Price") * col("Changed_Street_Price"))))
       .withColumn("SKUWhoChange", when(col("Changed_Street_Price") === 0, 0).otherwise(col("SKU")))
       .withColumn("PriceChange_HPS_OPS", when(col("Changed_Street_Price") === 0, 0).otherwise(col("HPS/OPS")))
@@ -145,8 +147,6 @@ object RetailPreRegressionPart21 {
       .withColumn("ASP_Flag", when(col("ASP_IR") > 0, 1).otherwise(lit(0)))
       .withColumn("Other_IR_Flag", when(col("Other_IR") > 0, 1).otherwise(lit(0)))
 
-    retailWithCompCann3DF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/preregression__before_output_retail.csv")
-
     /*  CR1 - Code removed in R Code - Start  */
     /*var inStore = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/Instore/instore_labor_final.csv"))
     inStore.columns.toList.foreach(x => {
@@ -178,7 +178,7 @@ object RetailPreRegressionPart21 {
       .withColumn("GC_SKU_Name", when(col("GC_SKU_Name").isNull, "NA").otherwise(col("GC_SKU_Name")))*/
     /*  CR1 - Code removed in R Code - End  */
 
-    /*retailWithCompCann3DF = retailWithCompCann3DF
+    retailWithCompCann3DF = retailWithCompCann3DF
       //AVIK Change: When total ir is null, it gives Selling price as null too instead of Street Price
       .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
       .withColumn("Selling_Price", col("Street_Price") - col("Total_IR"))
@@ -245,8 +245,10 @@ object RetailPreRegressionPart21 {
       .withColumn("Price_Gap_Online", when(col("Price_Gap_Online").isNull, 0).otherwise(col("Price_Gap_Online")))
       .withColumn("Price_Gap_Offline", when(col("Price_Gap_Offline").isNull, 0).otherwise(col("Price_Gap_Offline")))
 
+    retailWithCompCann3DF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/preregression__before_output_retail.csv")
+
     // walmart
-    val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/walmart_link.csv")
+    /*val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/walmart_link.csv")
       .withColumnRenamed("retail_sku", "SKU")
       .withColumnRenamed("retail_sku_desc", "SKU_Name")
 

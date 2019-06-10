@@ -95,12 +95,13 @@ object RetailPreRegressionPart13 {
       .na.fill(0, Seq("avg_discount_SKU_Account"))
 
     retailWithCompCannDF = retailWithCompCannDF
-      .withColumn("Supplies_GM_unscaled", col("Supplies_GM"))
-      .withColumn("Supplies_GM_no_promo", col("Supplies_GM_unscaled") * (lit(1) + ((lit(0) - col("avg_discount_SKU_Account")) * col("supplies_GM_scaling_factor"))))
-      .withColumn("Supplies_Rev_unscaled", col("Supplies_Rev"))
       .na.fill(0, Seq("Promo_Pct"))
-      .withColumn("Supplies_Rev", col("Supplies_Rev_unscaled") * (lit(1) + ((col("Promo_Pct") - col("avg_discount_SKU_Account")) * col("supplies_GM_scaling_factor"))))
+      .withColumn("Supplies_GM_unscaled", col("Supplies_GM"))
       .withColumn("Supplies_GM", col("Supplies_GM_unscaled") * (lit(1) + ((col("Promo_Pct") - col("avg_discount_SKU_Account")) * col("supplies_GM_scaling_factor"))))
+      .withColumn("Supplies_GM_no_promo", col("Supplies_GM_unscaled") * (lit(1) + ((lit(0) - col("avg_discount_SKU_Account")) * col("supplies_GM_scaling_factor"))))
+    retailWithCompCannDF = retailWithCompCannDF
+      .withColumn("Supplies_Rev_unscaled", col("Supplies_Rev"))
+      .withColumn("Supplies_Rev", col("Supplies_Rev_unscaled") * (lit(1) + ((col("Promo_Pct") - col("avg_discount_SKU_Account")) * col("supplies_GM_scaling_factor"))))
       .withColumn("Supplies_Rev_no_promo", col("Supplies_Rev_unscaled") * (lit(1) + ((lit(0) - col("avg_discount_SKU_Account")) * col("supplies_GM_scaling_factor"))))
       // CR1 - No longer variables required as commented in R code
       /*.withColumn("L1_cannibalization_log", log(lit(1) - col("L1_cannibalization")))

@@ -167,7 +167,7 @@ object RetailPreRegressionPart10 {
         .withColumn("c_discount", when(col("c_Street_Price")-col("c_avg_price")<=0, 0.00001).otherwise(col("c_Street_Price")-col("c_avg_price")))
         .withColumn("c_discount_perc", when(col("c_Street_Price")-col("c_avg_price")<=0, 0).otherwise(abs((col("c_Street_Price")-col("c_avg_price"))/col("c_Street_Price"))))
 
-    retailWithCompCannDF = retailWithCompCannDF.where(col("Account")=!="Walmart")
+    retailWithCompCannDF = retailWithCompCannDF.where(col("Account")=!="Walmart").na.fill(0, Seq("Promo_Pct"))
     retailWithCompCannDF = doUnion(retailWithCompCannDF, walmartPOS).get
     /* CR1 - Walmart Source - End */
 

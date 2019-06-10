@@ -1,5 +1,5 @@
 {
-  "config": "preregression-retail-BOGO",
+  "config": "preregression-retail-OUTPUT",
   "sparkConfig": {
     "master": "local[*]",
     "appName": "hp-R-retail"

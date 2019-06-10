@@ -16,7 +16,6 @@ object RetailPreRegressionPart11 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-
     var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2Cann-half-PART10.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -27,6 +26,7 @@ object RetailPreRegressionPart11 {
 
     //DON'T remove join
     val retailWithAdj = retailWithCompCannDF.withColumn("Adj_Qty", when(col("POS_Qty") <= 0, 0).otherwise(col("POS_Qty")))
+      //.withColumn("Promo_Pct_Bck", col("Promo_Pct"))
       .na.fill(0, Seq("Promo_Pct"))
 
     val retailGroupWEDSKU = retailWithAdj.groupBy("Week_End_Date", "SKU")
