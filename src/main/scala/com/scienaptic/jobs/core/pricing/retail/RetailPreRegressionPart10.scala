@@ -122,6 +122,14 @@ object RetailPreRegressionPart10 {
         .withColumn("EOL_vis_flag", when(col("Week_End_Date")>col("EOL_vis"),1).otherwise(0))
         .withColumn("BOL_vis_flag", when(col("Week_End_Date")<col("BOL_vis"),1).otherwise(0))
 
+    /*val epochDate = to_date(unix_timestamp(lit("1970-01-01"),"yyyy-MM-dd").cast("timestamp"))
+
+    walmartPOS = walmartPOS
+        .withColumn("EOL_vis", datediff(col("EOL_vis"), epochDate))
+      .withColumn("EOL_vis", datediff(col("BOL_vis"), epochDate))
+      .withColumn("EOL_vis", datediff(col("EOL_vis_online"), epochDate))
+      .withColumn("EOL_vis", datediff(col("BOL_vis_online"), epochDate))*/
+
     val dmerge = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/drop_in_merge.csv"))
         //.withColumnRenamed("SKU","SKU")
         .withColumn("cSKU", col("cSKU").cast("string"))
@@ -154,7 +162,9 @@ object RetailPreRegressionPart10 {
         .when(col("avg_c_quantity").between(1500, 6000), lit("1500-6000"))
         .when(col("avg_c_quantity").between(6000, 50000), lit("6000-50000")))
     val jan10Date = to_date(lit("2015-01-10"))
-    walmartPOS = walmartPOS.withColumn("drop_in_week", when(col("c_quantity")===col("Walmart_Qty"), 0).otherwise(1))
+
+    walmartPOS = walmartPOS
+        .withColumn("drop_in_week", when(col("c_quantity")===col("Walmart_Qty"), 0).otherwise(1))
         .withColumn("exclude", lit(0))
         .withColumn("exclude", when(col("Week_End_Date")<jan10Date || col("EOL_criterion")===1 || col("BOL_criterion")===1 || col("EOL_vis_flag")===1 ||
           col("BOL_vis_flag")===1 || col("data_useful_vis")===0 || col("drop_in_ex")===1 || col("drop_in_flag")===1,1).otherwise(0))

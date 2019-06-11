@@ -38,10 +38,10 @@ object RetailPreRegressionPart20 {
       .withColumn("cann_receiver", when(col("SKU_Name").contains("M47"), "M477").otherwise(col("cann_receiver")))
 
     retailWithCompCann3DF = retailWithCompCann3DF
-      .withColumn("is201", when(col("SKU_Name").contains("M201") or col("SKU_Name").contains("M203"), 1).otherwise(0))
+      //.withColumn("is201", when(col("SKU_Name").contains("M201") or col("SKU_Name").contains("M203"), 1).otherwise(0))
       .withColumn("is225", when(col("SKU_Name").contains("M225") or col("SKU_Name").contains("M227"), 1).otherwise(0))
-      .withColumn("is252", when(col("SKU_Name").contains("M252") or col("SKU_Name").contains("M254"), 1).otherwise(0))
-      .withColumn("is277", when(col("SKU_Name").contains("M277") or col("SKU_Name").contains("M281"), 1).otherwise(0))
+      //.withColumn("is252", when(col("SKU_Name").contains("M252") or col("SKU_Name").contains("M254"), 1).otherwise(0))
+      //.withColumn("is277", when(col("SKU_Name").contains("M277") or col("SKU_Name").contains("M281"), 1).otherwise(0))
       .withColumn("isM40", when(col("SKU_Name").contains("M40"), 1).otherwise(0))
       .withColumn("isM42", when(col("SKU_Name").contains("M42"), 1).otherwise(0))
       .withColumn("isM45", when(col("SKU_Name").contains("M45"), 1).otherwise(0))
@@ -54,14 +54,14 @@ object RetailPreRegressionPart20 {
       .withColumn("isPalermoForMuscatel", when(col("cann_group") === "Palermo", 1).otherwise(0))
       .withColumn("isPalermoForMuscatel", when(col("cann_group") === "Muscatel", 1).otherwise(0))
 
-    val retailWeek1 = retailWithCompCann3DF.where(col("isM40") === 1).groupBy("Week_End_Date").agg(mean(col("NP_IR") + col("ASP_IR")).alias("Direct_Cann_201"))
-      .withColumn("is201", lit(1))
+    //val retailWeek1 = retailWithCompCann3DF.where(col("isM40") === 1).groupBy("Week_End_Date").agg(mean(col("NP_IR") + col("ASP_IR")).alias("Direct_Cann_201"))
+      //.withColumn("is201", lit(1))
     val retailWeek2 = retailWithCompCann3DF.where(col("isM42") === 1).groupBy("Week_End_Date").agg(mean(col("NP_IR") + col("ASP_IR")).alias("Direct_Cann_225"))
       .withColumn("is225", lit(1))
-    val retailWeek3 = retailWithCompCann3DF.where(col("isM45") === 1).groupBy("Week_End_Date").agg(mean(col("NP_IR") + col("ASP_IR")).alias("Direct_Cann_252"))
-      .withColumn("is252", lit(1))
-    val retailWeek4 = retailWithCompCann3DF.where(col("isM47") === 1).groupBy("Week_End_Date").agg(mean(col("NP_IR") + col("ASP_IR")).alias("Direct_Cann_277"))
-      .withColumn("is277", lit(1))
+    //val retailWeek3 = retailWithCompCann3DF.where(col("isM45") === 1).groupBy("Week_End_Date").agg(mean(col("NP_IR") + col("ASP_IR")).alias("Direct_Cann_252"))
+      //.withColumn("is252", lit(1))
+    //val retailWeek4 = retailWithCompCann3DF.where(col("isM47") === 1).groupBy("Week_End_Date").agg(mean(col("NP_IR") + col("ASP_IR")).alias("Direct_Cann_277"))
+      //.withColumn("is277", lit(1))
 
     val retailWeek5 = retailWithCompCann3DF.where(col("isMuscatelForWeber") === 1).groupBy("Week_End_Date").agg(mean(col("NP_IR") + col("ASP_IR")).alias("Direct_Cann_Weber"))
       .withColumn("isWeber", lit(1))
@@ -72,18 +72,18 @@ object RetailPreRegressionPart20 {
     val retailWeek8 = retailWithCompCann3DF.where(col("isPalermoForMuscatel") === 1).groupBy("Week_End_Date").agg(mean(col("NP_IR") + col("ASP_IR")).alias("Direct_Cann_Palermo"))
       .withColumn("isPalermo", lit(1))
 
-    retailWithCompCann3DF = retailWithCompCann3DF.join(retailWeek1, Seq("is201", "Week_End_Date"), "left")
+    retailWithCompCann3DF = retailWithCompCann3DF//.join(retailWeek1, Seq("is201", "Week_End_Date"), "left")
       .join(retailWeek2, Seq("is225", "Week_End_Date"), "left")
-      .join(retailWeek3, Seq("is252", "Week_End_Date"), "left")
-      .join(retailWeek4, Seq("is277", "Week_End_Date"), "left")
+      //.join(retailWeek3, Seq("is252", "Week_End_Date"), "left")
+      //.join(retailWeek4, Seq("is277", "Week_End_Date"), "left")
       .join(retailWeek5, Seq("isWeber", "Week_End_Date"), "left")
       .join(retailWeek6, Seq("isMuscatel", "Week_End_Date"), "left")
       .join(retailWeek7, Seq("isMuscatel", "Week_End_Date"), "left")
       .join(retailWeek8, Seq("isPalermo", "Week_End_Date"), "left")
-      .withColumn("Direct_Cann_201", when(col("Direct_Cann_201").isNull, 0).otherwise(col("Direct_Cann_201")))
+      //.withColumn("Direct_Cann_201", when(col("Direct_Cann_201").isNull, 0).otherwise(col("Direct_Cann_201")))
       .withColumn("Direct_Cann_225", when(col("Direct_Cann_225").isNull, 0).otherwise(col("Direct_Cann_225")))
-      .withColumn("Direct_Cann_252", when(col("Direct_Cann_252").isNull, 0).otherwise(col("Direct_Cann_252")))
-      .withColumn("Direct_Cann_277", when(col("Direct_Cann_277").isNull, 0).otherwise(col("Direct_Cann_277")))
+      //.withColumn("Direct_Cann_252", when(col("Direct_Cann_252").isNull, 0).otherwise(col("Direct_Cann_252")))
+      //.withColumn("Direct_Cann_277", when(col("Direct_Cann_277").isNull, 0).otherwise(col("Direct_Cann_277")))
       .withColumn("Direct_Cann_Weber", when(col("Direct_Cann_Weber").isNull, 0).otherwise(col("Direct_Cann_Weber")))
       .withColumn("Direct_Cann_Muscatel_Weber", when(col("Direct_Cann_Muscatel_Weber").isNull, 0).otherwise(col("Direct_Cann_Muscatel_Weber")))
       .withColumn("Direct_Cann_Palermo", when(col("Direct_Cann_Palermo").isNull, 0).otherwise(col("Direct_Cann_Palermo")))
@@ -92,8 +92,41 @@ object RetailPreRegressionPart20 {
       .withColumnRenamed("Direct_Cann_Muscatel_Palermo", "Direct_Cann_Muscatel_Palermo2")
       .drop("Direct_Cann_Muscatel_Palermo")
 
+    //Direct_Cann_201
+    var tempMeanIR = retailWithCompCann3DF.select("SKU_Name","Week_End_Date","NP_IR","ASP_IR").where(col("SKU_Name").contains("M40"))
+    tempMeanIR = tempMeanIR
+      .groupBy("Week_End_Date")
+      .agg(mean(col("NP_IR")+col("ASP_IR")).as("Direct_Cann_201"),
+        sum(when(col("NP_IR").isNull || col("ASP_IR").isNull, 1).otherwise(0)).as("Direct_Cann_NCount"))
+      .withColumn("Direct_Cann_201", when(col("Direct_Cann_NCount") > 0, null).otherwise(col("Direct_Cann_201")))
+        .drop("Direct_Cann_NCount")
+    retailWithCompCann3DF = retailWithCompCann3DF.join(tempMeanIR, Seq("Week_End_Date"), "left")
+        .withColumn("Direct_Cann_201", when(col("SKU_Name").contains("M201") || col("SKU_Name").contains("M203"), col("Direct_Cann_201")).otherwise(0))
+
+    //Direct_Cann_252
+    tempMeanIR = retailWithCompCann3DF.select("SKU_Name","Week_End_Date","NP_IR","ASP_IR")
+      .where(col("SKU_Name").contains("M45"))
+    tempMeanIR = tempMeanIR
+      .groupBy("Week_End_Date")
+      .agg(mean(col("NP_IR")+col("ASP_IR")).as("Direct_Cann_252"),
+          sum(when(col("NP_IR").isNull || col("ASP_IR").isNull, 1).otherwise(0)).as("Direct_Cann_NCount"))
+      .withColumn("Direct_Cann_252", when(col("Direct_Cann_NCount") > 0, null).otherwise(col("Direct_Cann_252")))
+        .drop("Direct_Cann_NCount")
+    retailWithCompCann3DF = retailWithCompCann3DF.join(tempMeanIR, Seq("Week_End_Date"), "left")
+      .withColumn("Direct_Cann_252", when(col("SKU_Name").contains("M252") || col("SKU_Name").contains("M254"), col("Direct_Cann_252")).otherwise(0))
+
+    //Direct_Cann_277
+    tempMeanIR = retailWithCompCann3DF.select("SKU_Name","Week_End_Date","NP_IR","ASP_IR")
+      .where(col("SKU_Name").contains("M47"))
+    tempMeanIR = tempMeanIR
+      .groupBy("Week_End_Date").agg(mean(col("NP_IR")+col("ASP_IR")).as("Direct_Cann_277"),
+          sum(when(col("NP_IR").isNull || col("ASP_IR").isNull, 1).otherwise(0)).as("Direct_Cann_NCount"))
+      .withColumn("Direct_Cann_277", when(col("Direct_Cann_NCount") > 0, null).otherwise(col("Direct_Cann_277")))
+    retailWithCompCann3DF = retailWithCompCann3DF.join(tempMeanIR, Seq("Week_End_Date"), "left")
+      .withColumn("Direct_Cann_277", when(col("SKU_Name").contains("M277") || col("SKU_Name").contains("M281"), col("Direct_Cann_277")).otherwise(0))
+
     //Muscatel Palermo change
-    var tempMeanIR = retailWithCompCann3DF.where(col("cann_group")==="Palermo")
+    tempMeanIR = retailWithCompCann3DF.where(col("cann_group")==="Palermo")
       .select("cann_group","Week_End_Date","NP_IR","ASP_IR")
     tempMeanIR = tempMeanIR.groupBy("Week_End_Date")
       .agg(mean(col("NP_IR")+col("ASP_IR")).as("Direct_Cann_Muscatel_Palermo"))
