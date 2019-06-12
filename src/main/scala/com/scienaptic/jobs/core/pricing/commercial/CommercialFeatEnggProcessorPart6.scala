@@ -54,7 +54,7 @@ object CommercialFeatEnggProcessor6 {
       .withColumn("outlier", when(col("Qty")>col("percentile_0_75"), (col("Qty")-col("percentile_0_75"))/col("IQR")).otherwise(when(col("Qty")<col("percentile_0_25"), (col("Qty")-col("percentile_0_25"))/col("IQR")).otherwise(lit(0))))
       .withColumn("spike", when(abs(col("outlier"))<=8, 0).otherwise(1))
       .withColumn("spike", when((col("SKU_Name")==="OJ Pro 8610") && (col("Reseller_Cluster")==="Other - Option B") && (col("Week_End_Date")==="2014-11-01"),1).otherwise(col("spike")))
-      .withColumn("spike", when((col("SKU").isin("F6W14A")) && (col("Week_End_Date")==="2017-07-10") && (col("Reseller_Cluster").isin("Other - Option B")), 1).otherwise(col("spike")))
+      .withColumn("spike", when((col("SKU").isin("F6W14A")) && (col("Week_End_Date")==="2017-10-07") && (col("Reseller_Cluster").isin("Other - Option B")), 1).otherwise(col("spike")))
       .withColumn("spike2", when((col("spike")===1) && (col("IR")>0), 0).otherwise(col("spike")))
       .drop("percentile_0_75", "percentile_0_25","IQR")
       .withColumn("Qty", col("Qty").cast("int"))//.repartition(1000).cache()

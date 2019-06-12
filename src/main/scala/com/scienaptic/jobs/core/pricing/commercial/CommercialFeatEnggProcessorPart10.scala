@@ -33,7 +33,7 @@ object CommercialFeatEnggProcessor10 {
     //val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
     //val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
-    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeCannGroups.csv")
+    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output_commercial\\commercialBeforeCannGroups.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
@@ -161,6 +161,16 @@ object CommercialFeatEnggProcessor10 {
     commercial = commercial
       .withColumn("Supplies_GM", when(col("L1_Category")==="Scanners",0).otherwise(col("Supplies_GM")))
 
+    //TODO: Remove this when 2017-07-10 was modified to 2017-10-07 in part6 as part of calculation of Spike variable.
+    val Oct72017Date = to_date(unix_timestamp(lit("2017-10-07"),"yyyy-MM-dd").cast("timestamp"))
+    commercial = commercial
+      .withColumn("spike",
+        when(col("SKU_Name")==="LJP M426fdn" && col("Reseller_Cluster")==="Other - Option B" && col("Week_End_Date")===Oct72017Date && col("SKU")==="F6W14A",1)
+          .otherwise(col("spike")))
+      .withColumn("spike2",
+        when(col("SKU_Name")==="LJP M426fdn" && col("Reseller_Cluster")==="Other - Option B" && col("Week_End_Date")===Oct72017Date && col("SKU")==="F6W14A",1)
+          .otherwise(col("spike2")))
+
     commercial = commercial
       .withColumn("exclude",
           when(!col("PL").isin("3Y"),
@@ -199,7 +209,6 @@ object CommercialFeatEnggProcessor10 {
     } else {
       commercial = commercial.withColumn("Season_most_recent", col("Season"))
     }
-    val Oct72017Date = to_date(unix_timestamp(lit("2017-10-07"),"yyyy-MM-dd").cast("timestamp"))
 
     commercial = commercial
       .withColumnRenamed("Street Price","Street_Price")
@@ -209,12 +218,6 @@ object CommercialFeatEnggProcessor10 {
       .withColumnRenamed("Consol SKU","Consol_SKU")
       .withColumnRenamed("Full Name","Full_Name")
       .withColumn("PLC_Status", when(col("PLC_Status") === "#N/A", null).otherwise(col("PLC_Status")))
-      .withColumn("spike",
-        when(col("SKU_Name")==="LJP M426fdn" && col("Reseller_Cluster")==="Other - Option B" && col("Week_End_Date")===Oct72017Date && col("SKU")==="F6W14A",1)
-          .otherwise(col("spike")))
-      .withColumn("spike2",
-        when(col("SKU_Name")==="LJP M426fdn" && col("Reseller_Cluster")==="Other - Option B" && col("Week_End_Date")===Oct72017Date && col("SKU")==="F6W14A",1)
-          .otherwise(col("spike2")))
 
     commercial.write.option("header","true").mode(SaveMode.Overwrite).csv(TEMP_OUTPUT_DIR)
 
@@ -241,7 +244,7 @@ object CommercialFeatEnggProcessor10 {
         "spike","spike2","no_promo_avg","no_promo_med","low_baseline","low_volume","raw_bl_avg","raw_bl_med","EOL","BOL","opposite","no_promo_sales","NP_Flag","NP_IR","high_disc_Flag","always_promo_Flag","cann_group",
         "cann_receiver","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","Direct_Cann_Weber","Direct_Cann_Muscatel_Weber","Direct_Cann_Muscatel_Palermo","Direct_Cann_Palermo","Amount","exclude",
         "AE_NP_IR","AE_ASP_IR","AE_Other_IR","Street_PriceWhoChange_log","SKUWhoChange","PriceChange_HPS_OPS","Season_most_recent")
-      .coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\preregresion_commercial_output.csv")
+      .coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output_commercial\\preregresion_commercial_output.csv")
   }
 
 }
