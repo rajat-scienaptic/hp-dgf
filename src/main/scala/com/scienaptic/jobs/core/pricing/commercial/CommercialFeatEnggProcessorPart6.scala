@@ -27,7 +27,7 @@ object CommercialFeatEnggProcessor6 {
 
     val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
 
-    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialWithCompCannDF.csv")
+    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialWithCompCannDF.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
@@ -89,6 +89,6 @@ object CommercialFeatEnggProcessor6 {
       .withColumn("raw_bl_avg", col("no_promo_avg")*(col("seasonality_npd")+lit(1)))
       .withColumn("raw_bl_med", col("no_promo_med")*(col("seasonality_npd")+lit(1)))
 
-    commercial.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeEOL.csv")
+    commercial.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeEOL.csv")
   }
 }

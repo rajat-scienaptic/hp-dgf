@@ -24,7 +24,7 @@ object CommercialFeatEnggProcessor9 {
       .config(sparkConf)
       .getOrCreate
 
-    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeOpposite.csv")
+    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeOpposite.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
@@ -72,7 +72,7 @@ object CommercialFeatEnggProcessor9 {
       .withColumn("EOL", when(col("Reseller_Cluster")==="CDW",
         when(col("SKU_Name")==="LJ Pro M402dn", 0).otherwise(col("EOL"))).otherwise(col("EOL")))
 
-    commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeCannGroups.csv")
+    commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeCannGroups.csv")
   }
 
 }

@@ -26,14 +26,14 @@ object CommercialFeatEnggProcessor5 {
       .getOrCreate
 
     //val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
-    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeIFS2Calc.csv")
+    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeIFS2Calc.csv")
       .withColumn("ES date", to_date(unix_timestamp(col("ES date"),"yyyy-MM-dd").cast("timestamp")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
-    val ifs2 = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\ifs2.csv")
+    val ifs2 = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/ifs2.csv")
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
       .withColumn("Valid_End_Date", to_date(col("Valid_End_Date")))
-    var seasonalityNPD = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\seasonalityNPD.csv")
+    var seasonalityNPD = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/seasonalityNPD.csv")
     val seasonalityNPDScanner = seasonalityNPD.where(col("L1_Category")==="Office - Personal")
       .withColumn("L1_Category", when(col("L1_Category")==="Office - Personal", "Scanners").otherwise(col("L1_Category")))
 
@@ -108,7 +108,7 @@ object CommercialFeatEnggProcessor5 {
         .withColumn("Big_Deal", when(col("Big_Deal_Qty")>0, 1).otherwise(lit(0)))
         .withColumn("Big_Deal_Qty_log", log(when(col("Big_Deal_Qty")<1,1).otherwise(col("Big_Deal_Qty"))))
 
-    commercial.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialWithCompCannDF.csv")
+    commercial.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialWithCompCannDF.csv")
 
   }
 }

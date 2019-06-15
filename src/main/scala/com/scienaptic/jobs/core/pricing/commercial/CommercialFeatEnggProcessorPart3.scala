@@ -27,7 +27,7 @@ object CommercialFeatEnggProcessor3 {
 
     //val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
 
-    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeCannibalisation.csv")
+    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeCannibalisation.csv")
       .withColumn("ES date", to_date(unix_timestamp(col("ES date"),"yyyy-MM-dd").cast("timestamp")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
@@ -60,7 +60,7 @@ object CommercialFeatEnggProcessor3 {
       .na.fill(0, Seq("L2_cannibalization","L1_cannibalization"))
       .withColumn("Sale_Price", col("Street Price")-col("IR")).persist(StorageLevel.MEMORY_AND_DISK)
 
-    commercial.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeNPDCalc.csv")
+    commercial.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeNPDCalc.csv")
 
   }
 }

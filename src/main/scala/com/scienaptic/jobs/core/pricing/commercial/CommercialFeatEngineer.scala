@@ -30,13 +30,13 @@ object CommercialFeatEnggProcessor {
     //val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
 
     import spark.implicits._
-    val maxRegressionDate = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\NPD_weekly.csv"))
+    val maxRegressionDate = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/etherData/managedSources/NPD/NPD_weekly.csv"))
       .select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("Week_End_Date", date_sub(col("Week_End_Date"), 7)).agg(max("Week_End_Date")).head().getDate(0)
 
-    //val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
-    val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\outputs\\posqty_output_commercial.csv")
-    //var commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
+    val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    //val commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\outputs\\posqty_output_commercial.csv")
+    var commercialDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
       //.repartition(500).persist(StorageLevel.MEMORY_AND_DISK)
     var commercial = renameColumns(commercialDF)
     commercial.columns.toList.foreach(x => {
@@ -56,7 +56,7 @@ object CommercialFeatEnggProcessor {
       .withColumn("GA date",to_date(col("GA date")))
 
     //val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/IFS2/IFS2_most_recent.csv")
-    val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\IFS2_most_recent.csv")
+    val ifs2DF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/IFS2/IFS2_most_recent.csv")
     var ifs2 = renameColumns(ifs2DF)
     ifs2.columns.toList.foreach(x => {
       ifs2 = ifs2.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
@@ -64,7 +64,7 @@ object CommercialFeatEnggProcessor {
     ifs2 = ifs2
       .withColumn("Valid_Start_Date", to_date(unix_timestamp(col("Valid_Start_Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("Valid_End_Date", to_date(unix_timestamp(col("Valid_End_Date"),"MM/dd/yyyy").cast("timestamp")))
-    ifs2.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\ifs2.csv")
+    ifs2.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/ifs2.csv")
 
     commercial = commercial
       .withColumnRenamed("Reseller Cluster","Reseller_Cluster")
@@ -120,7 +120,7 @@ object CommercialFeatEnggProcessor {
 
 
 
-    val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\Aux_sku_hierarchy.csv")
+    val auxTableDF = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/AUX/Aux_sku_hierarchy.csv")
     var auxTable = renameColumns(auxTableDF).cache()
     auxTable.columns.toList.foreach(x => {
       auxTable = auxTable.withColumn(x, when(col(x).cast("string") === "NA" || col(x).cast("string") === "", null).otherwise(col(x)))
@@ -200,10 +200,10 @@ object CommercialFeatEnggProcessor {
           commercial = commercial.withColumn(x, when(col(x).isNull, 0).otherwise(col(x)))
       })
       commercial.persist(StorageLevel.MEMORY_AND_DISK)
-    //commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeNPD.csv")
-    //commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialWithCompCannDF.csv")
-    commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeNPD.csv")
-    commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialWithCompCannDF.csv")
+    commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeNPD.csv")
+    commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialWithCompCannDF.csv")
+    //commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeNPD.csv")
+    //commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialWithCompCannDF.csv")
 
   }
 }

@@ -27,7 +27,7 @@ object CommercialFeatEnggProcessor8 {
       .config(sparkConf)
       .getOrCreate
 
-    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeBOL.csv")
+    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeBOL.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
@@ -124,7 +124,7 @@ object CommercialFeatEnggProcessor8 {
       .withColumn("BOL", when(col("GA date").isNull, 0).otherwise(col("BOL"))) //Important: Dont comment this!
       .withColumn("BOL", when(col("BOL").isNull, 0).otherwise(col("BOL"))).cache()
 
-    commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeOpposite.csv")
+    commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeOpposite.csv")
   }
 
 }

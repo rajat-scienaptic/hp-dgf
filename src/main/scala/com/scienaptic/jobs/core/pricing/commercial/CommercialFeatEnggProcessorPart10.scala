@@ -31,9 +31,9 @@ object CommercialFeatEnggProcessor10 {
       .getOrCreate
 
     //val baselineThreshold = if (min_baseline/2 > 0) min_baseline/2 else 0
-    //val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
-    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output_commercial\\commercialBeforeCannGroups.csv")
+    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeCannGroups.csv")
       .withColumn("ES date", to_date(col("ES date")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("Valid_Start_Date", to_date(col("Valid_Start_Date")))
@@ -134,7 +134,7 @@ object CommercialFeatEnggProcessor10 {
       */
 
     /* Code Change: Avik April 6: VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund) - Start */
-    var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\Aux_canon.csv"))
+    var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/AUX/Aux_canon.csv"))
     canon = canon
       .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd-MM-yyyy").cast("timestamp")))
       .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
@@ -244,7 +244,7 @@ object CommercialFeatEnggProcessor10 {
         "spike","spike2","no_promo_avg","no_promo_med","low_baseline","low_volume","raw_bl_avg","raw_bl_med","EOL","BOL","opposite","no_promo_sales","NP_Flag","NP_IR","high_disc_Flag","always_promo_Flag","cann_group",
         "cann_receiver","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","Direct_Cann_Weber","Direct_Cann_Muscatel_Weber","Direct_Cann_Muscatel_Palermo","Direct_Cann_Palermo","Amount","exclude",
         "AE_NP_IR","AE_ASP_IR","AE_Other_IR","Street_PriceWhoChange_log","SKUWhoChange","PriceChange_HPS_OPS","Season_most_recent")
-      .coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output_commercial\\preregresion_commercial_output.csv")
+      .coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/Preregression_Commercial/preregresion_commercial_output_"+currentTS+".csv")
   }
 
 }

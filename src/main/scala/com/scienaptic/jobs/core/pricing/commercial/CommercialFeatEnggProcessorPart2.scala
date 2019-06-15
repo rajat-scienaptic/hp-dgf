@@ -25,18 +25,18 @@ object CommercialFeatEnggProcessor2 {
       .config(sparkConf)
       .getOrCreate
 
-    var commercial = spark.read.option("header", "true").option("inferSchema", "true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeNPD.csv")
+    var commercial = spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeNPD.csv")
       .withColumn("ES date", to_date(unix_timestamp(col("ES date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"), "yyyy-MM-dd").cast("timestamp")))
 
-    var npdDF = spark.read.option("header", "true").option("inferSchema", "true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\NPD_weekly.csv")
+    var npdDF = spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv")
     var npd = renameColumns(npdDF)
     npd.columns.toList.foreach(x => {
       npd = npd.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     npd = npd.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp"))).cache()
-    npd.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\npd.csv")
+    npd.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/npd.csv")
 
     /*================= Brand not Main Brands =======================*/
     val npdChannelBrandFilterNotRetail = npd.where((col("Channel") =!= "Retail") && (col("Brand").isin("Canon", "Epson", "Brother", "Lexmark", "Samsung")))
@@ -169,6 +169,6 @@ object CommercialFeatEnggProcessor2 {
       .na.fill(0, Seq("L1_competition_HP_ssmodel", "L2_competition_HP_ssmodel")).cache()
 
     //commercial.write.option("header", "true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeCannibalisation.csv")
-    commercial.coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeCannibalisation.csv")
+    commercial.coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeCannibalisation.csv")
   }
 }

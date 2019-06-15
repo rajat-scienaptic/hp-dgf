@@ -26,7 +26,7 @@ object CommercialFeatEnggProcessor4 {
       .config(sparkConf)
       .getOrCreate
 
-    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeNPDCalc.csv")
+    var commercial = spark.read.option("header","true").option("inferSchema","true").csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeNPDCalc.csv")
       .withColumn("ES date", to_date(unix_timestamp(col("ES date"),"yyyy-MM-dd").cast("timestamp")))
       .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
       .withColumn("GA date", to_date(unix_timestamp(col("GA date"),"yyyy-MM-dd").cast("timestamp")))
@@ -34,7 +34,7 @@ object CommercialFeatEnggProcessor4 {
       .withColumn("Sale_Price", round(col("Sale_Price"), 2))
       .withColumn("Street Price", round(col("Street Price"), 2))
 
-    val npdDF = spark.read.option("header", "true").option("inferSchema", "true").csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\inputs\\NPD_weekly.csv")
+    val npdDF = spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv")
     var npd = renameColumns(npdDF)
     npd.columns.toList.foreach(x => {
       npd = npd.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
@@ -74,7 +74,7 @@ object CommercialFeatEnggProcessor4 {
 
     //seasonalityNPD.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/seasonalityNPD.csv")
     //commercial.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeIFS2Calc.csv")
-    seasonalityNPD.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\seasonalityNPD.csv")
-    commercial.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Data\\CR1\\May31_Run\\spark_output\\commercialBeforeIFS2Calc.csv")
+    seasonalityNPD.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/seasonalityNPD.csv")
+    commercial.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/commercialTemp/CommercialFeatEngg/commercialBeforeIFS2Calc.csv")
   }
 }
