@@ -16,7 +16,7 @@ object RetailPreRegressionPart11 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2Cann-half-PART10.csv")
+    var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-half-PART10.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -62,7 +62,7 @@ object RetailPreRegressionPart11 {
       .withColumn("Total_IR", when(col("Total_IR").isNull, 0).otherwise(col("Total_IR")))
       .withColumn("Sale_Price", col("Street_Price") - col("Total_IR"))
       .withColumn("Price_Range_20_Perc_high", lit(1.2) * col("Sale_Price"))
-    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2Cann-PART11.csv")
+    retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-PART11.csv")
 
   }
 }

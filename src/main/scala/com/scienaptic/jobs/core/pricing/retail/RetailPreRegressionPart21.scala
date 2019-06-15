@@ -15,17 +15,16 @@ import scala.collection.mutable
 
 object RetailPreRegressionPart21 {
 
-  val TEMP_OUTPUT_DIR = "/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/temp/preregression_output_retail.csv"
-
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    val npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/NPD_weekly.csv"))
-    val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
+    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv"))
+    val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(col("Week_End_Date")))
+      //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
       .withColumn("Week_End_Date", date_sub(col("Week_End_Date"), 7)).agg(max("Week_End_Date")).head().getDate(0)
 
     //var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Preregression_Inputs/Intermediate/retail-DirectCann-PART20.csv")
-    var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-DirectCann-PART20.csv")
+    var retailWithCompCann3DF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART20.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -52,11 +51,13 @@ object RetailPreRegressionPart21 {
     */
 
     /* canon funding change starts May 23rd 2019*/
-    var canon = renameColumns(executionContext.spark.read.option("header","true").option("inferSchema","true").csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/canon_fund.csv"))
+    var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/AUX/Aux_canon.csv"))
     canon = canon
       //TODO: Check what format read in production
-      .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd/MM/yyyy").cast("timestamp")))
-      .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd/MM/yyyy").cast("timestamp")))
+      .withColumn("Start Date", to_date(col("Start Date")))
+      .withColumn("End Date", to_date(col("End Date")))
+      /*.withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"dd/MM/yyyy").cast("timestamp")))
+      .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"dd/MM/yyyy").cast("timestamp")))*/
       .withColumn("wk_day_start", dayofweek(col("Start_date")))
       .withColumn("wk_day_end", dayofweek(col("End_date")))
       .withColumn("WSD", date_add(expr("date_sub(Start_date, wk_day_start)"),7))
@@ -245,7 +246,7 @@ object RetailPreRegressionPart21 {
       .withColumn("Price_Gap_Online", when(col("Price_Gap_Online").isNull, 0).otherwise(col("Price_Gap_Online")))
       .withColumn("Price_Gap_Offline", when(col("Price_Gap_Offline").isNull, 0).otherwise(col("Price_Gap_Offline")))
 
-    retailWithCompCann3DF.write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/preregression__before_output_retail.csv")
+    retailWithCompCann3DF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/preregression__before_output_retail.csv")
 
     // walmart
     /*val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/walmart_link.csv")

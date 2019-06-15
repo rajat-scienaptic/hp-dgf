@@ -13,7 +13,7 @@ object RetailPreRegressionPart18 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailGroupWEDL1InnerCompCann3  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2InnerCann-PART17.csv")
+    var retailGroupWEDL1InnerCompCann3  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2InnerCann-PART17.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -56,7 +56,7 @@ object RetailPreRegressionPart18 {
       .withColumn("PriceBand_Innercannibalization_OnOffline_Min", when(col("PriceBand_Innercannibalization_OnOffline_Min").isNull, 0).otherwise(col("PriceBand_Innercannibalization_OnOffline_Min")))
       .na.fill(0, Seq("PriceBand_cannibalization_OnOffline_Min", "PriceBand_Innercannibalization_OnOffline_Min"))
 
-    retailGroupWEDL1InnerCompCann3.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-PriceBandCannOfflineOnline-PART18.csv")
+    retailGroupWEDL1InnerCompCann3.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-PriceBandCannOfflineOnline-PART18.csv")
 
 
   }

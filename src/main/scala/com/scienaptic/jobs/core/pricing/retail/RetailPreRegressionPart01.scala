@@ -23,11 +23,13 @@ object RetailPreRegressionPart01 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/NPD_weekly.csv"))
-    val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp")))
+    var npd = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/NPD/NPD_weekly.csv"))
+    val maximumRegressionDate = npd.select("Week_End_Date").withColumn("Week_End_Date", to_date(col("Week_End_Date")))
+      // TODO: Earlier this was MM/dd/yyyy now its timestamo
+      // .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("Week_End_Date", date_sub(col("Week_End_Date"), 7)).agg(max("Week_End_Date")).head().getDate(0)
-    //val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
-    var retail = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/outputs/posqty_output_retail.csv"))
+    val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    var retail = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/Pricing/Outputs/POS_Retail/posqty_output_retail.csv"))
     retail.columns.toList.foreach(x => {
       retail = retail.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -45,7 +47,7 @@ object RetailPreRegressionPart01 {
       .withColumnRenamed("Street_Price", "Street_Price_Org")
 
 
-    var IFS2 = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/IFS2_most_recent.csv"))
+    var IFS2 = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/etherData/managedSources/IFS2/IFS2_most_recent.csv"))
     IFS2.columns.toList.foreach(x => {
       IFS2 = IFS2.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -99,12 +101,12 @@ object RetailPreRegressionPart01 {
     val retailJoinRetailTreatmentAndAggregatePOSDF = retailMergeIFS2DF
       .dropDuplicates("SKU", "Account", "Week_End_Date", "Online", "Special_Programs")
 
-    var SKUMapping = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/s-print_SKU_mapping.csv"))
+    var SKUMapping = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/S-Print/SKU_Mapping/s-print_SKU_mapping.csv"))
     SKUMapping.columns.toList.foreach(x => {
       SKUMapping = SKUMapping.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
 
-    var GAP1 = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/gap_data_full.csv")).cache()
+    var GAP1 = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/Pricing/Outputs/POS_GAP/gap_data_full_"+currentTS+".csv")).cache()
     GAP1.columns.toList.foreach(x => {
       GAP1 = GAP1.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -136,7 +138,7 @@ object RetailPreRegressionPart01 {
       .drop("Product", "SKU_HP")
       .distinct()
 
-    retailJoinAdPositionDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-r-retailJoinAdPositionDF-PART01.csv")
-    GAP1JoinSKUMappingDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-r-GAP1JoinSKUMappingDF-PART01.csv")
+    retailJoinAdPositionDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoinAdPositionDF-PART01.csv")
+    GAP1JoinSKUMappingDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-GAP1JoinSKUMappingDF-PART01.csv")
   }
 }

@@ -19,13 +19,13 @@ object RetailPreRegressionPart10 {
     val spark: SparkSession = executionContext.spark
 
 
-    var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2-HP-PART09.csv")
+    var retailWithCompetitionDF = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2-HP-PART09.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
-    var inkPromo = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/Ink BOGO data.csv"))
+    var inkPromo = renameColumns(spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Calendar/Ink_Promo/Ink BOGO data.csv"))
     inkPromo.columns.toList.foreach(x => {
       inkPromo = inkPromo.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -72,7 +72,7 @@ object RetailPreRegressionPart10 {
     /* CR1 - Walmart Source - Start */
     val walmartRetail = retailWithCompCannDF.where(col("Account")==="Walmart")
 
-    var walmartPOS = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/walmart_posqty.csv"))
+    var walmartPOS = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/etherData/managedSources/Walmart_POS/walmart_posqty.csv"))
     walmartPOS = walmartPOS.where(!col("Store Type Desc").isin("Unknown","BASE STR Nghbrhd Mkt") && (col("POS Sales") > 0) && (col("POS Qty") > 0))
         .withColumn("SKU", substring(col("Vendor Stk/Part Nbr"), 0, 6))
     walmartPOS = walmartPOS
@@ -108,7 +108,7 @@ object RetailPreRegressionPart10 {
     //walmartPOS = walmartPOS.join(walmartRetail.drop("Special_Programs"), Seq("Account","Online","SKU","Week_End_Date"), "right")
     walmartPOS = walmartPOS.join(walmartRetail.withColumnRenamed("Special_Programs", "Special_Programs_y"), Seq("Account","Online","SKU","Week_End_Date"), "right")
 
-    val visID = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/Walmart_checks_visual.csv"))
+    val visID = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/etherData/managedSources/Walmart_link_checks/Walmart_checks_visual.csv"))
         .withColumn("EOL_vis", to_date(unix_timestamp(col("EOL_vis"), "MM/dd/yyyy").cast("timestamp")))
         .withColumn("EOL_vis_online", to_date(unix_timestamp(col("EOL_vis_online"), "MM/dd/yyyy").cast("timestamp")))
         .withColumn("BOL_vis", to_date(unix_timestamp(col("BOL_vis"), "MM/dd/yyyy").cast("timestamp")))
@@ -130,7 +130,7 @@ object RetailPreRegressionPart10 {
       .withColumn("EOL_vis", datediff(col("EOL_vis_online"), epochDate))
       .withColumn("EOL_vis", datediff(col("BOL_vis_online"), epochDate))*/
 
-    val dmerge = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/drop_in_merge.csv"))
+    val dmerge = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/etherData/managedSources/Walmart_link_checks/drop_in_merge.csv"))
         //.withColumnRenamed("SKU","SKU")
         .withColumn("cSKU", col("cSKU").cast("string"))
 
@@ -190,7 +190,7 @@ object RetailPreRegressionPart10 {
       .join(retailWithAdj.withColumn("Week_End_Date", col("Week_End_Date")), Seq("Week_End_Date", "SKU"), "right")*/
 
 
-    retailWithCompCannDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2Cann-half-PART10.csv")
+    retailWithCompCannDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2Cann-half-PART10.csv")
 
   }
 }

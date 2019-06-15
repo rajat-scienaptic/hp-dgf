@@ -16,7 +16,7 @@ object RetailPreRegressionPart17 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailGroupWEDL1InnerCompCann2  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2InnerCann-half-PART16.csv")
+    var retailGroupWEDL1InnerCompCann2  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2InnerCann-half-PART16.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -50,7 +50,7 @@ object RetailPreRegressionPart17 {
       .when(col("Street_Price").between(500, 10000), lit("500+")))
       .withColumn("PriceBand", when(col("PriceBand").isNull, "NA").otherwise(col("PriceBand")))
 
-    retailGroupWEDL1InnerCompCann3.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-L1L2InnerCann-PART17.csv")
+    retailGroupWEDL1InnerCompCann3.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-L1L2InnerCann-PART17.csv")
 
 
   }

@@ -16,7 +16,7 @@ object RetailPreRegressionPart19 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailGroupWEDL1InnerCompCann3  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-PriceBandCannOfflineOnline-PART18.csv")
+    var retailGroupWEDL1InnerCompCann3  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-PriceBandCannOfflineOnline-PART18.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -68,7 +68,7 @@ object RetailPreRegressionPart19 {
       .withColumn("Special_Programs", when(col("BOPIS") === 1 && col("Account").isin("Staples"), "BOPIS").otherwise(col("Special_Programs")))
       /*  CR1 - Deduplication removed from R code  */
       //.distinct()
-    retailWithCompCann3DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-CateCannOfflineOnline-PART19.csv")
+    retailWithCompCann3DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-CateCannOfflineOnline-PART19.csv")
 
   }
 }

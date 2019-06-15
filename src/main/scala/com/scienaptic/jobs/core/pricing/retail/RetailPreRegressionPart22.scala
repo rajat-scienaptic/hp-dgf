@@ -8,19 +8,19 @@ import org.apache.spark.sql.{SaveMode, SparkSession}
 
 object RetailPreRegressionPart22 {
 
-  val TEMP_OUTPUT_DIR = "/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/temp/preregression_output_retail.csv"
+  val TEMP_OUTPUT_DIR = "/etherData/retailTemp/RetailFeatEngg/temp/preregression_output_retail.csv"
 
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCann3DF = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/preregression__before_output_retail.csv"))
+    var retailWithCompCann3DF = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/etherData/retailTemp/RetailFeatEngg/preregression__before_output_retail.csv"))
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("EOL_Date", to_date(unix_timestamp(col("EOL_Date"), "yyyy-MM-dd").cast("timestamp"))).cache()
 
     // walmart
-    val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/walmart_link.csv")
+    val skuWalmart = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Walmart_link_checks/walmart_link.csv")
       .withColumnRenamed("retail_sku", "SKU")
       .withColumnRenamed("retail_sku_desc", "SKU_Name")
 
@@ -55,7 +55,7 @@ object RetailPreRegressionPart22 {
       .withColumn("Days_on_Promo", when(col("Total_IR") > 0 && col("Days_on_Promo") === 0, 7).otherwise(col("Days_on_Promo")))
 
     /* CR1 - New source added EndCap - Start */
-    var endcap = renameColumns(spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/endcap_weekly_prereg_2019-03-06_074509.csv"))
+    var endcap = renameColumns(spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Walmart_link_checks/endcap_weekly_prereg.csv"))
       //TODO: Check format in production
         .withColumn("Week_End_Date", to_date(col("Week_End_Date")))
     endcap = endcap.groupBy("Account","SKU","Week_End_Date")
@@ -73,6 +73,8 @@ object RetailPreRegressionPart22 {
     retailWithCompCann3DF = retailWithCompCann3DF           //CR1 - Confirmed by Sagnika. Special_Programs will remain as 'None' for Walmart Account.
         .withColumn("Special_Programs", when(col("Account")==="Walmart", "None").otherwise(col("Special_Programs")))
 
+    val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+`
     /* CR1 - New features added; some removed */
     //TODO: Uncomment Special_Programs_y (Created in part 10)
     retailWithCompCann3DF = retailWithCompCann3DF.select("Account", "SKU", "Week_End_Date" /*"mnth"*/, "walmart_sku", "Online", "trend", "SKU_Name", "L1_Category",
@@ -116,7 +118,7 @@ object RetailPreRegressionPart22 {
       "Price_Gap_Online", "Price_Gap_Offline", "Street_Price", "Walmart_Price", "Delta_Price_Walmart", "Price_Gap_Walmart", "weekly_endcap_flag")
 
 
-    retailWithCompCann3DF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/preregression_output_retail.csv")
+    retailWithCompCann3DF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/preregression_output_retail_"+currentTS+".csv")
 
     val regData = retailWithCompCann3DF
       .withColumn("MasterIR", col("NP_IR") + col("ASP_IR"))

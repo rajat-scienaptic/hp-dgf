@@ -39,7 +39,7 @@ object CommercialFeatEnggProcessor4 {
     npd.columns.toList.foreach(x => {
       npd = npd.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
-    npd = npd.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp"))).cache()
+    npd = npd.withColumn("Week_End_Date", to_date(col("Week_End_Date")))//.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp"))).cache()
 
     val AverageWeeklySales = commercial
       .groupBy("SKU","Reseller_Cluster","Sale_Price","Street Price")

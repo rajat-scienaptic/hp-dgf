@@ -16,7 +16,7 @@ object RetailPreRegressionPart20 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailWithCompCann3DF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-CateCannOfflineOnline-PART19.csv")
+    var retailWithCompCann3DF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-CateCannOfflineOnline-PART19.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -135,7 +135,7 @@ object RetailPreRegressionPart20 {
     retailWithCompCann3DF = retailWithCompCann3DF.withColumn("Direct_Cann_Muscatel_Palermo", when(col("cann_group")==="Muscatel",col("Direct_Cann_Muscatel_Palermo")).otherwise(0))
       .na.fill(0, Seq("Direct_Cann_Muscatel_Palermo","Direct_Cann_201","Direct_Cann_225","Direct_Cann_252","Direct_Cann_277","Direct_Cann_Weber","Direct_Cann_Muscatel_Weber","Direct_Cann_Palermo"))
 
-    retailWithCompCann3DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-DirectCann-PART20.csv")
+    retailWithCompCann3DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-DirectCann-PART20.csv")
 
   }
 }

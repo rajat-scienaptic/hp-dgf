@@ -20,12 +20,12 @@ object RetailPreRegressionPart04 {
 
     val focusedAccounts = List("HP Shopping", "Amazon-Proper", "Best Buy", "Office Depot-Max", "Staples")
 
-    var retailJoinAggUpstreamDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-retailJoinAggUpstreamDF-PART03.csv")
+    var retailJoinAggUpstreamDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamDF-PART03.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
 
-    var retailJoinAggUpstreamWithNATreatmentDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-retailJoinAggUpstreamWithNATreatmentDF-PART03.csv")
+    var retailJoinAggUpstreamWithNATreatmentDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamWithNATreatmentDF-PART03.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -85,10 +85,10 @@ object RetailPreRegressionPart04 {
       .withColumn("ImpAve_Staples", when(col("ImpAve_Staples").isNull, col("Street_Price")).otherwise(col("ImpAve_Staples")))
       .withColumn("ImpMin_Staples", when(col("ImpMin_Staples").isNull, col("Street_Price")).otherwise(col("ImpMin_Staples")))
 
-    //val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
-    var amz = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/amazon_sales_price.csv")).cache()
-      //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
-      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
+    val currentTS = executionContext.spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
+    var amz = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", true).csv("/etherData/Pricing/Outputs/POS_Amazon/amazon_sales_price"+currentTS+".csv")).cache()
+      .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
+      //.withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "MM/dd/yyyy").cast("timestamp")))
     amz.columns.toList.foreach(x => {
       amz = amz.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -121,7 +121,7 @@ object RetailPreRegressionPart04 {
       .withColumn("price", log(lit(1) - col("Promo_Pct")))
 
 
-    retailUnionRetailOtherAccountsDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-r-retailUnionRetailOtherAccountsDF-part04.csv")
+    retailUnionRetailOtherAccountsDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailUnionRetailOtherAccountsDF-part04.csv")
 
   }
 }

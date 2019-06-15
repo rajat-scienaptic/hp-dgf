@@ -53,7 +53,7 @@ object RetailPreRegressionPart05 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailUnionRetailOtherAccountsDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-r-retailUnionRetailOtherAccountsDF-part04.csv")
+    var retailUnionRetailOtherAccountsDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailUnionRetailOtherAccountsDF-part04.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
@@ -140,7 +140,7 @@ object RetailPreRegressionPart05 {
       .withColumn("EOL_criterion", when(col("EOL_criterion").isNull, 0).otherwise(col("EOL_criterion")))
       .withColumn("EOL_criterion_old", col("EOL_criterion")) // Variable omitted
 
-    var retailEOLDates = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/EOL_Dates_Retail.csv")).cache()
+    var retailEOLDates = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Calendar/EOL_Dates/EOL_Dates_Retail.csv")).cache()
     retailEOLDates.columns.toList.foreach(x => {
       retailEOLDates = retailEOLDates.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -164,6 +164,6 @@ object RetailPreRegressionPart05 {
 
      retailEOL = EOLCriterion2
 
-     retailEOL.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-EOL-half-PART05.csv")
+     retailEOL.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/RetailFeatEngg/retail-EOL-half-PART05.csv")
   }
 }

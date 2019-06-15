@@ -18,12 +18,12 @@ object RetailPreRegressionPart03 {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
 
-    var retailJoincompAdTotalDFDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-r-retailJoincompAdTotalDFDF-PART02.csv")
+    var retailJoincompAdTotalDFDF  = executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-r-retailJoincompAdTotalDFDF-PART02.csv")
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("GA_date", to_date(unix_timestamp(col("GA_date"), "yyyy-MM-dd").cast("timestamp")))
       .withColumn("ES_date", to_date(unix_timestamp(col("ES_date"), "yyyy-MM-dd").cast("timestamp")))
 
-    var calendar = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/master_calendar_retail.csv")).cache()
+    var calendar = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Calendar/Retail/master_calendar_retail.csv")).cache()
     calendar.columns.toList.foreach(x => {
       calendar = calendar.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -52,7 +52,7 @@ object RetailPreRegressionPart03 {
       .otherwise(lit("NA")))
 
     /* CR1 - New source added, Bundle Program Master.csv - Start */
-    val bundle = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/Bundle Program master.csv"))
+    val bundle = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/etherData/managedSources/Calendar/Retail/Bundle_Program_master.csv"))
       .withColumn("Week_End_Date", to_date(unix_timestamp(col("Week_End_Date"),"MM/dd/yyyy").cast("timestamp")))
     retailJoinCalendarDF = retailJoinCalendarDF.join(bundle, Seq("SKU","Week_End_Date"), "left")
     /* CR1 - New source added, Bundle Program Master.csv - End */
@@ -77,7 +77,7 @@ object RetailPreRegressionPart03 {
       .withColumn("Other_IR", col("Total_IR") - (col("NP_IR") + col("ASP_IR")))
       .withColumn("Ad", when(col("Total_IR") === 0, 0).otherwise(col("Ad")))
 
-    var masterSprintCalendar = renameColumns(executionContext.spark.read.option("header", "true").option("inferSchema", "true").csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/Master_Calender_s-print.csv")).cache()
+    var masterSprintCalendar = renameColumns(spark.read.option("header", "true").option("inferSchema", "true").csv("/etherData/managedSources/S-Print/Master_Calendar/Master_Calender_s-print.csv")).cache()
     masterSprintCalendar.columns.toList.foreach(x => {
       masterSprintCalendar = masterSprintCalendar.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -92,7 +92,7 @@ object RetailPreRegressionPart03 {
       .withColumn("NP_IR", when(col("NP_IR").isNull, 0).otherwise(col("NP_IR")))
       .drop("Rebate_SS")
 
-    var aggUpstream = renameColumns(executionContext.spark.read.option("header", true).option("inferSchema", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/inputs/AggUpstream.csv")).cache()
+    var aggUpstream = renameColumns(spark.read.option("header", true).option("inferSchema", true).csv("/etherData/managedSources/Upstream/AggUpstream.csv")).cache()
     aggUpstream.columns.toList.foreach(x => {
       aggUpstream = aggUpstream.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
@@ -125,8 +125,8 @@ object RetailPreRegressionPart03 {
     var retailJoinAggUpstreamDF = retailJoinAggUpstreamWithNATreatmentDF
       .filter(col("Account").isin(focusedAccounts: _*))
 
-      retailJoinAggUpstreamWithNATreatmentDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-retailJoinAggUpstreamWithNATreatmentDF-PART03.csv")
-      retailJoinAggUpstreamDF.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/home/avik/Scienaptic/HP/data/May31_Run/spark_out_retail/retail-retailJoinAggUpstreamDF-PART03.csv")
+      retailJoinAggUpstreamWithNATreatmentDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamWithNATreatmentDF-PART03.csv")
+      retailJoinAggUpstreamDF.write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/retailTemp/RetailFeatEngg/retail-retailJoinAggUpstreamDF-PART03.csv")
 
   }
 }
