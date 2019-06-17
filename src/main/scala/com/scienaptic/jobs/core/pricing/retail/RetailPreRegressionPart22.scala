@@ -74,7 +74,7 @@ object RetailPreRegressionPart22 {
         .withColumn("Special_Programs", when(col("Account")==="Walmart", "None").otherwise(col("Special_Programs")))
 
     val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
-`
+
     /* CR1 - New features added; some removed */
     //TODO: Uncomment Special_Programs_y (Created in part 10)
     retailWithCompCann3DF = retailWithCompCann3DF.select("Account", "SKU", "Week_End_Date" /*"mnth"*/, "walmart_sku", "Online", "trend", "SKU_Name", "L1_Category",

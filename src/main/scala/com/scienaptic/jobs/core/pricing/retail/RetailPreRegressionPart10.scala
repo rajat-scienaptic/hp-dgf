@@ -72,7 +72,7 @@ object RetailPreRegressionPart10 {
     /* CR1 - Walmart Source - Start */
     val walmartRetail = retailWithCompCannDF.where(col("Account")==="Walmart")
 
-    var walmartPOS = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/etherData/managedSources/Walmart_POS/walmart_posqty.csv"))
+    var walmartPOS = renameColumns(spark.read.option("header",true).option("inferSchema",true).csv("/etherData/managedSources/Walmart_POS/WalmartPOSQTY.csv"))
     walmartPOS = walmartPOS.where(!col("Store Type Desc").isin("Unknown","BASE STR Nghbrhd Mkt") && (col("POS Sales") > 0) && (col("POS Qty") > 0))
         .withColumn("SKU", substring(col("Vendor Stk/Part Nbr"), 0, 6))
     walmartPOS = walmartPOS
