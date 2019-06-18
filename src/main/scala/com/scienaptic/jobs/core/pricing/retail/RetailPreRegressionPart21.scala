@@ -54,8 +54,8 @@ object RetailPreRegressionPart21 {
     var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/AUX/Aux_canon.csv"))
     canon = canon
       //TODO: Check what format read in production
-      .withColumn("Start Date", to_date(col("Start Date")))
-      .withColumn("End Date", to_date(col("End Date")))
+      .withColumn("Start_Date", to_date(col("Start Date")))
+      .withColumn("End_Date", to_date(col("End Date")))
       /*.withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"dd/MM/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"dd/MM/yyyy").cast("timestamp")))*/
       .withColumn("wk_day_start", dayofweek(col("Start_date")))

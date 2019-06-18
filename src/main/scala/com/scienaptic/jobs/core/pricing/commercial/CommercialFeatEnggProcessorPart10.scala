@@ -136,8 +136,11 @@ object CommercialFeatEnggProcessor10 {
     /* Code Change: Avik April 6: VApr6: Use new source, Canon funding code (Aux table file's worksheet: canon_fund) - Start */
     var canon = renameColumns(spark.read.option("header","true").option("inferSchema","true").csv("/etherData/managedSources/AUX/Aux_canon.csv"))
     canon = canon
-      .withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd-MM-yyyy").cast("timestamp")))
-      .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
+      //TODO: Check format in production
+      .withColumn("Start_Date", to_date(col("Start Date")))
+      .withColumn("End_Date", to_date(col("End Date")))
+      /*.withColumn("Start_date", to_date(unix_timestamp(col("Start Date"),"dd-MM-yyyy").cast("timestamp")))
+      .withColumn("End_date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))*/
       .withColumn("wk_day_start", dayofweek(col("Start_date")))
       .withColumn("wk_day_end", dayofweek(col("End_date")))
       .withColumn("WSD", date_add(expr("date_sub(Start_date, wk_day_start)"),7))
