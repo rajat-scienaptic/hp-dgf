@@ -3,6 +3,7 @@ package com.scienaptic.jobs.core
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.utility.Utils._
 import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.apache.spark.sql.functions.col
 
 /*
 Blender : Responsible for merging ORCA's historic and daily file into one file.
