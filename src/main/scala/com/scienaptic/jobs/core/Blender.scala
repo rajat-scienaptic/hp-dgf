@@ -4,6 +4,7 @@ import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.utility.Utils._
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.sql.functions.col
+import com.scienaptic.jobs.bean.UnionOperation.doUnion
 
 /*
 Blender : Responsible for merging ORCA's historic and daily file into one file.
@@ -28,11 +29,31 @@ object Blender {
         case "Walmart_Pos_Qty" => orcaNewSource = orcaNewSource   //Only Historic was faulty. So replaced Carlos' feed with Fabio's file.
         case _ => orcaNewSource = orcaNewSource
       }
-      historicSource.unionByName(orcaNewSource).distinct()
-        .coalesce(1)
-        .write.mode(SaveMode.Overwrite)
-        .option("header", true)
-        .csv(sourceDefinition.orcaNewFilePath.replace("_new",""))
+
+      nameSource match {
+        case "ORCA_QRY_2017_TO_DATE" => {
+          doUnion(historicSource,orcaNewSource).get.distinct()
+            .coalesce(1)
+            .write.mode(SaveMode.Overwrite)
+            .option("header", true)
+            .csv(sourceDefinition.orcaNewFilePath.replace("_new",""))
+        }
+        case "ST" => {
+          doUnion(historicSource,orcaNewSource).get.distinct()
+            .coalesce(1)
+            .write.mode(SaveMode.Overwrite)
+            .option("header", true)
+            .csv(sourceDefinition.orcaNewFilePath.replace("_new",""))
+        }
+        case _ => {
+          historicSource.unionByName(orcaNewSource).distinct()
+            .coalesce(1)
+            .write.mode(SaveMode.Overwrite)
+            .option("header", true)
+            .csv(sourceDefinition.orcaNewFilePath.replace("_new",""))
+
+        }
+      }
     }
   }
 }
