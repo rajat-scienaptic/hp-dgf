@@ -16,7 +16,9 @@ object ExcelDQValidation {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
     val sourceMap = executionContext.configuration.sources
+    val reportingBasePaths : Map[String,String] = executionContext.configuration.reporting
     import spark.implicits._
+    val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
     // Method for generating the summarise value
     def convertListToDFColumn(columnList: List[String], dataFrame: DataFrame) = {
@@ -27,11 +29,12 @@ object ExcelDQValidation {
       df.select(convertListToDFColumn(cols, df): _*).summary()
     }
 
-    val inputLocation = "C:\\Users\\leroy\\Downloads\\Output\\Excel\\InPut\\"
-    val outputLocation = "D:\\files\\temp\\spark-out-local\\29thMay-Reporting\\"
-    val alteryxRecentInputLocation = "C:\\Users\\leroy\\Downloads\\Output\\Excel\\InPut\\Alteryx\\recent_week\\"
-    val alteryxPreviousInputLocation = "C:\\Users\\leroy\\Downloads\\Output\\Excel\\InPut\\Alteryx\\previous_week\\"
-    val auxSkuHierarchyLocation = "D:\\files\\input\\Alteryx\\"
+    val retailInputLocation = reportingBasePaths.get("retail-preregression-basepath")
+    val commercialInputLocation = reportingBasePaths.get("commercial-preregression-basepath")
+    val outputLocation = reportingBasePaths.get("output-basepath").asInstanceOf[String].format(currentTS, "/excel")
+    val alteryxRetailInputLocation = reportingBasePaths.get("retail-alteryx-basepath")
+    val alteryxCommercialInputLocation = reportingBasePaths.get("commercial-alteryx-basepath")
+    val auxSkuHierarchyLocation = reportingBasePaths.get("sku-hierarchy-basepath")
 
     var minVal = 0.0
     var maxVal = 0.0
@@ -70,7 +73,7 @@ object ExcelDQValidation {
     //---------------------------------------Retail validation starts (Excel)---------------------------------------
 
     val retailDataFrame = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(inputLocation + "spark-pre-regression-retail-17thMay-out.csv"))
+      .csv(retailInputLocation + "preregression_output_retail_"+ currentTS +".csv"))
 
     //    Duplicate Check
     val retailDuplicateData = retailDataFrame.groupBy("SKU", "Account", "Week_End_Date", "online", "Special_Programs").count.filter("count>1")
@@ -416,7 +419,7 @@ object ExcelDQValidation {
     /*-------------------------------Commercial Validation starts--------------------------------------------*/
 
     val commercialDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(inputLocation + "preregrsesion_output_commercial-Spark-26thApril2019.csv"))
+      .csv(commercialInputLocation + "preregresion_commercial_output_"+currentTS+".csv"))
 
     val commercialDuplicateData = commercialDF.groupBy("SKU", "Reseller_Cluster", "Week_End_Date").count.filter("count>1")
     val commDupCount = commercialDuplicateData.count();
@@ -524,11 +527,11 @@ object ExcelDQValidation {
 
 
     val recentSeasonRetailData = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxRecentInputLocation + "posqty_output_retail.csv")).orderBy(col("season").desc)
+      .csv(alteryxRetailInputLocation + "posqty_output_retail.csv")).orderBy(col("season").desc)
       .select("SKU", "Account", "season", "POS_Qty", "Raw_POS_Qty", "Distribution_Inv")
 
     val previousSeasonRetalData = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxPreviousInputLocation + "posqty_output_retail.csv")).orderBy(col("season").desc)
+      .csv(alteryxRetailInputLocation + "posqty_output_retail.csv")).orderBy(col("season").desc)
       .withColumnRenamed("POS_Qty", "Pre_POS_Qty")
       .withColumnRenamed("Raw_POS_Qty", "Pre_Raw_POS_Qty")
       .withColumnRenamed("Distribution_Inv", "Pre_Distribution_Inv")
@@ -591,10 +594,10 @@ object ExcelDQValidation {
 
     //-------------------------------------------------Alteryx  for Commercial----------------------------------------------
     val recentCommercialData = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxRecentInputLocation + "posqty_output_commercial.csv")).orderBy(col("season").desc)
+      .csv(alteryxCommercialInputLocation + "posqty_output_commercial.csv")).orderBy(col("season").desc)
       .select("SKU", "Reseller Cluster", "season", "Qty", "Inv_Qty")
     val previousWeekCommercialData = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxPreviousInputLocation + "posqty_output_commercial.csv")).orderBy(col("season").desc)
+      .csv(alteryxCommercialInputLocation + "posqty_output_commercial.csv")).orderBy(col("season").desc)
       .withColumnRenamed("Qty", "Pre_Qty")
       .withColumnRenamed("Inv_Qty", "Pre_Inv_Qty")
       .select("SKU", "Reseller Cluster", "season", "Pre_Qty", "Pre_Inv_Qty")
@@ -644,7 +647,7 @@ object ExcelDQValidation {
     //-------------------------------------------------Alteryx  for Retail SKU----------------------------------------------
     //TODO: Debug this
     val recentRetailDataForSkuDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxRecentInputLocation + "posqty_output_retail.csv"))
+      .csv(alteryxRetailRecentInputLocation + "posqty_output_retail.csv"))
     val skuHierarchyDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
       .csv(auxSkuHierarchyLocation + "Aux_sku_hierarchy.csv")).select("SKU")
       .withColumn("Flag", lit(true))

@@ -19,7 +19,11 @@ object RCodeDQValidation {
   def execute(executionContext: ExecutionContext): Unit = {
     val spark: SparkSession = executionContext.spark
     val sourceMap = executionContext.configuration.sources
+    val reportingBasePaths = executionContext.configuration.reporting
+
     import spark.implicits._
+
+    val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
     //Avik: no need to use this. Already present in utility
     def convertListToDFColumn(columnList: List[String], dataFrame: DataFrame) = {
@@ -30,8 +34,9 @@ object RCodeDQValidation {
       df.select(convertListToDFColumn(cols, df): _*).summary()
     }
 
-    val inputLocation = "C:\\Users\\leroy\\Downloads\\Output\\Excel\\InPut\\"
-    val outputLocation = "D:\\files\\temp\\spark-out-local\\29thMay-Reporting\\R-Code\\"
+    val inputRetailLocation = reportingBasePaths.get("retail-preregression-basepath")
+    val inputCommercialLocation = reportingBasePaths.get("retail-preregression-basepath")
+    val outputLocation = reportingBasePaths.get("output-basepath").asInstanceOf[String].format(currentTS, "/R-code")
 
     val seasons = {
       val yy: Int = DateTime.now().getYear.toString.slice(2, 4).toInt
@@ -71,7 +76,7 @@ object RCodeDQValidation {
     /*----------------------------------------------------Retail Starts ---------------------------------------------------*/
     //Load The Retail CSV
     var retailDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(inputLocation + "spark-pre-regression-retail-17thMay-out.csv"))
+      .csv(inputRetailLocation + "preregression_output_retail_"+ currentTS +".csv"))
     retailDF = retailDF
       .where((retailDF("Account") === "Best Buy")
         || (retailDF("Account") === "Office Depot-Max")
@@ -98,7 +103,7 @@ object RCodeDQValidation {
       "Direct_Cann_201", "Direct_Cann_225", "Direct_Cann_252", "Direct_Cann_277", "Direct_Cann_Weber", "Direct_Cann_Palermo", "Direct_Cann_Muscatel_Weber",
       "Direct_Cann_Muscatel_Palermo", "seasonality_npd2", "Promo_Pct_Min", "Promo_Pct_Ave", "L1_cannibalization_OnOffline_Min", "L2_cannibalization_OnOffline_Min",
       "L1_Innercannibalization_OnOffline_Min", "L2_Innercannibalization_OnOffline_Min", "PriceBand_cannibalization_OnOffline_Min",
-      "PriceBand_Innercannibalization_OnOffline_Min", "Cate_cannibalization_OnOffline_Min", "Cate_Innercannibalization_OnOffline_Min", "BOPISbtbhol", "BOPISbts",
+      "PriceBand_Innercannibalization_OnOffline_Min", "Cate_cannibalization_OnOffline_Min", "Cate_Innercannibalization_OnOffline_Min", /*"BOPISbtbhol", "BOPISbts",*/
       "BOPIS", "LBB_adj", "exclude")
     var dataFormatColumnsVaue = retailDF.select(cols.head, cols.tail: _*).schema.fields
 
@@ -129,7 +134,7 @@ object RCodeDQValidation {
       "L2_cannibalization", "Direct_Cann_201", "Direct_Cann_225", "Direct_Cann_252", "Direct_Cann_277", "Direct_Cann_Weber", "Direct_Cann_Palermo",
       "Direct_Cann_Muscatel_Weber", "Direct_Cann_Muscatel_Palermo", "seasonality_npd2", "Promo_Pct_Min", "Promo_Pct_Ave", "L1_cannibalization_OnOffline_Min",
       "L2_cannibalization_OnOffline_Min", "L1_Innercannibalization_OnOffline_Min", "L2_Innercannibalization_OnOffline_Min", "PriceBand_cannibalization_OnOffline_Min",
-      "PriceBand_Innercannibalization_OnOffline_Min", "Cate_cannibalization_OnOffline_Min", "Cate_Innercannibalization_OnOffline_Min", "BOPISbtbhol", "BOPISbts",
+      "PriceBand_Innercannibalization_OnOffline_Min", "Cate_cannibalization_OnOffline_Min", "Cate_Innercannibalization_OnOffline_Min",/* "BOPISbtbhol", "BOPISbts",*/
       "BOPIS", "LBB_adj", "exclude", "L1_Category", "L2_Category", "Season_most_recent"))
 
     //    #4. Check AE variables
@@ -190,7 +195,7 @@ object RCodeDQValidation {
     /*----------------------------------------------------Commercial Starts ---------------------------------------------------*/
 
     val commercialDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(inputLocation + "preregresion_commercial_output_2019_04_26_22_55.csv"))
+      .csv(inputCommercialLocation + "preregresion_commercial_output_"+currentTS+".csv"))
 
     val duplicateData = commercialDF.groupBy("SKU", "Reseller_Cluster", "Week_End_Date", "Special_Programs", "Brand").count().as("count")
       .filter("count > 1")

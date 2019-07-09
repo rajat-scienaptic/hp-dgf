@@ -155,6 +155,6 @@ object RetailPreRegressionPart22 {
         sum(col("Promo_Flag")).as("Total_IR")
       )
       .orderBy(col("Account"), col("Total_qty").desc)
-    //excluded.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/Preregression_Retail/Excluded_" + currentTS + ".csv")
+    excluded.coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/reporting/" + currentTS + "/Preregression_Retail_Excluded.csv")
   }
 }
