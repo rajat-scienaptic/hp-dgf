@@ -29,12 +29,12 @@ object ExcelDQValidation {
       df.select(convertListToDFColumn(cols, df): _*).summary()
     }
 
-    val retailInputLocation = reportingBasePaths.get("retail-preregression-basepath")
-    val commercialInputLocation = reportingBasePaths.get("commercial-preregression-basepath")
-    val outputLocation = reportingBasePaths.get("output-basepath") + currentTS + "/excel"
-    val alteryxRetailInputLocation = reportingBasePaths.get("retail-alteryx-basepath")
-    val alteryxCommercialInputLocation = reportingBasePaths.get("commercial-alteryx-basepath")
-    val auxSkuHierarchyLocation = reportingBasePaths.get("sku-hierarchy-basepath")
+    val retailInputLocation = reportingBasePaths("retail-preregression-basepath")
+    val commercialInputLocation = reportingBasePaths("commercial-preregression-basepath")
+    val outputLocation = reportingBasePaths("output-basepath").format(currentTS, "/excel")
+    val alteryxRetailInputLocation = reportingBasePaths("retail-alteryx-basepath")
+    val alteryxCommercialInputLocation = reportingBasePaths("commercial-alteryx-basepath")
+    val auxSkuHierarchyLocation = reportingBasePaths("sku-hierarchy-basepath")
 
     var minVal = 0.0
     var maxVal = 0.0
