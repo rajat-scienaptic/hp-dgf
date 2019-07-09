@@ -35,7 +35,7 @@ object RCodeDQValidation {
     }
 
     val inputRetailLocation = reportingBasePaths("retail-preregression-basepath")
-    val inputCommercialLocation = reportingBasePaths("retail-preregression-basepath")
+    val inputCommercialLocation = reportingBasePaths("commercial-preregression-basepath")
     val outputLocation = reportingBasePaths("output-basepath").format(currentTS, "/R-code")
 
     val seasons = {
