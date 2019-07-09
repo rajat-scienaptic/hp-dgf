@@ -32,6 +32,10 @@ object Blender {
 
       nameSource match {
         case "ORCA_QRY_2017_TO_DATE" => {
+          // Rename necessary as it creates ambiguity in union with 2014-16 source.
+          orcaNewSource = orcaNewSource
+            .withColumnRenamed("Sell-To Qty","POS Qty")
+            .withColumnRenamed("Sell-To Sales NDP","POS Sales NDP")
           doUnion(historicSource,orcaNewSource).get.distinct()
             .coalesce(1)
             .write.mode(SaveMode.Overwrite)
