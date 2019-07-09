@@ -647,7 +647,7 @@ object ExcelDQValidation {
     //-------------------------------------------------Alteryx  for Retail SKU----------------------------------------------
     //TODO: Debug this
     val recentRetailDataForSkuDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxRetailRecentInputLocation + "posqty_output_retail.csv"))
+      .csv(alteryxRetailInputLocation + "posqty_output_retail.csv"))
     val skuHierarchyDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
       .csv(auxSkuHierarchyLocation + "Aux_sku_hierarchy.csv")).select("SKU")
       .withColumn("Flag", lit(true))
@@ -666,7 +666,7 @@ object ExcelDQValidation {
 
     //TODO: Debug this
     val recentCommercialDataForSkuDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxRecentInputLocation + "posqty_output_commercial.csv"))
+      .csv(alteryxCommercialInputLocation + "posqty_output_commercial.csv"))
 
     val comJoinTableDF = recentCommercialDataForSkuDF.join(skuHierarchyDF, Seq("SKU"), "left")
       .filter(col("Flag").isNull)
