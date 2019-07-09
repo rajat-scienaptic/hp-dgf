@@ -36,7 +36,7 @@ object RCodeDQValidation {
 
     val inputRetailLocation = reportingBasePaths("retail-preregression-basepath")
     val inputCommercialLocation = reportingBasePaths("commercial-preregression-basepath")
-    val outputLocation = reportingBasePaths("output-basepath").format(currentTS, "/R-code")
+    val outputLocation = reportingBasePaths("output-basepath").format(currentTS, "R-code")
 
     val seasons = {
       val yy: Int = DateTime.now().getYear.toString.slice(2, 4).toInt

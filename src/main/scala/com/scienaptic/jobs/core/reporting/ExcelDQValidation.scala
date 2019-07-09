@@ -31,7 +31,7 @@ object ExcelDQValidation {
 
     val retailInputLocation = reportingBasePaths("retail-preregression-basepath")
     val commercialInputLocation = reportingBasePaths("commercial-preregression-basepath")
-    val outputLocation = reportingBasePaths("output-basepath").format(currentTS, "/excel")
+    val outputLocation = reportingBasePaths("output-basepath").format(currentTS, "excel")
     val alteryxRetailInputLocation = reportingBasePaths("retail-alteryx-basepath")
     val alteryxCommercialInputLocation = reportingBasePaths("commercial-alteryx-basepath")
     val auxSkuHierarchyLocation = reportingBasePaths("sku-hierarchy-basepath")
