@@ -7,7 +7,8 @@ import com.scienaptic.jobs.bean._
 @JsonInclude(JsonInclude.Include.NON_NULL)
 case class AppConfiguration(@JsonProperty("config") val config : String,
                              @JsonProperty("sparkConfig") val sparkConfig: SparkConfig,
-                            @JsonProperty("sources") sources: Map[String, Source]) extends Configuration
+                            @JsonProperty("sources") sources: Map[String, Source],
+                           @JsonProperty("reporting") reporting: Map[String, String]) extends Configuration
 
 case class SparkConfig(@JsonProperty("master") master: String,
                        @JsonProperty("appName") appName: String)
