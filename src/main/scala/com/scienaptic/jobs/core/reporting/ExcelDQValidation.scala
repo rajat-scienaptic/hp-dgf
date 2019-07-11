@@ -80,9 +80,9 @@ object ExcelDQValidation {
     val retDupCount = retailDuplicateData.count();
     if (retDupCount > 0) {
       retailDuplicateData.coalesce(1).write.option("header", "true")
-        .mode(SaveMode.Overwrite).csv(outputLocation + "Retail_Duplicate_Data.csv")
+        .mode(SaveMode.Overwrite).csv(outputLocation + "final/Retail_Duplicate_Data_new.csv")
     }
-    val retailDuplicateDataDF = Seq(("Retail", "SKU, Account, Week_End_Date, Online, Special_Programs", retDupCount, if (retDupCount > 0) "Retail_Duplicate_Data.csv" else ""))
+    val retailDuplicateDataDF = Seq(("Retail", "SKU, Account, Week_End_Date, Online, Special_Programs", retDupCount, if (retDupCount > 0) "Retail_Duplicate_Data_new.csv" else ""))
       .toDF("Dataset", "Duplicate_Check_On", "Number_of_Records", "FilePath")
 
     //    #2. Check format of all modelled variables
@@ -354,7 +354,7 @@ object ExcelDQValidation {
     val promoCount = promoDF.count()
     if (promoCount > 0) {
       promoDF.coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
-        .csv(outputLocation + "Retail_Last_Two_Season_Promo_Pct_Exclude.csv")
+        .csv(outputLocation + "final/Retail_Last_Two_Season_Promo_Pct_Exclude.csv")
     }
     promoFlagDiffCheckDF = promoFlagDiffCheckDF.union(Seq(("Retail", "exclude = 0 and Promo_Pct > 0.7", promoCount.toString, if (promoCount > 0) "Retail_Last_Two_Season_Promo_Pct_Exclude.csv" else ""))
       .toDF("Dataset", "Validation_Rule", "Number_of_Records", "FilePath"))
@@ -425,9 +425,9 @@ object ExcelDQValidation {
     val commDupCount = commercialDuplicateData.count();
     if (commDupCount > 0) {
       commercialDuplicateData.coalesce(1).write.option("header", "true")
-        .mode(SaveMode.Overwrite).csv(outputLocation + "Commercial_Duplicate_Data.csv")
+        .mode(SaveMode.Overwrite).csv(outputLocation + "final/Commercial_Duplicate_Data_new.csv")
     }
-    val commercialDuplicateDataDF = Seq(("Commercial", "SKU, Reseller_Cluster, Week_End_Date", commDupCount, if (commDupCount > 0) "Commercial_Duplicate_Data.csv" else ""))
+    val commercialDuplicateDataDF = Seq(("Commercial", "SKU, Reseller_Cluster, Week_End_Date", commDupCount, if (commDupCount > 0) "Commercial_Duplicate_Data_new.csv" else ""))
       .toDF("Dataset", "Duplicate_Check_On", "Number_of_Records", "FilePath")
     commercialDuplicateDataDF.union(retailDuplicateDataDF).coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
       .csv(outputLocation + "Commercial_And_Retail_Duplicate_Check_Report.csv")
@@ -492,7 +492,7 @@ object ExcelDQValidation {
       )
       .sort(col("Total_qty").desc)
 
-    promotedProductsCommercialDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv(outputLocation + "Excluded_promotedProducts_Commercial_report.csv")
+    promotedProductsCommercialDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv(outputLocation + "final/Excluded_promotedProducts_Commercial_report.csv")
     /*eolDF.union(bolDF).union(lowDF).union(eolCommDF).union(bolCommDF).union(lowCommDF).coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
       .csv(outputLocation + "Commercial_and Retail_PromoteProduct.csv")*/
 
