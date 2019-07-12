@@ -90,7 +90,7 @@ object RCodeDQValidation {
     val retDupCount = groupedRetailDF.count();
     if (retDupCount > 0) {
       groupedRetailDF.coalesce(1).write.option("header", "true")
-        .mode(SaveMode.Overwrite).csv(outputLocation + "final/Retail_Duplicate_Data.csv")
+        .mode(SaveMode.Overwrite).csv(outputLocation + "Retail_Duplicate_Data.csv")
     }
     val RetailDuplicateDF = Seq(CommercialCheckDF("Retail", "SKU, Account, Week_End_Date, Online, Special_Programs", retDupCount, if (retDupCount > 0) "Retail_Duplicate_Data.csv" else "")).toDF
 
@@ -202,7 +202,7 @@ object RCodeDQValidation {
     val commDupCount = duplicateData.count();
     if (commDupCount > 0) {
       duplicateData.coalesce(1).write.option("header", "true")
-        .mode(SaveMode.Overwrite).csv(outputLocation + "final/Commercial_Duplicate_Data.csv")
+        .mode(SaveMode.Overwrite).csv(outputLocation + "Commercial_Duplicate_Data.csv")
     }
     val CommercialDuplicateDF = Seq(CommercialCheckDF("Commercial", "SKU, Reseller_Cluster, Week_End_Date, Special_Programs, Brand", commDupCount, if (commDupCount > 0) "Commercial_Duplicate_Data.csv" else "")).toDF
     CommercialDuplicateDF.union(RetailDuplicateDF).coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
