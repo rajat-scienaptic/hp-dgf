@@ -1,0 +1,9 @@
+{
+  "config": "preregression-retail-L1_L2_CANN_OFFLINE_ONLINE",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "preregression-retail-15"
+  },
+  "sources": {
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "config": "preregression-commercial-BOL",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "hp-preregression-commercial-8"
+  },
+  "sources": {
+  }
+}

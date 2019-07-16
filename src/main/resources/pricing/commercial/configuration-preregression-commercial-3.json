@@ -1,0 +1,9 @@
+{
+  "config": "preregression-commercial-cannibalization",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "hp-preregression-commercial-3"
+  },
+  "sources": {
+  }
+}

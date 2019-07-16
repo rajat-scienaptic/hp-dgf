@@ -1,0 +1,9 @@
+{
+  "config": "preregression-retail-BOGO",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "preregression-retail-10"
+  },
+  "sources": {
+  }
+}

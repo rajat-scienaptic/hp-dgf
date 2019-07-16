@@ -1,0 +1,9 @@
+{
+  "config": "preregression-commercial-spike",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "hp-preregression-commercial-6"
+  },
+  "sources": {
+  }
+}

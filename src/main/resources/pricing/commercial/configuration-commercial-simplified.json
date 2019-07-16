@@ -1,13 +1,13 @@
 {
   "config": "commercial",
   "sparkConfig": {
-    "master": "local[*]",
+    "master": "yarn-cluster",
     "appName": "hp-commercial-simplified"
   },
   "sources": {
     "IEC_CLAIMS": {
       "name": "iec_claims",
-      "filePath": "/home/avik/Scienaptic/HP/data/April13/iec claims archive.csv",
+      "filePath": "/etherData/managedSources/Claims/IEC_Claims/iec claims archive.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
@@ -17,7 +17,7 @@
     },
     "XS_CLAIMS": {
       "name": "",
-      "filePath": "/home/avik/Scienaptic/HP/data/April13/03_Xs_Claims.csv",
+      "filePath": "/etherData/managedSources/Claims/XS_Claims/03_Xs_Claims.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
@@ -116,7 +116,7 @@
         "RESELLER_WED_SKU_PROGRAM_AGG_CLAIM_REBATE_QUANTITY": {
           "cols" : ["Reseller Cluster","Week End Date","Consol SKU","Program"],
           "aggregations": {"sum":{"Sum_Claim Quantity":"Sum_Sum_Claim Quantity"},
-            "max":{"Claim Partner Unit Rebate": "Claim Partner Unit Rebate"}},
+                           "max":{"Claim Partner Unit Rebate": "Claim Partner Unit Rebate"}},
           "selectCriteria": []
         },
         "RESELLER_WED_SKU_PROGRAM_AGG_CLAIM_QUANTITY": {
@@ -191,7 +191,7 @@
     },
     "RAW_MASTER_CALENDAR" :{
       "name": "",
-      "filePath": "/home/avik/Scienaptic/HP/data/April13/master_calendar_raw_commercial.csv",
+      "filePath": "/etherData/managedSources/Calendar/Raw_Commercial/master_calendar_raw_commercial.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"Y",
@@ -210,7 +210,7 @@
     },
     "WEEK_END_DATE": {
       "name": "",
-      "filePath": "/home/avik/Scienaptic/HP/data/April13/Aux_week_end_date.csv",
+      "filePath": "/etherData/managedSources/AUX/Aux_week_end_date.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
@@ -230,7 +230,7 @@
     },
     "SKU_HIERARCHY": {
       "name": "",
-      "filePath": "/home/avik/Scienaptic/HP/data/April13/Aux_sku_hierarchy.csv",
+      "filePath": "/etherData/managedSources/AUX/Aux_sku_hierarchy.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
@@ -240,7 +240,7 @@
     },
     "COMM_ACCOUNTS": {
       "name": "",
-      "filePath": "/home/avik/Scienaptic/HP/data/April13/comm_accounts.csv",
+      "filePath": "/etherData/managedSources/AUX/comm_accounts.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
@@ -250,7 +250,7 @@
     },
     "ONYX_ST": {
       "name": "",
-      "filePath": "/home/avik/Scienaptic/HP/data/April13/US Comm ST-STT.csv",
+      "filePath": "/etherData/ORCA/ST/US Comm ST-STT.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"Y",
@@ -405,7 +405,7 @@
     },
     "ONYX_STT": {
       "name": "",
-      "filePath": "/home/avik/Scienaptic/HP/data/April13/US Comm CI v1.csv",
+      "filePath": "/etherData/ORCA/CI/US Comm CI v1.csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"Y",
@@ -459,7 +459,7 @@
     },
     "TIDY_HPS_2016_17_HISTORICAL_POS": {
       "name": "",
-      "filePath": "/home/avik/Scienaptic/HP/data/April13/Tidy HPS prt 2016-2017_v2 (historical pos units).csv",
+      "filePath": "/etherData/managedSources/TIDY_Historical_POS/Tidy HPS prt 2016-2017_v2 (historical pos units).csv",
       "select": {
         "INITIAL_SELECT": {
           "isUnknown":"n",
