@@ -1,0 +1,9 @@
+{
+  "config": "preregression-retail-SEASONALITY_HARDWARE_GM",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "preregression-retail-12"
+  },
+  "sources": {
+  }
+}

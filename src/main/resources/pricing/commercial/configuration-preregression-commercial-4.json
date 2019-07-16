@@ -1,0 +1,9 @@
+{
+  "config": "preregression-commercial-seasonality_npd",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "hp-preregression-commercial-4"
+  },
+  "sources": {
+  }
+}

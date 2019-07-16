@@ -1,0 +1,9 @@
+{
+  "config": "preregression-retail-AGGUPSTREAM_INITIAL_JOIN",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "preregression-retail-3"
+  },
+  "sources": {
+  }
+}

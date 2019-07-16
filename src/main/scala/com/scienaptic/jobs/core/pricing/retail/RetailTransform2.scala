@@ -187,6 +187,9 @@ object RetailTransform2 {
     val auxTablesSKUHierarchySort01 = auxTablesSKUHierarchySource.sortOperation(SORT01)
     val auxTablesSKUHierarchySort01DF = SortOperation.doSort(auxTablesSKUHierarchyGroup01DF, auxTablesSKUHierarchySort01.ascending, auxTablesSKUHierarchySort01.descending).get
 
+    // SKU fallout
+    auxTablesSKUHierarchySort01DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/fallout-SKUs-retail-" + currentTS + ".csv")
+
     // browse or write to CSV
 
     // group
@@ -199,7 +202,7 @@ object RetailTransform2 {
     // unique
     val auxTablesSKUHierarchyDistinctDF = auxTablesSKUHierarchyGroup02DF.dropDuplicates(List("Account Major", "Online", "SKU", "WED"))
     // SKU fallout
-    auxTablesSKUHierarchyDistinctDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/fallout-SKUs-retail-" + currentTS + ".csv")
+//    auxTablesSKUHierarchyDistinctDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/fallout-SKUs-retail-" + currentTS + ".csv")
     // browse here
 
     // filter

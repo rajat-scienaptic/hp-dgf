@@ -1,0 +1,9 @@
+{
+  "config": "preregression-retail-NOPROMO_SKU_CATEGORY",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "preregression-retail-14"
+  },
+  "sources": {
+  }
+}

@@ -1,7 +1,0 @@
-{
-  "config": "preregression-commercial-2",
-  "sparkConfig": {
-    "master": "local[*]",
-    "appName": "preregression-commercial-2"
-  }
-}

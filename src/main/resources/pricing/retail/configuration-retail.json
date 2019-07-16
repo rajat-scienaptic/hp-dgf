@@ -1,13 +1,13 @@
 {
-  "config" : "retail",
+  "config" : "retail-ORCA_MAIN_UNION",
   "sparkConfig": {
-    "master": "local[*]",
+    "master": "yarn-client",
     "appName": "hp-retail"
   },
   "sources": {
     "ODOM_ONLINE_ORCA": {
       "name": "ODOM_ONLINE_ORCA",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/odom.csv",
+      "filePath": "/etherData/ORCA/ODOM/US ODOM Online.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -62,7 +62,7 @@
     },
     "STAPLES_COM_UNITS":  {
       "name": "STAPLES_COM_UNITS",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Staples.com Units.csv",
+      "filePath": "/etherData/managedSources/Staples.com/Staples.com Units.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -118,7 +118,7 @@
     },
     "HP_COM": {
       "name": "HP_COM",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/hpshopping.csv",
+      "filePath": "/etherData/ORCA/HP.com/US HP Shopping v3.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -151,14 +151,15 @@
             "if-else"
           ],
           "conditions": [
-            "Title not_contains Refurb"
+            "Title not_contains Refurb",
+	    "Title not_contains REFURB"
           ]
         }
       }
     },
     "AMAZON_ARAP": {
       "name": "AMAZON_ARAP",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/amazon_arap.csv",
+      "filePath": "/etherData/managedSources/Amazon/ARAP/amazon_arap_data.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -266,7 +267,7 @@
     },
     "AMAZON_ASIN_MAP": {
       "name": "AMAZON_ASIN_MAP",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/amazon_asin_sku_mapping.csv",
+      "filePath": "/etherData/managedSources/Amazon/ASIN/amazon_asin_sku_mapping.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -276,7 +277,7 @@
     },
     "S_PRINT_HISTORICAL_UNITS": {
       "name": "S_PRINT_HISTORICAL_UNITS",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Tidy HPS prt 2016-2017_v2 (historical pos units).csv",
+      "filePath": "/etherData/managedSources/TIDY_Historical_POS/Tidy HPS prt 2016-2017_v2 (historical pos units).csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -304,7 +305,7 @@
     },
     "ORCA_2014_16_ARCHIVE": {
       "name": "ORCA_2014_16_ARCHIVE",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/2014-16_Filtered.csv",
+      "filePath": "/etherData/ORCA/2014_16_archive/2014-16_Filtered.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -314,7 +315,7 @@
     },
     "ORCA_QRY_2017_TO_DATE": {
       "name": "ORCA_QRY_2017_TO_DATE",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/2017-present.csv",
+      "filePath": "/etherData/ORCA/2017-present/US Retail POS.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -403,7 +404,7 @@
     },
     "AUX_TABLES_WEEKEND": {
       "name": "AUX_TABLES_WEEKEND",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Aux_week_end_date.csv",
+      "filePath": "/etherData/managedSources/AUX/Aux_week_end_date.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -432,7 +433,7 @@
     },
     "AUX_TABLES_ONLINE": {
       "name": "AUX_TABLES_ONLINE",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Aux_online.csv",
+      "filePath": "/etherData/managedSources/AUX/Aux_online.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -585,7 +586,7 @@
     },
     "AUX_TABLES_SKU_HIERARCHY": {
       "name": "AUX_TABLES_SKU_HIERARCHY",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/Aux_sku_hierarchy.csv",
+      "filePath": "/etherData/managedSources/AUX/Aux_sku_hierarchy.csv",
       "select": {
         "select01": {
           "isUnknown" : "N",
@@ -621,7 +622,7 @@
         }
       },
       "rename" : {
-        "rename01" : {
+          "rename01" : {
           "Account Major Consol" : "Account Major",
           "Consol SKU" : "SKU",
           "Abbreviated Name" : "SKU Name",
@@ -652,7 +653,7 @@
     },
     "BBY_BUNDLE_INFO": {
       "name": "BBY_BUNDLE_INFO",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/BestBuyBundle_Summary.csv",
+      "filePath": "/etherData/managedSources/Best_Buy_Bundle/BestBuyBundle_Summary.csv",
       "select": {
         "select01": {
           "isUnknown" : "Y",
@@ -853,7 +854,7 @@
     },
     "WALMART": {
       "name": "WALMART",
-      "filePath": "/home/avik/Scienaptic/HP/data/Retail/April13_inputs_for_spark/walmart_combined.csv",
+      "filePath": "/etherData/managedSources/Walmart/WalmartPOS.csv",
       "select": {
         "select01": {
           "isUnknown": "Y",
@@ -877,7 +878,7 @@
       },
       "filter" : {
         "WALMART_STORE_TYPE_FILTER" : {
-          "multiWordMap" : {
+        "multiWordMap" : {
             "storetypeOIID" : "Store Type OIID"
           },
           "conditionTypes": [
@@ -892,7 +893,7 @@
       },
       "group" : {
         "GROUP_WEEK_BASESKU_STORENBR_AGG_POSQTY_POSSALES_STRONHANDQTY" : {
-          "cols": [
+         "cols": [
             "Week",
             "Base SKU",
             "Store Nbr"
@@ -907,7 +908,7 @@
           "selectCriteria": []
         },
         "GROUP_STORENBR_AGG_SUMPOSQTY_SUMPOSSALES" : {
-          "cols": [
+         "cols": [
             "Store Nbr"
           ],
           "aggregations": {
@@ -919,9 +920,9 @@
           "selectCriteria": []
         },
         "GROUP_WEEK_BASESKU_AGG_STOREPOS_STOREINV" : {
-          "cols": [
+         "cols": [
             "Week",
-            "Base SKU"
+            "Base SKU"  
           ],
           "aggregations": {
             "sum": {
