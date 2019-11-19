@@ -94,7 +94,7 @@ object GAPTransform3 {
       .withColumn("Days_on_Promo_End",when(col("Days_on_Promo_End")>lit(6),lit(7))
         .otherwise(col("Days_on_Promo_End")))
       .withColumn("Days_on_Promo",least("Days_on_Promo_End","Days_on_Promo_Start"))
-      .select("Account", "SKU","Brand","Product","Promotion_Type_Promo","Value_Promo",/*"Ad_Promo",*/F
+      .select("Account", "SKU","Brand","Product","Promotion_Type_Promo","Value_Promo",/*"Ad_Promo",*/
         "Days_on_Promo","Week_End_Date")
 
     var ad3 = renameColumns(spark.read.option("header","true").option("inferSchema","true")

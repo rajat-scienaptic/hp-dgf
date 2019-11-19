@@ -53,6 +53,7 @@ object GAPTransform2 {
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("BusinessPrinters_WEEKLY"))
+      .withColumnRenamed("Page Number", "Page Number API")
       .withColumnRenamed("Print Page Number", "Page Number")
       .select("Merchant","Brand","Product","Part Number","Product Type"
         ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
@@ -89,6 +90,7 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("PersonalSOHOPrinters_WEEKLY"))
+      .withColumnRenamed("Page Number", "Page Number API")
       .withColumnRenamed("Print Page Number", "Page Number")
       .select("Merchant","Brand","Product","Part Number","Product Type"
         ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
@@ -110,9 +112,13 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
       .csv("/etherData/managedSources/GAP/gap_input_ad.csv"))
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"dd-MM-yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
+      .select("Merchant","Brand","Product","Part Number","Advertised Price"
+        ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
+        ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
+        ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
     val ad11=GAPInputAdRawDF.join(ad3,GAPInputAdRawDF("Ad Date")===ad3("Ad Date"),"leftanti")
-    ad3=doUnion(ad11,ad3).get
+    ad3=ad11.unionByName(ad3)
       .select("Merchant","Brand","Product","Part Number","Advertised Price"
       ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
     ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
