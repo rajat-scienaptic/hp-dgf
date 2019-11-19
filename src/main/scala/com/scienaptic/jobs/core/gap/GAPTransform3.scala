@@ -56,7 +56,7 @@ object GAPTransform3 {
       .withColumn("Promo_End_Date",col("End Date"))
       .drop("Start Date","End Date")
       .where(col("Promo_End_Date")>=to_date(unix_timestamp(lit("01-01-2014"),"dd-MM-yyyy").cast("timestamp")))
-      .na.drop(Seq("Value"))
+//      .na.drop(Seq("Value"))
       .dropDuplicates()
       .withColumn("Promo_Start_Date_wday",dayofweek(col("Promo_Start_Date")).cast(IntegerType))
       .withColumn("Promo_End_Date_wday",dayofweek(col("Promo_End_Date")).cast(IntegerType))
