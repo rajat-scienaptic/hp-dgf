@@ -2,6 +2,7 @@ package com.scienaptic.jobs.core.gap
 
 import com.scienaptic.jobs.ExecutionContext
 import com.scienaptic.jobs.bean.UnionOperation.doUnion
+import com.scienaptic.jobs.core.gap.GAPTransform1.partNumberUDF
 import com.scienaptic.jobs.utility.Utils.renameColumns
 import org.apache.spark.SparkConf
 import org.apache.spark.ml.Pipeline
@@ -47,13 +48,14 @@ object GAPTransform2 {
     businessPrintersAdRawExcelDF.columns.toList.foreach(x => {
       businessPrintersAdRawExcelDF = businessPrintersAdRawExcelDF.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
+    // TODO : select column changes
     val businessPrintersAdRawDF=businessPrintersAdRawExcelDF.na.drop(Seq("Brand"))
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("BusinessPrinters_WEEKLY"))
+      .withColumnRenamed("Print Page Number", "Page Number")
       .select("Merchant","Brand","Product","Part Number","Product Type"
-        ,"Shelf Price When Advertised","Advertised Price"
-        ,"Ad Date","End Date","Promotion Type","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
+        ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
         ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
         ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
@@ -61,8 +63,8 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
   .csv("/etherData/managedSources/GAP/PersonalSOHOPrinters_WEEKLY_Retail_Advertising.csv"))
   .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
   .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
-  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),"\\$",""))
-  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),",","").cast("double"))
+//  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),"\\$",""))
+//  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),",","").cast("double"))
   .withColumn("Advertised Price",regexp_replace(col("Advertised Price"),"\\$",""))
   .withColumn("Advertised Price",regexp_replace(col("Advertised Price"),",","").cast("double"))
   .withColumn("Instant Savings",regexp_replace(col("Instant Savings"),"\\$",""))
@@ -82,18 +84,19 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
     personalPrintersAdRawExcelDF.columns.toList.foreach(x => {
       personalPrintersAdRawExcelDF = personalPrintersAdRawExcelDF.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
+    // TODO : select column change "Image Number" is missing
     val personalPrintersAdRawDF=personalPrintersAdRawExcelDF.na.drop(Seq("Brand"))
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("PersonalSOHOPrinters_WEEKLY"))
+      .withColumnRenamed("Print Page Number", "Page Number")
       .select("Merchant","Brand","Product","Part Number","Product Type"
-        ,"Shelf Price When Advertised","Advertised Price"
-        ,"Ad Date","End Date","Promotion Type","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
+        ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
         ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
         ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
     var ad3=businessPrintersAdRawDF.union(personalPrintersAdRawDF)
-    ad3=ad3.where((col("Product").isNotNull) && (col("Product") =!= ".")
+    ad3=ad3.where((col("Product").isNotNull || col("Product") =!= "na") && (col("Product") =!= ".")  // TODO : Handle null (na) as string
       && (lower(col("Part Number")) =!= "select"))
     val maxaddate=ad3.select(col("Ad Date")).agg(max("Ad Date")).head().getDate(0)
     ad3=ad3.withColumn("Max_Ad Date", lit(maxaddate))
@@ -101,11 +104,7 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
       , date_add(col("Max_Ad Date").cast("timestamp"), -12*7))
           .where(col("Ad Date")>col("Max_Ad Date_Add91"))
           .drop("Max_Ad Date_Add91")
-    ad3=ad3.withColumn("Part Number",when(col("Part Number")==="J9V83A","J9V80A")
-      .when(col("Part Number")==="M9L74A","M9L75A")
-      .when(col("Part Number")==="J9V91A","J9V90A")
-      .when(col("Part Number")==="J9V92A","J9V90A")
-    .otherwise(col("Part Number")))
+    ad3=ad3.withColumn("Part Number", partNumberUDF(col("Part Number")))
 
     val GAPInputAdRawDF = renameColumns(spark.read.option("header","true").option("inferSchema","true")
       .csv("/etherData/managedSources/GAP/gap_input_ad.csv"))
@@ -114,8 +113,8 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
 
     val ad11=GAPInputAdRawDF.join(ad3,GAPInputAdRawDF("Ad Date")===ad3("Ad Date"),"leftanti")
     ad3=doUnion(ad11,ad3).get
-      .select("Merchant","Brand","Product","Part Number","Shelf Price When Advertised","Advertised Price"
-      ,"Ad Date","End Date","Promotion Type","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
+      .select("Merchant","Brand","Product","Part Number","Advertised Price"
+      ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
     ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
     ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 

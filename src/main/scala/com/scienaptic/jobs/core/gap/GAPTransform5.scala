@@ -87,7 +87,7 @@ object GAPTransform5 {
       .withColumn("Account",when(col("Account")===lit("Office Depot"),"Office Depot-Max").otherwise(col("Account")))
       .withColumn("Account",when(col("Account")===lit("OfficeMax"),"Office Depot-Max").otherwise(col("Account")))
       .select("SKU","Brand","Account","Online","Week_End_Date"
-        ,"Total_IR","Ad","Promotion_Type","Ad Location","Product","Days_on_Promo")
+        ,"Total_IR",/*"Ad",*/"Promotion_Type","Ad Location","Product","Days_on_Promo")
 
     /* Change for Adlocation Order within Group  - Start*/
     var adLocationTemp = Promo_Ad

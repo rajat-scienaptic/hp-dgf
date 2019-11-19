@@ -50,7 +50,7 @@ object GAPTransform3 {
       promo3 = promo3.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
 
-    promo3=promo3.withColumn("Ad_Promo",when(col("On Ad")==="Y",1).otherwise(0))
+    promo3=promo3/*.withColumn("Ad_Promo",when(col("On Ad")==="Y",1).otherwise(0))*/
       .withColumn("On Ad",lit(""))
       .withColumn("Promo_Start_Date",col("Start Date"))
       .withColumn("Promo_End_Date",col("End Date"))
@@ -84,7 +84,7 @@ object GAPTransform3 {
       .withColumnRenamed("Valid Resellers","Account")
       .withColumnRenamed("Promotion Type","Promotion_Type_Promo")
       .withColumnRenamed("Value","Value_Promo")
-      .select("Account", "SKU","Brand","Product","Promotion_Type_Promo","Value_Promo","Ad_Promo",
+      .select("Account", "SKU","Brand","Product","Promotion_Type_Promo","Value_Promo",/*"Ad_Promo",*/
          "Promo_Start_Date","Promo_End_Date","Week_End_Date")
       .withColumn("Days_on_Promo_Start",
         datediff(col("Week_End_Date"),col("Promo_Start_Date"))+lit(1))
@@ -94,7 +94,7 @@ object GAPTransform3 {
       .withColumn("Days_on_Promo_End",when(col("Days_on_Promo_End")>lit(6),lit(7))
         .otherwise(col("Days_on_Promo_End")))
       .withColumn("Days_on_Promo",least("Days_on_Promo_End","Days_on_Promo_Start"))
-      .select("Account", "SKU","Brand","Product","Promotion_Type_Promo","Value_Promo","Ad_Promo",
+      .select("Account", "SKU","Brand","Product","Promotion_Type_Promo","Value_Promo",/*"Ad_Promo",*/F
         "Days_on_Promo","Week_End_Date")
 
     var ad3 = renameColumns(spark.read.option("header","true").option("inferSchema","true")
@@ -137,7 +137,7 @@ object GAPTransform3 {
         "Page Number","Print Verified","Online Verified","Ad","Week_End_Date")
       .withColumn("Print Verified",when(col("Print Verified")==="Y",1).otherwise(0))
       .withColumn("Online Verified",when(col("Online Verified")==="Y",1).otherwise(0))
-      .withColumn("Page Number",when(col("Page Number").isNull,lit("NA"))
+      .withColumn("Page Number",when(col("Page Number").isNull || col("Page Number") === "na",lit("NA")) // TODO : add 'na'
         .otherwise(col("Page Number")))
 
     var Promo_Ad=promo3.join(ad3,Seq("SKU","Brand","Product","Account","Week_End_Date"),"fullouter")
@@ -145,9 +145,9 @@ object GAPTransform3 {
       ,col("Promotion_Type_Ad")).otherwise(col("Promotion_Type_Promo")))
       .withColumn("Promotion_Type_Promo",lit(""))
       .withColumn("Promotion_Type_Ad",lit(""))
-      .withColumn("Ad",when(col("Ad_Promo")===lit(1) or col("Ad")=== lit(1),lit(1))
+      /*.withColumn("Ad",when(col("Ad_Promo")===lit(1) or col("Ad")=== lit(1),lit(1))
       .otherwise(lit(0)))
-      .withColumn("Ad_Promo",lit(""))
+      .withColumn("Ad_Promo",lit(""))*/
 
     Promo_Ad.write.option("header","true").mode(SaveMode.Overwrite)
       .csv("/etherData/Pricing/Outputs/POS_GAP/promo_ad_intermediate.csv")

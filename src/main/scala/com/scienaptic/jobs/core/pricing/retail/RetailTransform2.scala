@@ -96,6 +96,9 @@ object RetailTransform2 {
       when(col("Product Base ID") === "M9L74A", "M9L75A")
         .when((col("Product Base ID") === "J9V91A") || (col("Product Base ID") === "J9V92A"), "J9V90A")
             .when(col("Product Base ID") === "Z3M52A", "K7G93A")
+        .when(col("Product Base ID") === "5LJ23A" || (col("Product Base ID") === "4KJ65A"), "3UC66A")
+        .when(col("Product Base ID") === "3UK84A", "1KR45A")
+        .when(col("Product Base ID") === "T0G26A", "T0G25A")
         .otherwise(col("Product Base ID")))
 
     // group
