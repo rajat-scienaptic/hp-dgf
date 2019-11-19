@@ -107,22 +107,22 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
           .where(col("Ad Date")>col("Max_Ad Date_Add91"))
           .drop("Max_Ad Date_Add91")
     ad3=ad3.withColumn("Part Number", partNumberUDF(col("Part Number")))
+      .select("Merchant","Brand","Product","Part Number"
+        ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
+        ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
+        ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
     val GAPInputAdRawDF = renameColumns(spark.read.option("header","true").option("inferSchema","true")
       .csv("/etherData/managedSources/GAP/gap_input_ad.csv"))
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"dd-MM-yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
-      .select("Merchant","Brand","Product","Part Number"
-        ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
-        ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
-        ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
     val ad11=GAPInputAdRawDF.join(ad3,GAPInputAdRawDF("Ad Date")===ad3("Ad Date"),"leftanti")
       .select("Merchant","Brand","Product","Part Number"
         ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
         ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
         ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
-    
+
     ad3=ad11.unionByName(ad3)
       .select("Merchant","Brand","Product","Part Number"
       ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
