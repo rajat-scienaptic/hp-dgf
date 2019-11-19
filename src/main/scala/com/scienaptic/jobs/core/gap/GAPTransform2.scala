@@ -118,6 +118,11 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
         ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
     val ad11=GAPInputAdRawDF.join(ad3,GAPInputAdRawDF("Ad Date")===ad3("Ad Date"),"leftanti")
+      .select("Merchant","Brand","Product","Part Number"
+        ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
+        ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
+        ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
+    
     ad3=ad11.unionByName(ad3)
       .select("Merchant","Brand","Product","Part Number"
       ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
