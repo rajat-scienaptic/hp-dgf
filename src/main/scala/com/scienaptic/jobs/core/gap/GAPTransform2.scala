@@ -16,6 +16,10 @@ object GAPTransform2 {
   val stability_weeks = 4
   val intro_weeks = 6
 
+  val bool2String = (verified : Boolean)  => if (verified) "Y" else "N"
+
+  def bool2StringUDF = udf(bool2String)
+
   val dat2000_01_01 = to_date(unix_timestamp(lit("2000-01-01"),"yyyy-MM-dd").cast("timestamp"))
   val dat9999_12_31 = to_date(unix_timestamp(lit("9999-12-31"),"yyyy-MM-dd").cast("timestamp"))
 
@@ -111,6 +115,7 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
         ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
         ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
         ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
+      .withColumn("Online Verified",bool2StringUDF(col("Online Verified")))
 
     val GAPInputAdRawDF = renameColumns(spark.read.option("header","true").option("inferSchema","true")
       .csv("/etherData/managedSources/GAP/gap_input_ad.csv"))
