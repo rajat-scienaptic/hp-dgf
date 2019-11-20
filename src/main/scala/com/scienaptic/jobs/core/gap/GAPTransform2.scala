@@ -57,6 +57,7 @@ object GAPTransform2 {
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("BusinessPrinters_WEEKLY"))
+      .withColumnRenamed("Print Page Number", "Page Number")
       .select("Merchant","Brand","Product","Part Number","Product Type"
         ,"Shelf Price When Advertised","Advertised Price"
         ,"Ad Date","End Date","Promotion Type","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
@@ -93,6 +94,7 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("PersonalSOHOPrinters_WEEKLY"))
+      .withColumnRenamed("Print Page Number", "Page Number")
       .select("Merchant","Brand","Product","Part Number","Product Type"
         ,"Shelf Price When Advertised","Advertised Price"
         ,"Ad Date","End Date","Promotion Type","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
