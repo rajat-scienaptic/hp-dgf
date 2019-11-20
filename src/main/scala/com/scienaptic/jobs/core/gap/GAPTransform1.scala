@@ -68,8 +68,8 @@ object GAPTransform1 {
       .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("BusinessPrinters_WEEKLY"))
-      .select("Brand","Product","Part Number","Merchant SKU","Product Type","Start Date","End Date",
-      "Promotion Type","Bundle Type","Merchant","FileName", "Value")
+      .select("Brand","Product","Part Number","Merchant SKU","Market Segment","Product Type","Start Date","End Date",
+      "Promotion Type","Bundle Type","Merchant","Value","Conditions / Notes","On Ad","FileName")
       .withColumnRenamed("Merchant","Valid Resellers")
 
     var personalPrintersPromoRawExcelDF=renameColumns(spark.read.option("header","true").option("inferSchema","true")
@@ -85,8 +85,8 @@ object GAPTransform1 {
       .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("PersonalSOHOPrinters_WEEKLY"))
-      .select("Brand","Product","Part Number","Merchant SKU","Product Type","Start Date","End Date",
-        "Promotion Type","Bundle Type","Merchant","FileName", "Value")
+      .select("Brand","Product","Part Number","Merchant SKU","Market Segment","Product Type","Start Date","End Date",
+        "Promotion Type","Bundle Type","Merchant","Value","Conditions / Notes","On Ad","FileName")
       .withColumnRenamed("Merchant","Valid Resellers")
 
     var promo3=businessPrintersPromoRawDF.union(personalPrintersPromoRawDF)
@@ -112,13 +112,13 @@ object GAPTransform1 {
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"yyyy-MM-dd").cast("timestamp")))
     var promo11=GAPInputPromoRawDF.join(promo3,GAPInputPromoRawDF("Start Date")===promo3("Start Date"),"leftanti")
     promo3=promo3.select("Brand","Product","Part Number","Merchant SKU","Product Type"
-      ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","FileName", "Value")
+      ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","Conditions / Notes","On Ad","FileName")
     promo11=promo11.select("Brand","Product","Part Number","Merchant SKU","Product Type"
-      ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","FileName", "Value")
+      ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","Conditions / Notes","On Ad","FileName")
     promo3=promo3.union(promo11)
       .select("Brand","Product","Part Number","Merchant SKU","Product Type"
-        ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","FileName", "Value")
-    promo3.write.option("header","true").mode(SaveMode.Overwrite)
+        ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","Conditions / Notes","On Ad","FileName")
+    promo3.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
       .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_"+currentTS+".csv")
 
 

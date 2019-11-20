@@ -57,10 +57,9 @@ object GAPTransform2 {
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("BusinessPrinters_WEEKLY"))
-      .withColumnRenamed("Page Number", "Page Number API")
-      .withColumnRenamed("Print Page Number", "Page Number")
       .select("Merchant","Brand","Product","Part Number","Product Type"
-        ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
+        ,"Shelf Price When Advertised","Advertised Price"
+        ,"Ad Date","End Date","Promotion Type","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
         ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
         ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
@@ -68,8 +67,8 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
   .csv("/etherData/managedSources/GAP/PersonalSOHOPrinters_WEEKLY_Retail_Advertising.csv"))
   .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
   .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
-//  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),"\\$",""))
-//  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),",","").cast("double"))
+  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),"\\$",""))
+  .withColumn("Shelf Price When Advertised",regexp_replace(col("Shelf Price When Advertised"),",","").cast("double"))
   .withColumn("Advertised Price",regexp_replace(col("Advertised Price"),"\\$",""))
   .withColumn("Advertised Price",regexp_replace(col("Advertised Price"),",","").cast("double"))
   .withColumn("Instant Savings",regexp_replace(col("Instant Savings"),"\\$",""))
@@ -94,10 +93,9 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("PersonalSOHOPrinters_WEEKLY"))
-      .withColumnRenamed("Page Number", "Page Number API")
-      .withColumnRenamed("Print Page Number", "Page Number")
       .select("Merchant","Brand","Product","Part Number","Product Type"
-        ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
+        ,"Shelf Price When Advertised","Advertised Price"
+        ,"Ad Date","End Date","Promotion Type","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
         ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
         ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
@@ -111,11 +109,6 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
           .where(col("Ad Date")>col("Max_Ad Date_Add91"))
           .drop("Max_Ad Date_Add91")
     ad3=ad3.withColumn("Part Number", partNumberUDF(col("Part Number")))
-      .select("Merchant","Brand","Product","Part Number"
-        ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
-        ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
-        ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
-      .withColumn("Online Verified",bool2StringUDF(col("Online Verified")))
 
     val GAPInputAdRawDF = renameColumns(spark.read.option("header","true").option("inferSchema","true")
       .csv("/etherData/managedSources/GAP/gap_input_ad.csv"))
@@ -123,18 +116,13 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
 
     val ad11=GAPInputAdRawDF.join(ad3,GAPInputAdRawDF("Ad Date")===ad3("Ad Date"),"leftanti")
-      .select("Merchant","Brand","Product","Part Number"
-        ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
-        ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
-        ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
-
-    ad3=ad11.unionByName(ad3)
-      .select("Merchant","Brand","Product","Part Number"
-      ,"Ad Date","End Date","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
+    ad3=doUnion(ad11,ad3).get
+      .select("Merchant","Brand","Product","Part Number","Shelf Price When Advertised","Advertised Price"
+      ,"Ad Date","End Date","Promotion Type","Bundle Type","Instant Savings","Mail-in Rebate","Price Drop","Bundle","Peripheral"
     ,"Free Gift","Merchant Gift Card","Merchant Rewards","Recycling","Misc_","Total Value","Details","Ad Location","Ad Name"
     ,"Page Number","Region","Print Verified","Online Verified","gap URL","FileName")
 
-    ad3.write.option("header","true").mode(SaveMode.Overwrite)
+    ad3.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
       .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad_"+currentTS+".csv")
 
   }
