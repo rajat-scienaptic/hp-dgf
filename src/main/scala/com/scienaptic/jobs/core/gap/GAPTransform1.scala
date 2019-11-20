@@ -93,6 +93,11 @@ object GAPTransform1 {
     promo3=promo3.where((col("Promotion Type") === lit("Instant Savings"))
       && (col("Product").isNotNull) && (col("Product") =!= lit(".")) &&
       (lower(col("Part Number")) =!= "select") && (col("Part Number") =!= "na"))
+
+    // debug
+    promo3.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
+      .csv("/etherData/GAPTemp/gap_1_filter.csv")
+
     promo3=promo3.sort(asc("Start Date")
       ,desc("End Date"),asc("Brand")
       ,asc("Valid Resellers"),asc("Part Number"),asc("Merchant SKU"))
@@ -103,6 +108,9 @@ object GAPTransform1 {
       , date_add(col("Max_Start Date").cast("timestamp"), -13*7))
           .where(col("Start Date")>col("Max_Start Date_Add91"))
           .drop("Max_Start Date_Add91")
+
+    promo3.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
+      .csv("/etherData/GAPTemp/gap_1_2_filter.csv")
     // TODO : change to formula
     promo3=promo3.withColumn("Part Number", partNumberUDF(col("Part Number")))
 
@@ -111,6 +119,10 @@ object GAPTransform1 {
       .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"yyyy-MM-dd").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"yyyy-MM-dd").cast("timestamp")))
     var promo11=GAPInputPromoRawDF.join(promo3,GAPInputPromoRawDF("Start Date")===promo3("Start Date"),"leftanti")
+
+    promo11.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
+      .csv("/etherData/GAPTemp/gap_1_leftanti.csv")
+
     promo3=promo3.select("Brand","Product","Part Number","Merchant SKU","Product Type"
       ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","Conditions / Notes","On Ad","FileName")
     promo11=promo11.select("Brand","Product","Part Number","Merchant SKU","Product Type"
