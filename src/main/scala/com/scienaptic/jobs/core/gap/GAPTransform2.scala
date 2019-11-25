@@ -53,7 +53,7 @@ object GAPTransform2 {
       businessPrintersAdRawExcelDF = businessPrintersAdRawExcelDF.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     // TODO : select column changes
-    val businessPrintersAdRawDF=businessPrintersAdRawExcelDF.na.drop(Seq("Brand"))
+    val businessPrintersAdRawDF=businessPrintersAdRawExcelDF/*.na.drop(Seq("Brand"))*/
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("BusinessPrinters_WEEKLY"))
@@ -90,7 +90,7 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
       personalPrintersAdRawExcelDF = personalPrintersAdRawExcelDF.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
     // TODO : select column change "Image Number" is missing
-    val personalPrintersAdRawDF=personalPrintersAdRawExcelDF.na.drop(Seq("Brand"))
+    val personalPrintersAdRawDF=personalPrintersAdRawExcelDF/*.na.drop(Seq("Brand"))*/
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("PersonalSOHOPrinters_WEEKLY"))

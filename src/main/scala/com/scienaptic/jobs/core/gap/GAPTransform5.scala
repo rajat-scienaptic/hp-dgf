@@ -31,7 +31,7 @@ object GAPTransform5 {
 
   val takeLast = udf((collectedList: mutable.WrappedArray[String]) => {
     try {
-      collectedList.last
+      collectedList.max
     } catch {
       case _ : Exception => null
     }
@@ -89,10 +89,6 @@ object GAPTransform5 {
       .select("SKU","Brand","Account","Online","Week_End_Date"
         ,"Total_IR","Ad","Promotion_Type","Ad Location","Product","Days_on_Promo")
 
-    // debug
-    Promo_Ad.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
-      .csv("/etherData/GAPTemp/Promo_Ad-before-grouping.csv")
-
     /* Change for Adlocation Order within Group  - Start*/
     var adLocationTemp = Promo_Ad
       .groupBy("SKU","Brand","Account","Online","Week_End_Date")
@@ -120,7 +116,7 @@ object GAPTransform5 {
       .drop("Product","Promotion_Type"/*,"Ad Location"*/)
       .withColumnRenamed("Product2", "Product")
       .withColumnRenamed("Promotion_Type2", "Promotion_Type")
-    GAP = GAP.groupBy("SKU","Brand","Account","Online","Week_End_Date")
+    GAP = GAP.coalesce(1).groupBy("SKU","Brand","Account","Online","Week_End_Date")
         .agg(max("Ad").as("Ad"), sum(when(col("Ad").isNull,1).otherwise(0)).as("Ad_null_count"),
           max("Total_IR").as("Total_IR"), sum(when(col("Total_IR").isNull,1).otherwise(0)).as("Total_IR_null_count"),
           max("Days_on_Promo").as("Days_on_Promo"), sum(when(col("Days_on_Promo").isNull,1).otherwise(0)).as("Days_on_Promo_null_count"),
