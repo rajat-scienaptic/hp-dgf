@@ -342,7 +342,7 @@ object RetailTransform {
     // browse here
     // SKU fallout
     if (amazonArapSumOrderedUnitsGreaterThanZeroDF.count() > 0) {
-      amazonArapSumOrderedUnitsGreaterThanZeroDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/amazon-asin-fallout-" + currentTS + ".csv")
+      amazonArapSumOrderedUnitsGreaterThanZeroDF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/amazon-asin-fallout-" + currentTS + ".csv")
     }
 
     // formula
@@ -419,7 +419,7 @@ object RetailTransform {
       .withColumnRenamed("Sum_Sales : Net Qty", "Sum_POS Qty")
     ).get
    // mainUnion05Union04AndSPrintFormula.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/Retail_Alteryx_Spark_debug/April13/mainUnion05Union04AndSPrintFormula.csv")
-   mainUnion05Union04AndSPrintFormula.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/mainUnion05Union04AndSPrintFormula.csv")
+   mainUnion05Union04AndSPrintFormula.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/mainUnion05Union04AndSPrintFormula.csv")
   }
 
 }
