@@ -111,7 +111,7 @@ object GAPTransform1 {
     promo3=promo3.withColumn("Part Number", partNumberUDF(col("Part Number")))
 
     val GAPInputPromoRawDF = renameColumns(spark.read.option("header","true").option("escape","\"").option("inferSchema","true")
-      .csv("/etherData/managedSources/GAP/gap_input_promo.csv"))
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_prev_week.csv"))
       .drop("Conditions / Notes")
       .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"yyyy-MM-dd").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"yyyy-MM-dd").cast("timestamp")))
@@ -126,6 +126,16 @@ object GAPTransform1 {
         ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","On Ad","FileName")
     promo3.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
       .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_"+currentTS+".csv")
+
+
+    val GAPInputPromoCurr = renameColumns(spark.read.option("header","true").option("escape","\"").option("inferSchema","true")
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_"+currentTS+".csv"))
+      .drop("Conditions / Notes")
+      .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"yyyy-MM-dd").cast("timestamp")))
+      .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"yyyy-MM-dd").cast("timestamp")))
+
+    GAPInputPromoCurr.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_prev_week.csv")
 
 
   }

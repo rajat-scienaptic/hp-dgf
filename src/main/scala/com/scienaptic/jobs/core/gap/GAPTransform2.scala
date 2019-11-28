@@ -113,7 +113,7 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
     ad3=ad3.withColumn("Part Number", partNumberUDF(col("Part Number")))
 
     val GAPInputAdRawDF = renameColumns(spark.read.option("header","true").option("inferSchema","true")
-      .csv("/etherData/managedSources/GAP/gap_input_ad.csv"))
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad_prev_week.csv"))
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"dd-MM-yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
 
@@ -126,6 +126,14 @@ var personalPrintersAdRawExcelDF=renameColumns(spark.read.option("header","true"
 
     ad3.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
       .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad_"+currentTS+".csv")
+
+    val GAPInputAdCurr = renameColumns(spark.read.option("header","true").option("inferSchema","true")
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad_"+currentTS+".csv"))
+      .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"dd-MM-yyyy").cast("timestamp")))
+      .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"dd-MM-yyyy").cast("timestamp")))
+
+    GAPInputAdCurr.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad_prev_week.csv")
 
   }
 }
