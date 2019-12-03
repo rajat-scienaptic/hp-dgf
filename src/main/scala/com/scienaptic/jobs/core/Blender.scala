@@ -18,7 +18,7 @@ object Blender {
       val historicSource = loadCSV(executionContext, sourceDefinition.historicFilePath).get
       var orcaNewSource = loadCSV(executionContext, sourceDefinition.orcaNewFilePath).get
       val nameSource = sourceDefinition.name
-      
+
       nameSource match {
         case "ODOM_ONLINE_ORCA" => orcaNewSource = orcaNewSource.where(col("Week")>="2019W01")
         case "HP_COM" => orcaNewSource = orcaNewSource    //TODO: Dont have source from Fabio yet to compare
@@ -26,7 +26,7 @@ object Blender {
         case "WALMART" => orcaNewSource = orcaNewSource.where(col("Week")>"2019W23")
         case "CI" => orcaNewSource = orcaNewSource.where(col("Quarter")>"2018Q02")
         case "ST" => orcaNewSource = orcaNewSource.where(col("Quarter")>"2019Q02")
-        case "Walmart_Pos_Qty" => orcaNewSource = orcaNewSource   //Only Historic was faulty. So replaced Carlos' feed with Fabio's file.
+        case "Walmart_Pos_Qty" => orcaNewSource = orcaNewSource.where(col("Week") > "2019W44")
         case _ => orcaNewSource = orcaNewSource
       }
 

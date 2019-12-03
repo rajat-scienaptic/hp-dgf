@@ -96,6 +96,9 @@ object RetailTransform2 {
       when(col("Product Base ID") === "M9L74A", "M9L75A")
         .when((col("Product Base ID") === "J9V91A") || (col("Product Base ID") === "J9V92A"), "J9V90A")
             .when(col("Product Base ID") === "Z3M52A", "K7G93A")
+        .when(col("Product Base ID") === "5LJ23A" || (col("Product Base ID") === "4KJ65A"), "3UC66A")
+        .when(col("Product Base ID") === "3UK84A", "1KR45A")
+        .when(col("Product Base ID") === "T0G26A", "T0G25A")
         .otherwise(col("Product Base ID")))
 
     // group
@@ -188,7 +191,7 @@ object RetailTransform2 {
     val auxTablesSKUHierarchySort01DF = SortOperation.doSort(auxTablesSKUHierarchyGroup01DF, auxTablesSKUHierarchySort01.ascending, auxTablesSKUHierarchySort01.descending).get
 
     // SKU fallout
-    auxTablesSKUHierarchySort01DF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/fallout-SKUs-retail-" + currentTS + ".csv")
+    auxTablesSKUHierarchySort01DF.coalesce(1).write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/fallout-SKUs-retail-" + currentTS + ".csv")
 
     // browse or write to CSV
 
@@ -202,7 +205,7 @@ object RetailTransform2 {
     // unique
     val auxTablesSKUHierarchyDistinctDF = auxTablesSKUHierarchyGroup02DF.dropDuplicates(List("Account Major", "Online", "SKU", "WED"))
     // SKU fallout
-//    auxTablesSKUHierarchyDistinctDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/fallout-SKUs-retail-" + currentTS + ".csv")
+    // auxTablesSKUHierarchyDistinctDF.write.option("header", true).mode(SaveMode.Overwrite).csv("/etherData/retailTemp/retailAlteryx/fallout-SKUs-retail-" + currentTS + ".csv")
     // browse here
 
     // filter
@@ -352,12 +355,12 @@ object RetailTransform2 {
     val format = new SimpleDateFormat("d-M-y h-m-s");
 
 
-    bbyBundleInfoSort01DF.dropDuplicates(List("Account", "Online", "SKU", "Week_End_Date", "Max_Week_End_Date"))
+    bbyBundleInfoSort01DF/*.dropDuplicates(List("Account", "Online", "SKU", "Week_End_Date", "Max_Week_End_Date"))*/
       .select("Account","Online","SKU","SKU_Name","IPSLES","Week_End_Date","POS_Qty","Season","Street_Price",
         "Category","Category_Subgroup","Line","PL","L1_Category","L2_Category","Raw_POS_Qty","GA_date","ES_date",
         "Distribution_Inv","Category_1","Category_2","Category_3","HPS/OPS","Series","Category Custom","Brand",
         "Max_Week_End_Date","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year")
-      .write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/POS_Retail/temp/before_posqty_output_retail_"+currentTS+".csv")
+      .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/POS_Retail/temp/before_posqty_output_retail_"+currentTS+".csv")
     // formula
     //val bbyBundleInfoFormula08DF = bbyBundleInfoSort01DF.withColumn("Workflow Run Date", current_date())
 

@@ -98,7 +98,7 @@ object GAPTransform3 {
         "Days_on_Promo","Week_End_Date")
 
     var ad3 = renameColumns(spark.read.option("header","true").option("inferSchema","true")
-      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad_"+currentTS+".csv"))
+        .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_ad_"+currentTS+".csv"))
       .withColumn("Ad Date", to_date(unix_timestamp(col("Ad Date"),"yyyy-MM-dd").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"yyyy-MM-dd").cast("timestamp")))
 
@@ -137,7 +137,7 @@ object GAPTransform3 {
         "Page Number","Print Verified","Online Verified","Ad","Week_End_Date")
       .withColumn("Print Verified",when(col("Print Verified")==="Y",1).otherwise(0))
       .withColumn("Online Verified",when(col("Online Verified")==="Y",1).otherwise(0))
-      .withColumn("Page Number",when(col("Page Number").isNull,lit("NA"))
+      .withColumn("Page Number",when(col("Page Number").isNull || col("Page Number") === "na",lit("NA")) // TODO : add 'na'
         .otherwise(col("Page Number")))
 
     var Promo_Ad=promo3.join(ad3,Seq("SKU","Brand","Product","Account","Week_End_Date"),"fullouter")

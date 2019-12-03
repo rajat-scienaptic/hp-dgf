@@ -14,6 +14,22 @@ object GAPTransform1 {
   val stability_weeks = 4
   val intro_weeks = 6
 
+  val partNumber = (partNumber : String)  => {
+    if(partNumber == "J9V91A" || partNumber == "J9V92A" || partNumber == "J9V83A"){
+      "J9V80A"
+    }else if(partNumber == "M9L74A") {
+      "M9L75A"
+    }else if(partNumber == "Z3M52A") {
+      "K7G93A"
+    }else if(partNumber == "5LJ23A" || partNumber == "4KJ65A") {
+      "3UC66A"
+    }else if(partNumber == "3UK84A") {
+      "1KR45A"
+    }else{
+      partNumber
+    }
+  }
+
   val dat2000_01_01 = to_date(unix_timestamp(lit("2000-01-01"),"yyyy-MM-dd").cast("timestamp"))
   val dat9999_12_31 = to_date(unix_timestamp(lit("9999-12-31"),"yyyy-MM-dd").cast("timestamp"))
 
@@ -22,6 +38,8 @@ object GAPTransform1 {
 
   val indexerForResellerCluster = new StringIndexer().setInputCol("Reseller_Cluster").setOutputCol("Reseller_Cluster_fact")
   val pipelineForResellerCluster= new Pipeline().setStages(Array(indexerForResellerCluster))
+
+  def partNumberUDF = udf(partNumber)
 
   def execute(executionContext: ExecutionContext): Unit = {
 
@@ -41,20 +59,20 @@ object GAPTransform1 {
       .getOrCreate
     val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
 
-    var businessPrintersPromoRawExcelDF=renameColumns(spark.read.option("header","true").option("inferSchema","true")
+    var businessPrintersPromoRawExcelDF=renameColumns(spark.read.option("header","true").option("escape","\"").option("inferSchema","true")
       .csv("/etherData/managedSources/GAP/BusinessPrinters_WEEKLY_Promotions.csv"))
     businessPrintersPromoRawExcelDF.columns.toList.foreach(x => {
       businessPrintersPromoRawExcelDF = businessPrintersPromoRawExcelDF.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
-    val businessPrintersPromoRawDF=businessPrintersPromoRawExcelDF.na.drop(Seq("Brand"))
+    val businessPrintersPromoRawDF=businessPrintersPromoRawExcelDF/*.na.drop(Seq("Brand"))*/
       .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("BusinessPrinters_WEEKLY"))
       .select("Brand","Product","Part Number","Merchant SKU","Market Segment","Product Type","Start Date","End Date",
-      "Promotion Type","Bundle Type","Merchant","Value","Conditions / Notes","On Ad","FileName")
+      "Promotion Type","Bundle Type","Merchant","Value","On Ad","FileName")
       .withColumnRenamed("Merchant","Valid Resellers")
 
-    var personalPrintersPromoRawExcelDF=renameColumns(spark.read.option("header","true").option("inferSchema","true")
+    var personalPrintersPromoRawExcelDF=renameColumns(spark.read.option("header","true").option("escape","\"").option("inferSchema","true")
       .csv("/etherData/managedSources/GAP/PersonalSOHOPrinters_WEEKLY_Promotions.csv"))
       .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
@@ -63,46 +81,61 @@ object GAPTransform1 {
     personalPrintersPromoRawExcelDF.columns.toList.foreach(x => {
       personalPrintersPromoRawExcelDF = personalPrintersPromoRawExcelDF.withColumn(x, when(col(x) === "NA" || col(x) === "", null).otherwise(col(x)))
     })
-    val personalPrintersPromoRawDF=personalPrintersPromoRawExcelDF.na.drop(Seq("Brand"))
+    val personalPrintersPromoRawDF=personalPrintersPromoRawExcelDF/*.na.drop(Seq("Brand"))*/
       .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"MM/dd/yyyy").cast("timestamp")))
       .withColumn("FileName",lit("PersonalSOHOPrinters_WEEKLY"))
       .select("Brand","Product","Part Number","Merchant SKU","Market Segment","Product Type","Start Date","End Date",
-        "Promotion Type","Bundle Type","Merchant","Value","Conditions / Notes","On Ad","FileName")
+        "Promotion Type","Bundle Type","Merchant","Value","On Ad","FileName")
       .withColumnRenamed("Merchant","Valid Resellers")
 
     var promo3=businessPrintersPromoRawDF.union(personalPrintersPromoRawDF)
     promo3=promo3.where((col("Promotion Type") === lit("Instant Savings"))
       && (col("Product").isNotNull) && (col("Product") =!= lit(".")) &&
       (lower(col("Part Number")) =!= "select") && (col("Part Number") =!= "na"))
+
     promo3=promo3.sort(asc("Start Date")
       ,desc("End Date"),asc("Brand")
       ,asc("Valid Resellers"),asc("Part Number"),asc("Merchant SKU"))
-    promo3=promo3.dropDuplicates("Brand","Part Number","Start Date","End Date","Valid Resellers")
+    promo3=promo3.coalesce(1).dropDuplicates("Brand","Part Number","Start Date","End Date","Valid Resellers")
     val maxdate=promo3.select(col("Start Date")).agg(max("Start Date")).head().getDate(0)
     promo3=promo3.withColumn("Max_Start Date", lit(maxdate))
     promo3 = promo3.withColumn("Max_Start Date_Add91"
       , date_add(col("Max_Start Date").cast("timestamp"), -13*7))
           .where(col("Start Date")>col("Max_Start Date_Add91"))
           .drop("Max_Start Date_Add91")
-    promo3=promo3.withColumn("Part Number",when(col("Part Number")==="J9V83A","J9V80A")
-      .when(col("Part Number")==="M9L74A","M9L75A").when(col("Part Number")==="J9V91A","J9V90A").when(col("Part Number")==="J9V92A","J9V90A")
-    .otherwise(col("Part Number")))
 
-    val GAPInputPromoRawDF = renameColumns(spark.read.option("header","true").option("inferSchema","true")
-      .csv("/etherData/managedSources/GAP/gap_input_promo.csv"))
+    promo3.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
+      .csv("/etherData/GAPTemp/gap_1_2_filter.csv")
+    // TODO : change to formula
+    promo3=promo3.withColumn("Part Number", partNumberUDF(col("Part Number")))
+
+    val GAPInputPromoRawDF = renameColumns(spark.read.option("header","true").option("escape","\"").option("inferSchema","true")
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_prev_week.csv"))
+      .drop("Conditions / Notes")
       .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"yyyy-MM-dd").cast("timestamp")))
       .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"yyyy-MM-dd").cast("timestamp")))
     var promo11=GAPInputPromoRawDF.join(promo3,GAPInputPromoRawDF("Start Date")===promo3("Start Date"),"leftanti")
+
     promo3=promo3.select("Brand","Product","Part Number","Merchant SKU","Product Type"
-      ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","Conditions / Notes","On Ad","FileName")
+      ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","On Ad","FileName")
     promo11=promo11.select("Brand","Product","Part Number","Merchant SKU","Product Type"
-      ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","Conditions / Notes","On Ad","FileName")
+      ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","On Ad","FileName")
     promo3=promo3.union(promo11)
       .select("Brand","Product","Part Number","Merchant SKU","Product Type"
-        ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","Conditions / Notes","On Ad","FileName")
-    promo3.write.option("header","true").mode(SaveMode.Overwrite)
+        ,"Start Date","End Date","Promotion Type","Bundle Type","Valid Resellers","Value","On Ad","FileName")
+    promo3.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
       .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_"+currentTS+".csv")
+
+
+    val GAPInputPromoCurr = renameColumns(spark.read.option("header","true").option("escape","\"").option("inferSchema","true")
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_"+currentTS+".csv"))
+      .drop("Conditions / Notes")
+      .withColumn("Start Date", to_date(unix_timestamp(col("Start Date"),"yyyy-MM-dd").cast("timestamp")))
+      .withColumn("End Date", to_date(unix_timestamp(col("End Date"),"yyyy-MM-dd").cast("timestamp")))
+
+    GAPInputPromoCurr.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite)
+      .csv("/etherData/Pricing/Outputs/POS_GAP/gap_input_promo_prev_week.csv")
 
 
   }

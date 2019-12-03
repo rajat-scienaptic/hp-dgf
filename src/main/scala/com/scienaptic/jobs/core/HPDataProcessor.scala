@@ -10,12 +10,13 @@ import com.scienaptic.jobs.core.npd.print._
 import com.scienaptic.jobs.core.pricing.amazon.AmazonTransform
 import com.scienaptic.jobs.core.pricing.commercial._
 import com.scienaptic.jobs.core.pricing.retail._
+import com.scienaptic.jobs.core.reporting.RetailPOSQtyComparisonReport
 
 object HPDataProcessor {
   def execute(executionContext: ExecutionContext): Unit = {
     executionContext.configuration.config match {
       case "reporting-NEW" => ExcelDQValidation.execute(executionContext)
-      case "reporting" => RCodeDQValidation.execute(executionContext)
+      case "reporting" => RetailPOSQtyComparisonReport.execute(executionContext)
       case "HP-orca-merge" => Blender.execute(executionContext)
       case "retail-ORCA_MAIN_UNION" => RetailTransform.execute(executionContext)
       case "retail-DISTRIBUTION_INV" => RetailTransform2.execute(executionContext)
