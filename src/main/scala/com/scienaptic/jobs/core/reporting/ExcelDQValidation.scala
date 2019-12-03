@@ -19,7 +19,6 @@ object ExcelDQValidation {
     val reportingBasePaths : Map[String,String] = executionContext.configuration.reporting
     import spark.implicits._
     val currentTS = spark.read.json("/etherData/state/currentTS.json").select("ts").head().getString(0)
-
     // Method for generating the summarise value
     def convertListToDFColumn(columnList: List[String], dataFrame: DataFrame) = {
       columnList.map(name => dataFrame.col(name))
@@ -72,7 +71,7 @@ object ExcelDQValidation {
 
     //---------------------------------------Retail validation starts (Excel)---------------------------------------
 
-    val retailDataFrame = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
+   /* val retailDataFrame = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
       .csv(retailInputLocation + "preregression_output_retail_"+ currentTS +".csv"))
 
     //    Duplicate Check
@@ -299,10 +298,12 @@ object ExcelDQValidation {
     }
 
     invalidRangeDF.coalesce(1).write.option("header", "true")
-      .mode(SaveMode.Overwrite).csv(outputLocation + "Retail_Invalid_Range_Check_Report.csv")
+      .mode(SaveMode.Overwrite).csv(outputLocation + "Retail_Invalid_Range_Check_Report.csv")*/
 
+    val retailDataFrame = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
+      .csv(alteryxRetailInputLocation + "posqty_output_retail_" + currentTS + ".csv"))
 
-    val retailTwoSeasonDf = retailDataFrame.filter(col("season") === seasons(0) || col("season") === seasons(1))
+    /*val retailTwoSeasonDf = retailDataFrame.filter(col("season") === seasons(0) || col("season") === seasons(1))
     val retailFourSeasonDf = retailDataFrame.filter(col("season") === seasons(0) || col("season") === seasons(1) || col("season") === seasons(2) || col("season") === seasons(3))
 
     var retailDistInv = retailFourSeasonDf.groupBy("Category", "Account").agg(min("Distribution_Inv") as ("min_Distribution_Inv"),
@@ -520,18 +521,16 @@ object ExcelDQValidation {
     summarizeColumn.join(summariseExclude, Seq("summary"), "inner")
       .join(sumLLBDf, Seq("summary"), "inner")
       .coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
-      .csv(outputLocation + "Commercial_and_Retail_Summary_Excel_Report.csv")
+      .csv(outputLocation + "Commercial_and_Retail_Summary_Excel_Report.csv")*/
 
 
     //-------------------------------------------------Alteryx  for Retail----------------------------------------------
 
 
-    val recentSeasonRetailData = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxRetailInputLocation + "posqty_output_retail.csv")).orderBy(col("season").desc)
+    val recentSeasonRetailData = retailDataFrame.orderBy(col("season").desc)
       .select("SKU", "Account", "season", "POS_Qty", "Raw_POS_Qty", "Distribution_Inv")
 
-    val previousSeasonRetalData = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxRetailInputLocation + "posqty_output_retail.csv")).orderBy(col("season").desc)
+    val previousSeasonRetalData = retailDataFrame.orderBy(col("season").desc)
       .withColumnRenamed("POS_Qty", "Pre_POS_Qty")
       .withColumnRenamed("Raw_POS_Qty", "Pre_Raw_POS_Qty")
       .withColumnRenamed("Distribution_Inv", "Pre_Distribution_Inv")
@@ -542,19 +541,19 @@ object ExcelDQValidation {
     //TODO: Change week to season
     val joinPreAndPresentDf = previousSeasonRetalData.join(recentSeasonRetailData, Seq("SKU", "Account", "season"), "right")
 
-    val commercialLatestSeasonFilterDF = joinPreAndPresentDf.filter(col("season") === latestSeaName)
+    val retailLatestSeasonFilterDF = joinPreAndPresentDf.filter(col("season") === latestSeaName)
       .withColumn("POS_Qty_Flag", col("POS_Qty") === col("Pre_POS_Qty"))
       .withColumn("Raw_POS_Qty_Flag", col("Raw_POS_Qty") === col("Pre_Raw_POS_Qty"))
       .withColumn("Distribution_Inv_Flag", col("Distribution_Inv") === col("Pre_Distribution_Inv"))
       .select("SKU", "Account", "season", "POS_Qty", "POS_Qty_Flag", "Pre_POS_Qty", "Raw_POS_Qty", "Raw_POS_Qty_Flag", "Pre_Raw_POS_Qty", "Distribution_Inv", "Distribution_Inv_Flag", "Pre_Distribution_Inv")
 
-    val retailLatSeasonPosQtyFlag = commercialLatestSeasonFilterDF.filter(col("POS_Qty_Flag") === false)
+    val retailLatSeasonPosQtyFlag = retailLatestSeasonFilterDF.filter(col("POS_Qty_Flag") === false)
     //retailLatSeasonPosQtyFlag.coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
     //.csv(outputLocation + "Alteryx_Retail_POS_Qty_Current_Season.csv")
-    val retailLatSeasonRawPosQtyFlag = commercialLatestSeasonFilterDF.filter(col("Raw_POS_Qty_Flag") === false)
+    val retailLatSeasonRawPosQtyFlag = retailLatestSeasonFilterDF.filter(col("Raw_POS_Qty_Flag") === false)
     //retailLatSeasonRawPosQtyFlag.coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
     //.csv(outputLocation + "Alteryx_Retail_Raw_POS_Qty_Current_Season.csv")
-    val retailLatSeasonDistributionInvFlag = commercialLatestSeasonFilterDF.filter(col("Distribution_Inv_Flag") === false)
+    val retailLatSeasonDistributionInvFlag = retailLatestSeasonFilterDF.filter(col("Distribution_Inv_Flag") === false)
     //retailLatSeasonDistributionInvFlag.coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
     //.csv(outputLocation + "Alteryx_Retail_Distribution_Inv_Current_Season.csv")
 
@@ -586,7 +585,7 @@ object ExcelDQValidation {
     /*retailFlag.coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
       .csv(outputLocation + "Alteryx_Retail_Comparison_Report.csv")*/
 
-    val checkDiffRetailDF = commercialLatestSeasonFilterDF.withColumn("Season_Validated", lit("Current"))
+    val checkDiffRetailDF = retailLatestSeasonFilterDF.withColumn("Season_Validated", lit("Current"))
       .unionByName(commercialPreviousSeasonFilterDF.withColumn("Season_Validated", lit("Non_Current")))
       .filter((col("POS_Qty_Flag") === false) || (col("Raw_POS_Qty_Flag") === false) || (col("Distribution_Inv_Flag") === false))
     checkDiffRetailDF.coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
@@ -594,10 +593,10 @@ object ExcelDQValidation {
 
     //-------------------------------------------------Alteryx  for Commercial----------------------------------------------
     val recentCommercialData = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxCommercialInputLocation + "posqty_output_commercial.csv")).orderBy(col("season").desc)
+      .csv(alteryxCommercialInputLocation + "posqty_output_commercial_" +currentTS + ".csv")).orderBy(col("season").desc)
       .select("SKU", "Reseller Cluster", "season", "Qty", "Inv_Qty")
     val previousWeekCommercialData = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxCommercialInputLocation + "posqty_output_commercial.csv")).orderBy(col("season").desc)
+      .csv(alteryxCommercialInputLocation + "posqty_output_commercial_" + currentTS + ".csv")).orderBy(col("season").desc)
       .withColumnRenamed("Qty", "Pre_Qty")
       .withColumnRenamed("Inv_Qty", "Pre_Inv_Qty")
       .select("SKU", "Reseller Cluster", "season", "Pre_Qty", "Pre_Inv_Qty")
@@ -646,7 +645,7 @@ object ExcelDQValidation {
 
     //-------------------------------------------------Alteryx  for Retail SKU----------------------------------------------
     //TODO: Debug this
-    val recentRetailDataForSkuDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
+    /*val recentRetailDataForSkuDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
       .csv(alteryxRetailInputLocation + "posqty_output_retail.csv"))
     val skuHierarchyDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
       .csv(auxSkuHierarchyLocation + "Aux_sku_hierarchy.csv")).select("SKU")
@@ -659,13 +658,13 @@ object ExcelDQValidation {
 
     val skus = joinTableDF.select("SKU").collect().map(_ (0)).mkString(",")
     val retailSKU = Seq(("Retail", "Fallout SKUs", joinTableDF.count(), skus.toString)).toDF("Dataset", "Validation_Rule", "Count", "Fallout SKUs")
-    dataTypeSkuDF = dataTypeSkuDF.union(retailSKU)
+    dataTypeSkuDF = dataTypeSkuDF.union(retailSKU)*/
 
 
     //-------------------------------------------------Alteryx  for Commercial SKU----------------------------------------------
 
     //TODO: Debug this
-    val recentCommercialDataForSkuDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
+    /*val recentCommercialDataForSkuDF = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
       .csv(alteryxCommercialInputLocation + "posqty_output_commercial.csv"))
 
     val comJoinTableDF = recentCommercialDataForSkuDF.join(skuHierarchyDF, Seq("SKU"), "left")
@@ -676,7 +675,7 @@ object ExcelDQValidation {
     dataTypeSkuDF = dataTypeSkuDF.union(commercialSKU)
 
     dataTypeSkuDF.coalesce(1).write.option("header", "true").mode(SaveMode.Overwrite)
-      .csv(outputLocation + "Alteryx_SKU_Commercial_and_retail_report.csv")
+      .csv(outputLocation + "Alteryx_SKU_Commercial_and_retail_report.csv")*/
 
     //-------------------------------------------------Merged GeneratedReport----------------------------------------------
 
