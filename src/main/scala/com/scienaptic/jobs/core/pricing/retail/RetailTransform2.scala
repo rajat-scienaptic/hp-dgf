@@ -48,6 +48,7 @@ object RetailTransform2 {
   val RENAME04 = "rename04"
   val RENAME05 = "rename05"
   val RENAME06 = "rename06"
+  val RENAME07 = "rename07"
   val SORT01 = "sort01"
   val SORT02 = "sort02"
   val SORT03 = "sort03"
@@ -102,9 +103,10 @@ object RetailTransform2 {
     val skuHierarchyFilter01 = auxTablesSKUHierarchySource.filterOperation(FILTER_SKU)
     val skuHierarchyFilterDF = FilterOperation.doFilter(auxTablesSKUHierarchySelect01DF, skuHierarchyFilter01, skuHierarchyFilter01.conditionTypes(NUMERAL0)).get
 
+
     //join
     val auxOnlineJoinSkuFilterAndOnline = auxTablesOnlineSource.joinOperation(JOIN_SKU_FILTER_AND_AUX_ONLINE)
-    val auxOnlineJoinSkuFilterAndOnlineMap = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineFormula01DF, skuHierarchyFilterDF, auxOnlineJoinSkuFilterAndOnline)
+    val auxOnlineJoinSkuFilterAndOnlineMap = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineFormula01DF, skuHierarchyFilterDF.withColumnRenamed("Product Base Desc", "Right_Product Base Desc"), auxOnlineJoinSkuFilterAndOnline)
     val auxOnlineJoinSkuFilterAndOnlineInnerDF = auxOnlineJoinSkuFilterAndOnlineMap(INNER_JOIN)
 
 
@@ -329,7 +331,8 @@ object RetailTransform2 {
 
     // join 331
     val unionAppendMaxWeekEndDateSource = bbyBundleInfoSource.joinOperation(JOIN_SKU_FILTER_AND_MAX_WEEKEND_DATE)
-    val unionAppendMaxWeekEndDateMap = JoinAndSelectOperation.doJoinAndSelect(unionAppendMaxWeekEndDate, skuHierarchyFilterDF, unionAppendMaxWeekEndDateSource)
+    val skuFilterHierarchyRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME07), skuHierarchyFilterDF)
+    val unionAppendMaxWeekEndDateMap = JoinAndSelectOperation.doJoinAndSelect(unionAppendMaxWeekEndDate, skuFilterHierarchyRenamedDF, unionAppendMaxWeekEndDateSource)
     val unionAppendMaxWeekEndDateInnerDF = unionAppendMaxWeekEndDateMap(INNER_JOIN)
     // browse here
 
