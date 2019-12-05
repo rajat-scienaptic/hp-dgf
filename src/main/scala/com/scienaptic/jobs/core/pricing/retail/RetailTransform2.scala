@@ -123,6 +123,7 @@ object RetailTransform2 {
     // group
     val auxTablesOnlineGroup02 = auxTablesOnlineSource.groupOperation(GROUP02)
     val auxTablesOnlineGroup02DF = GroupOperation.doGroup(auxOnlineJoinSkuFilterAndOnlineInnerDF, auxTablesOnlineGroup02).get
+      .withColumnRenamed("Consol SKU", "Producct Base ID")
 
     // filter
     val maxWedIncluding7000DaysDF = auxTablesOnlineGroup02DF.withColumn("date_last_52weeks", date_sub(col("Max_wed"), 7000))
