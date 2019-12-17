@@ -278,7 +278,7 @@ object CommercialSimplifiedTransform {
       .groupBy("Base SKU","Season_Ordered","season")
       .agg(sum("Total Amount"), sum("Sum_Claim Quantity"))
       .withColumnRenamed("Total Amount","Sum_Total Amount")
-      .withcolumnRenamed("Sum_Claim Quantity","Sum_Sum_Claim Quantity")
+      .withColumnRenamed("Sum_Claim Quantity","Sum_Sum_Claim Quantity")
       .withColumn("Avg BD per Unit",col("Sum_Total Amount")/col("Sum_Sum_Claim Quantity"))
       .withColumnRenamed("Base SKU","SKU").withColumnRenamed("Season_Ordered","Season_2").withColumnRenamed("season","Season")
       .withColumnRenamed("Sum_Sum_Claim Quantity","BD Units").withColumnRenamed("Avg BD per Unit","BD Claim Avg")
@@ -287,6 +287,12 @@ object CommercialSimplifiedTransform {
     * OUTPUT - big_deal_avg_discount.csv - 423
     * */
     claimsAndCalJoinBrowseDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/big_deal_avg_discount"+currentTS+".csv")
+
+    /*
+    * 427 - Filter PRODUCT TYPE CONSOLE = Units
+    * */
+    val skuHierProdTypeFilter = skuHierarchySource.filterOperation(PRODUCT_TYPE_EQ_UNITS)
+    val skuHierProdTypeFilteredDF = doFilter(skuHierarchySelectDF, skuHierProdTypeFilter, skuHierProdTypeFilter.conditionTypes(NUMERAL0)).get
 
     /*
     * Join Claims and SKU Hierarchy on SclaimsAndSKUHierInnerJoinDFKU - 254 */
@@ -529,12 +535,6 @@ object CommercialSimplifiedTransform {
     //writeDF(tidyHistAndSKUHierInnerJoinDF,"BIG_DEAL_QTY_ETAILER_NON_BIG_DEAL")
 
     /* ---------------------------- STT (CI) ---------------------------- */
-    /*
-    * 427 - Filter PRODUCT TYPE CONSOLE = Units
-    * */
-    val skuHierProdTypeFilter = skuHierarchySource.filterOperation(PRODUCT_TYPE_EQ_UNITS)
-    val skuHierProdTypeFilteredDF = doFilter(skuHierarchySelectDF, skuHierProdTypeFilter, skuHierProdTypeFilter.conditionTypes(NUMERAL0)).get
-
     /*
     * Join STT Onyx and Accounts on Account Company - 406
     * */
