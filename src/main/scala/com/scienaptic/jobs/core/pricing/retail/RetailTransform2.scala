@@ -20,6 +20,7 @@ object RetailTransform2 {
   val SELECT05 = "select05"
   val SELECT06 = "select06"
   val FILTER01 = "filter01"
+  val FILTER_SKU = "FILTER_SKU"
   val FILTER02 = "filter02"
   val FILTER03 = "filter03"
   val FILTER04 = "filter04"
@@ -32,6 +33,8 @@ object RetailTransform2 {
   val JOIN05 = "join05"
   val JOIN06 = "join06"
   val JOIN07 = "join07"
+  val JOIN_SKU_FILTER_AND_AUX_ONLINE = "JOIN_SKU_FILTER_AND_AUX_ONLINE"
+  val JOIN_SKU_FILTER_AND_MAX_WEEKEND_DATE = "JOIN_SKU_FILTER_AND_MAX_WEEKEND_DATE"
   val NUMERAL0 = 0
   val NUMERAL1 = 1
   val GROUP01 = "group01"
@@ -45,6 +48,7 @@ object RetailTransform2 {
   val RENAME04 = "rename04"
   val RENAME05 = "rename05"
   val RENAME06 = "rename06"
+  val RENAME07 = "rename07"
   val SORT01 = "sort01"
   val SORT02 = "sort02"
   val SORT03 = "sort03"
@@ -90,20 +94,36 @@ object RetailTransform2 {
     val mainUnion05Union04AndSPrintFormula = Utils.loadCSV(executionContext, MAIN_UNION_PATH).get
       .withColumn("wed", to_date(unix_timestamp(col("wed"), "yyyy-MM-dd").cast("timestamp")))
 
+    /* Aux Table SKU Hierarchy */
+    //select
+    val auxTablesSKUHierarchySelect01 = auxTablesSKUHierarchySource.selectOperation(SELECT01)
+    val auxTablesSKUHierarchySelect01DF = SelectOperation.doSelect(auxTablesSKUHierarchy, auxTablesSKUHierarchySelect01.cols, auxTablesSKUHierarchySelect01.isUnknown).get
+
+    // filter
+    val skuHierarchyFilter01 = auxTablesSKUHierarchySource.filterOperation(FILTER_SKU)
+    val skuHierarchyFilterDF = FilterOperation.doFilter(auxTablesSKUHierarchySelect01DF, skuHierarchyFilter01, skuHierarchyFilter01.conditionTypes(NUMERAL0)).get
+
+
+    //join
+    val auxOnlineJoinSkuFilterAndOnline = auxTablesOnlineSource.joinOperation(JOIN_SKU_FILTER_AND_AUX_ONLINE)
+    val auxOnlineJoinSkuFilterAndOnlineMap = JoinAndSelectOperation.doJoinAndSelect(auxTablesOnlineFormula01DF, skuHierarchyFilterDF.withColumnRenamed("Product Base Desc", "Right_Product Base Desc"), auxOnlineJoinSkuFilterAndOnline)
+    val auxOnlineJoinSkuFilterAndOnlineInnerDF = auxOnlineJoinSkuFilterAndOnlineMap(INNER_JOIN)
+
 
     // formula
-    val auxTablesOnlineFormula02DF = auxTablesOnlineFormula01DF.withColumn("Product Base ID",
+   /* val auxTablesOnlineFormula02DF = auxTablesOnlineFormula01DF.withColumn("Product Base ID",
       when(col("Product Base ID") === "M9L74A", "M9L75A")
         .when((col("Product Base ID") === "J9V91A") || (col("Product Base ID") === "J9V92A"), "J9V90A")
             .when(col("Product Base ID") === "Z3M52A", "K7G93A")
         .when(col("Product Base ID") === "5LJ23A" || (col("Product Base ID") === "4KJ65A"), "3UC66A")
         .when(col("Product Base ID") === "3UK84A", "1KR45A")
         .when(col("Product Base ID") === "T0G26A", "T0G25A")
-        .otherwise(col("Product Base ID")))
+        .otherwise(col("Product Base ID")))*/
 
     // group
     val auxTablesOnlineGroup02 = auxTablesOnlineSource.groupOperation(GROUP02)
-    val auxTablesOnlineGroup02DF = GroupOperation.doGroup(auxTablesOnlineFormula02DF, auxTablesOnlineGroup02).get
+    val auxTablesOnlineGroup02DF = GroupOperation.doGroup(auxOnlineJoinSkuFilterAndOnlineInnerDF, auxTablesOnlineGroup02).get
+      .withColumnRenamed("Consol SKU", "Product Base ID")
 
     // filter
     val maxWedIncluding7000DaysDF = auxTablesOnlineGroup02DF.withColumn("date_last_52weeks", date_sub(col("Max_wed"), 7000))
@@ -171,14 +191,10 @@ object RetailTransform2 {
     // browse here
     // distribution calculation Ends
 
-    /* Aux Table SKU Hierarchy */
-    //select
-    val auxTablesSKUHierarchySelect01 = auxTablesSKUHierarchySource.selectOperation(SELECT01)
-    val auxTablesSKUHierarchySelect01DF = SelectOperation.doSelect(auxTablesSKUHierarchy, auxTablesSKUHierarchySelect01.cols, auxTablesSKUHierarchySelect01.isUnknown).get
 
     // join
     val auxTablesSKUHierarchyJoin01 = auxTablesSKUHierarchySource.joinOperation(JOIN01)
-    val auxTablesSKUHierarchyJoin01Map = JoinAndSelectOperation.doJoinAndSelect(mainUnion05Union04AndSPrintFormula, auxTablesSKUHierarchySelect01DF, auxTablesSKUHierarchyJoin01)
+    val auxTablesSKUHierarchyJoin01Map = JoinAndSelectOperation.doJoinAndSelect(mainUnion05Union04AndSPrintFormula, skuHierarchyFilterDF, auxTablesSKUHierarchyJoin01)
     val auxTablesSKUHierarchyJoin01LeftDF = auxTablesSKUHierarchyJoin01Map(LEFT_JOIN)
     val auxTablesSKUHierarchyJoin01InnerDF = auxTablesSKUHierarchyJoin01Map(INNER_JOIN)
 
@@ -314,6 +330,11 @@ object RetailTransform2 {
     val calMaxWED = unionFormulaAndInnerJoinDF.agg(max("Week_End_Date")).head().getDate(NUMERAL0)
     val unionAppendMaxWeekEndDate = unionFormulaAndInnerJoinDF.withColumn("Max_Week_End_Date", lit(calMaxWED))
 
+    // join 331
+    val unionAppendMaxWeekEndDateSource = bbyBundleInfoSource.joinOperation(JOIN_SKU_FILTER_AND_MAX_WEEKEND_DATE)
+    val skuFilterHierarchyRenamedDF = Utils.convertListToDFColumnWithRename(bbyBundleInfoSource.renameOperation(RENAME07), skuHierarchyFilterDF)
+    val unionAppendMaxWeekEndDateMap = JoinAndSelectOperation.doJoinAndSelect(unionAppendMaxWeekEndDate, skuFilterHierarchyRenamedDF, unionAppendMaxWeekEndDateSource)
+    val unionAppendMaxWeekEndDateInnerDF = unionAppendMaxWeekEndDateMap(INNER_JOIN)
     // browse here
 
     // filter
@@ -339,7 +360,7 @@ object RetailTransform2 {
     /* Commenting Existing POS ends */
 
     // formula
-    val bbyBundleInfoFormula07DF = unionAppendMaxWeekEndDate.withColumn("Season",
+    val bbyBundleInfoFormula07DF = unionAppendMaxWeekEndDateInnerDF.withColumn("Season",
       when(col("IPSLES") === "IPS", col("Season"))
         .otherwise(when(col("Week_End_Date") === "2016-10-01", "BTS'16")
           .when(col("Week_End_Date") === "2016-12-31", "HOL'16")
