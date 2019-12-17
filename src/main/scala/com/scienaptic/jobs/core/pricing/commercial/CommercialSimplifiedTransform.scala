@@ -455,12 +455,13 @@ object CommercialSimplifiedTransform {
     /*
     * Filter 'Start - Week End' <= -3 AND 'Week End - End' <= 3
     * */
+    //TODO: BU Removed as missing in Alteryx
     val claimsJoinWEDWithStartnWEDFilteredDF = claimsJoinWEDWithStartEndnOptionTypeVarsDF
     .withColumn("StartMinusEnd", col("Start - Week End"))
     .withColumn("WeekEndMinusEnd", col("Week End - End"))
     .filter("StartMinusEnd <= -3").filter("WeekEndMinusEnd <= 3")
     .drop("StartMinusEnd").drop("WeekEndMinusEnd")
-    .select("SKU","C2B Promo Code","Promo Name","Season","BU","Product","Rebate Amount","Week_End_Date","Option Type","Source_season","Source_Season_Ordered","Cal_Month","Cal_Year","Fiscal_Year","Fiscal_Qtr")
+    .select("SKU","C2B Promo Code","Promo Name","Season"/*,"BU"*/,"Product","Rebate Amount","Week_End_Date","Option Type","Source_season","Source_Season_Ordered","Cal_Month","Cal_Year","Fiscal_Year","Fiscal_Qtr")
     //writeDF(claimsJoinWEDWithStartnWEDFilteredDF,"claimsJoinWEDWithStartnWEDFilteredDF")
     /*
     * Sort SKU, WED and Rebate Amount - 162
