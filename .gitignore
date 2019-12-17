@@ -340,3 +340,4 @@ __pycache__/
 # tools/
 
 .gvd/
+.DS_Store
