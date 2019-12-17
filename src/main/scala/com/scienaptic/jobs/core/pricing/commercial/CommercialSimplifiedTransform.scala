@@ -276,7 +276,7 @@ object CommercialSimplifiedTransform {
     * */
     val claimsAndCalJoinBrowseDF = claimsAndCalendarInnerJoinDF.where(col("Program")===lit("Big_Deal"))
       .groupBy("Base SKU","Season_Ordered","season")
-      .agg(sum("Total Amount"), sum("Sum_Claim Quantity"))
+      .agg(sum("Total Amount").as("Sum_Total Amount"), sum("Sum_Claim Quantity").as("Sum_Sum_Claim Quantity"))
       .withColumnRenamed("Total Amount","Sum_Total Amount")
       .withColumnRenamed("Sum_Claim Quantity","Sum_Sum_Claim Quantity")
       .withColumn("Avg BD per Unit",col("Sum_Total Amount")/col("Sum_Sum_Claim Quantity"))
