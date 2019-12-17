@@ -198,7 +198,7 @@ object CommercialSimplifiedTransform {
     val iecUnionXSDF = doUnion(iecFilterShipDateDF, xsClaimsRenamedDF).get
     //writeDF(iecUnionXSDF,"iec_xs_union_output")
 
-    /*
+    /**
     * Create Features - Base SKU, Temp Date Calc String, Temp Date Calc, Week End Date */
     val iecXSNewFeaturesDF = iecUnionXSDF.withColumn("Base SKU",when(col("Product ID").isNull,null).otherwise(createBaseSKUFromProductIDUDF(col("Product ID"))))
       .withColumn("Temp Date Calc String", dayofweek(col("Partner Ship Calendar Date"))-lit(1))
@@ -214,14 +214,14 @@ object CommercialSimplifiedTransform {
       .withColumn("Base SKU",baseSKUFormulaUDF(col("Base SKU")))
       .withColumn("Week End Date", to_date(unix_timestamp(col("Week End Date"),"YYYY-MM-dd").cast("timestamp")))
     //writeDF(iecXSNewFeaturesDF,"iecXSNewFeaturesDFCONVERTE_WED")
-    /*
+    /**
     * Join Claims with Accounts based on Partner Desc and Account Company - 342 */
     val claimsAndAccountJoin = xsClaimsSource.joinOperation(CLAIMS_AND_ACCOUNTS)
     val claimsAndAccountJoinMap = doJoinAndSelect(iecXSNewFeaturesDF, commAccountsSelectDF, claimsAndAccountJoin)
     val claimsAndAccountLeftJoinDF = claimsAndAccountJoinMap(LEFT)//211642
     val claimsAndAccountInnerJoinDF = claimsAndAccountJoinMap(INNER)//685877 More than required
     //writeDF(claimsAndAccountInnerJoinDF,"claimsAndAccountInnerJoinDF")
-    /*
+    /**
     * Add new variables - Account Consol, Grouping, VPA, Reseller Cluster*/
     val claimsAndAccountLeftJoinNewFeatDF = claimsAndAccountLeftJoinDF
       .withColumn("Account Consol",lit("Others"))
@@ -515,7 +515,7 @@ object CommercialSimplifiedTransform {
     /*
     * 425 - Select after Qty, IR, ETailer Filter
     * * */
-    val tidyHistSelectAfterQtyIRFilter = stOnyxSource.selectOperation(SELECT_BEFORE_OUTPUT)
+    val tidyHistSelectAfterQtyIRFilter = stOnyxSource.selectOperation(SELECT_AFTER_QTY_TAILER_IR_FILTER)
     val tidyHistIRQtyTailerFilterSelectDF = doSelect(tidyHistWithDealQtyETailerIRPromoFlagDF, tidyHistSelectAfterQtyIRFilter.cols, tidyHistSelectAfterQtyIRFilter.isUnknown).get
 
     /*
@@ -612,7 +612,7 @@ object CommercialSimplifiedTransform {
     /*
     * Group Left join on Product Base Id, Product Base Desc and sum Aggregate Sell Thru Qty, Sell-to Qty
     * And
-    * Sort on Sell Thru and Sell to Quantities
+    * Sort on Sell Thru and Sell to Quantities - 362
     * */
     val stOnyxProductBaseGroup = stOnyxSource.groupOperation(PRODUCT_BASE_SUM_AGG_SELL_THRU_SELL_TO_QTY)
     val stOnyxProductBaseGroupDF = doGroup(stOnyxAndSKUHierLeftJoinDF, stOnyxProductBaseGroup).get
@@ -666,6 +666,7 @@ object CommercialSimplifiedTransform {
     * */
     val stOnyxAllColumSumAggQtyGroup = stOnyxSource.groupOperation(GROUP_ALL_SUM_AGG_BIG_NON_BIG_DEAL_QTY)
     val stOnyxAllColumSumAggQtyGroupDF = doGroup(stOnyxAndPromoJoinsUnionDF, stOnyxAllColumSumAggQtyGroup).get
+      .withColumnRenamed("season","Season")
     //writeDF(stOnyxAllColumSumAggQtyGroupDF,"stOnyxAllColumSumAggQtyGroupDF")
     /*
     * Group All columns except Account, Promo, Grouping and Sum aggregation Qty, Big deal Qty, Non big deal qty - 369
@@ -814,7 +815,7 @@ object CommercialSimplifiedTransform {
     //writeDF(stOnyxWithPromoSpendETailerResellerAndNullImputeDF,"AFTER_REPLACE_NULL_WITH_ZERO")
 
     /*
-    * 424 - Join - SKU Hierarchy and Promo Clacs in Tidy Hist File. Right DF - skuHierarchySelectDF, Left DF - stOnyxWithPromoSpendETailerResellerAndNullImputeDF
+    * 424 - Join - SKU Hierarchy and Promo Clacs in Tidy Hist File.
     * */
     val tidyHistAndSKUHierJoin = tidyHistSource.joinOperation(TIDY_HIST_AND_SKU_HIER)
     val skuHierProdTypeFilteredUpdSKUDF = skuHierProdTypeFilteredDF.withColumnRenamed("SKU","Right_SKU")
