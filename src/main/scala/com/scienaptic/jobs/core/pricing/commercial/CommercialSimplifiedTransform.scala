@@ -830,7 +830,9 @@ object CommercialSimplifiedTransform {
     .withColumn("L1_Category",col("L1: Use Case")).withColumn("L2_Category",col("L2: Key functionality"))
     .drop("L1: Use Case").drop("L2: Key functionality")
         .withColumn("Spend",col("Promo Spend"))
-        .select("Reseller Cluster","VPA","Street Price","SKU","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Mono/Color","Category Custom","L1_Category","L2_Category","PLC Status","GA date","ES date","Week_End_Date","Season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","SKU_Name","Big_Deal_Qty","Non_Big_Deal_Qty","Qty","IR","Promo Flag","Inv_Qty","eTailer","Promo Spend","Spend")
+      .withColumn("SKU_Name","Abbreviated Name")
+      //TODO: Promo ID, Right_SKU,Consol SKU,Full Name removed from here
+        .select("Reseller Cluster","VPA","SKU","Week_End_Date","Season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Big_Deal_Qty","Non_Big_Deal_Qty","Qty","IR","Promo Flag","Inv_Qty","eTailer","Spend","Product Base Desc","Product Type Desc","PL","PL Desc","Product Category Desc","Product Type Consol","SKU_Name","List Price","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category Custom","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","Mono/Color","L1: Use Case","L2: Key functionality","PLC Statuc","GA date","ES date"/*,"Right_SKU","Consol SKU","Full Name"*/)
       .withColumn("Street Price", regexp_replace(col("Street Price"),"\\$",""))
       .withColumn("Street Price", regexp_replace(col("Street Price"),",","").cast("double"))
       .withColumn("IR", regexp_replace(col("Street Price"),"\\$",""))
