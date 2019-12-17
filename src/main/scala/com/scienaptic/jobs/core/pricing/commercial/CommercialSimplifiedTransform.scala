@@ -274,7 +274,7 @@ object CommercialSimplifiedTransform {
     /*
     * Filter, Summarize, Formula, Select not implemented as going to BROWSE - 249, 248, 250, 253
     * */
-    val claimsAndCalJoinBrowseDF = claimsAndCalendarInnerJoinDF.where(col("Program")==lit("Big_Deal"))
+    val claimsAndCalJoinBrowseDF = claimsAndCalendarInnerJoinDF.where(col("Program")===lit("Big_Deal"))
       .groupBy("Base SKU","Season_Ordered","season")
       .agg(sum("Total Amount"), sum("Sum_Claim Quantity"))
       .withColumnRenamed("Total Amount","Sum_Total Amount")
