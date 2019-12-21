@@ -18,7 +18,7 @@ hs_err_pid*
 
 ### Maven ###
 target/
-project/
+project/target
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
@@ -134,6 +134,10 @@ artifacts/
 *.pidb
 *.svclog
 *.scc
+
+#Spark runs
+spark-warehouse/
+metastore_db/
 
 # Chutzpah Test files
 _Chutzpah*
@@ -336,3 +340,4 @@ __pycache__/
 # tools/
 
 .gvd/
+.DS_Store

@@ -1,0 +1,9 @@
+{
+  "config": "preregression-retail-L2_L2_CANNIBALIZATION",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "preregression-retail-11"
+  },
+  "sources": {
+  }
+}

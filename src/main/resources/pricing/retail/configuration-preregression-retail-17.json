@@ -1,0 +1,9 @@
+{
+  "config": "preregression-retail-L1_L2_INNERCANN",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "preregression-retail-17"
+  },
+  "sources": {
+  }
+}

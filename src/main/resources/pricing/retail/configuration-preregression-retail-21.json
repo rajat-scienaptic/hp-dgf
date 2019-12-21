@@ -1,0 +1,9 @@
+{
+  "config": "preregression-retail-BEFORE_OUTPUT",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "preregression-retail-21"
+  },
+  "sources": {
+  }
+}

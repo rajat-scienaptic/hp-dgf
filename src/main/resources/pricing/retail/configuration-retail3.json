@@ -1,0 +1,994 @@
+{
+  "config" : "retail-WALMART",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "hp-retail-part3"
+  },
+  "sources": {
+    "ODOM_ONLINE_ORCA": {
+      "name": "ODOM_ONLINE_ORCA",
+      "filePath": "/etherData/ORCA/ODOM/US ODOM Online.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "Y",
+          "cols": []
+        }
+      },
+      "group" : {
+        "group01": {
+          "cols" : ["Account Major", "Week", "Base SKU"],
+          "aggregations": {
+            "sum" : {
+              "Units" : "Online Units"
+            }
+          },
+          "selectCriteria": ["Units", "Quarter", "Month", "Week", "Week Desc", "Item Desc", "Store Name", "Vendor Product Code", "Store Nbr", "Base SKU", "Account Major"]
+        },
+        "group02": {
+          "cols" : ["wed"],
+          "aggregations": {
+            "sum" : {
+              "Online Units" : "Sum_Online Units"
+            }
+          },
+          "selectCriteria": ["Account Major", "Base SKU", "Online Units", "wed", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"]
+        }
+      },
+      "join": {
+        "join01": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["Week"],
+            "right": ["fy_week"]
+          },
+          "selectCriteria": {
+            "left": ["Week"], "right": ["fy_week","season"]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["wed >= 2018-01-01"]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": [],
+          "desc": ["wed"]
+        }
+      }
+    },
+    "STAPLES_COM_UNITS":  {
+      "name": "STAPLES_COM_UNITS",
+      "filePath": "/etherData/managedSources/Staples.com/Staples.com Units.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "N",
+          "cols": ["WED", "HP SKU", "Units"]
+        },
+        "select02": {
+          "isUnknown" : "Y",
+          "cols": ["Sum_POS Qty", "IPSLES"]
+        },
+        "select03": {
+          "isUnknown" : "Y",
+          "cols": ["Sum_POS Qty", "Online Units","IPSLES"]
+        }
+      },
+      "rename" : {
+        "rename01" : {
+          "WED" : "wed",
+          "HP SKU" : "Base SKU",
+          "Units" : "Online Units"
+        }
+      },
+      "join": {
+        "join01": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["leftanti","inner"],
+          "joinCriteria": {
+            "left": [
+              "Account Major Consol",
+              "Product Base ID",
+              "wed"
+            ],
+            "right": [
+              "Account Major",
+              "Base SKU",
+              "Right_wed"
+            ]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": [
+              "Account Major",
+              "Base SKU",
+              "Right_wed",
+              "season_ordered",
+              "cal_month",
+              "cal_year",
+              "fiscal_quarter",
+              "fiscal_year"
+            ]
+          }
+        }
+      }
+    },
+    "HP_COM": {
+      "name": "HP_COM",
+      "filePath": "/etherData/ORCA/HP.com/US HP Shopping v3.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "N",
+          "cols": ["Units", "Week", "Product Description", "Product Number"]
+        }
+      },
+      "join": {
+        "join01": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": [
+              "Week"
+            ],
+            "right": [
+              "fy_week"
+            ]
+          },
+          "selectCriteria": {
+            "left": ["Week", "Product Description"],
+            "right": ["fy_week"]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Title not_contains Refurb",
+	    "Title not_contains REFURB"
+          ]
+        }
+      }
+    },
+    "AMAZON_ARAP": {
+      "name": "AMAZON_ARAP",
+      "filePath": "/etherData/managedSources/Amazon/ARAP/amazon_arap_data.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "Y",
+          "cols": ["Season", "Week Number"]
+        },
+        "select02": {
+          "isUnknown" : "Y",
+          "cols": ["Week Beginning"]
+        },
+        "select03": {
+          "isUnknown" : "Y",
+          "cols": ["Week_End_Date","fy_week", "Sum_Shipped Units"]
+        }
+      },
+      "group" : {
+        "group01" : {
+          "cols" : ["ASIN","Title","Week Beginning Conv"],
+          "aggregations": {
+            "sum" : {
+              "Ordered Units" : "Ordered Units"
+            }
+          },
+          "selectCriteria" : ["ASIN", "Ordered Units", "Title", "Week Beginning", "Week Beginning Conv"]
+        },
+        "group02" : {
+          "cols" : ["ASIN","Title"],
+          "aggregations": {
+            "sum" : {
+              "Ordered Units" : "Sum_Ordered Units"
+            }
+          },
+          "selectCriteria" : ["ASIN", "Title", "Week Beginning", "Ordered Units"]
+        },
+        "group03" : {
+          "cols" : ["SKU","Account", "Online", "Week_End_Date"],
+          "aggregations": {
+            "sum" : {
+              "POS Qty" : "Sum_POS Qty"
+            }
+          },
+          "selectCriteria" : ["ASIN", "Title", "POS Qty", "SKU", "Account", "Online", "Week_End_date"]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": [],
+          "desc": ["Sum_Ordered Units"]
+        }
+      },
+      "join" : {
+        "join01" : {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["leftanti","inner"],
+          "joinCriteria": {
+            "left": ["ASIN"],
+            "right": ["Right_ASIN"]
+          },
+          "selectCriteria": {
+            "left": [], "right": ["Right_ASIN"]
+          }
+        },
+        "join02" : {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["Week_End_Date"],
+            "right": ["wed"]
+          },
+          "selectCriteria": {
+            "left": [], "right": []
+          }
+        }
+      },
+      "rename" : {
+        "rename01" : {
+          "Week Beginning Conv" : "Week Beginning"
+        },
+        "rename02" : {
+          "Ordered Units" : "POS Qty"
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Title not_contains Refurb"
+          ]
+        },
+        "filter02": {
+          "multiWordMap" : {
+            "sumOrderedUnits" : "Sum_Ordered Units"
+          },
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["sumOrderedUnits > 0"]
+        },
+        "filter03": {
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["SKU != NA"]
+        }
+      }
+    },
+    "AMAZON_ASIN_MAP": {
+      "name": "AMAZON_ASIN_MAP",
+      "filePath": "/etherData/managedSources/Amazon/ASIN/amazon_asin_sku_mapping.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "Y",
+          "cols": []
+        }
+      }
+    },
+    "S_PRINT_HISTORICAL_UNITS": {
+      "name": "S_PRINT_HISTORICAL_UNITS",
+      "filePath": "/etherData/managedSources/TIDY_Historical_POS/Tidy HPS prt 2016-2017_v2 (historical pos units).csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "N",
+          "cols": ["Account Consol", "Online", "Channel", "Inv : Saleable Qty", "Sales : Net Qty", "season","HP_SKU_Short","season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year", "Week_End_Date"]
+        }
+      },
+      "filter" : {
+        "filter01": {
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["Channel = Retail"]
+        }
+      },
+      "group" : {
+        "group01": {
+          "cols" : ["HP_SKU_Short", "Account Consol", "Online", "wed", "season", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"],
+          "aggregations": {
+            "sum" : {
+              "Inv : Saleable Qty" : "Sum_Inv : Saleable Qty",
+              "Sales : Net Qty" : "Sum_Sales : Net Qty"
+            }
+          },
+          "selectCriteria" : []
+        }
+      }
+    },
+    "ORCA_2014_16_ARCHIVE": {
+      "name": "ORCA_2014_16_ARCHIVE",
+      "filePath": "/etherData/ORCA/2014_16_archive/2014-16_Filtered.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "Y",
+          "cols": ["Entity ID Old"]
+        }
+      }
+    },
+    "ORCA_QRY_2017_TO_DATE": {
+      "name": "ORCA_QRY_2017_TO_DATE",
+      "filePath": "/etherData/ORCA/2017-present/US Retail POS.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "Y",
+          "cols": ["Product Family Desc","Product Business Unit Desc","Product Business Area Desc","Entity Store Nbr"]
+        }
+      },
+      "rename" : {
+        "rename01" : {
+          "Sell-To Qty" : "POS Qty",
+          "Sell-To Sales NDP" : "POS Sales NDP"
+        }
+      },
+      "group" : {
+        "group01": {
+          "cols" : ["Week", "Week Desc", "Account Major"],
+          "aggregations": {
+            "sum" : {
+              "POS Qty" : "Sum_POS Qty",
+              "POS Sales NDP" : "Sum_POS Sales NDP"
+            }
+          },
+          "selectCriteria" : ["Quarter","Month","Week","Week Desc","Account Major","Entity Desc","Entity ID","Product Base ID","Product Base Desc","Product Category Desc","Inventory Total Qty","Sum_POS Qty","Sum_POS Sales NDP"]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account Major"],
+          "desc": ["Week", "Sum_POS Qty"]
+        }
+      },
+      "join" : {
+        "join01": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": [
+              "Week"
+            ],
+            "right": [
+              "fy_week"
+            ]
+          },
+          "selectCriteria": {
+            "left": ["Quarter", "Month", "Week", "Week Desc", "Product Category Desc"],
+            "right": ["fy_week", "season", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"]
+          }
+        },
+        "join02": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["wed"],
+            "right": ["Right_wed"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["fy_week", "Right_wed"]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "multiWordMap" : {
+            "accountMajorConsol" : "Account Major Consol"
+          },
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["accountMajorConsol != Amazon.Com","wed <= 2015-11-07"]
+        },
+        "filter02": {
+          "multiWordMap" : {
+            "accountMajorConsol" : "Account Major Consol",
+            "costcoWholesale" : "Costco Wholesale"
+          },
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["accountMajorConsol = costcoWholesale"]
+        },
+        "filter03": {
+          "multiWordMap" : {
+            "accountMajorConsol" : "Account Major Consol",
+            "costcoWholesale" : "Costco Wholesale"
+          },
+          "conditionTypes": ["and","or","if-else"],
+          "conditions": ["accountMajorConsol != costcoWholesale"]
+        }
+      }
+    },
+    "AUX_TABLES_WEEKEND": {
+      "name": "AUX_TABLES_WEEKEND",
+      "filePath": "/etherData/managedSources/AUX/Aux_week_end_date.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "N",
+          "cols": ["fy_week", "wed", "season", "season_ordered", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"]
+        }
+      },
+      "filter": {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "Account = Amazon",
+            "Fixed < 40.0"
+          ]
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Account"],
+          "desc": ["Fixed"]
+        }
+      }
+    },
+    "AUX_TABLES_ONLINE": {
+      "name": "AUX_TABLES_ONLINE",
+      "filePath": "/etherData/managedSources/AUX/Aux_online.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "Y",
+          "cols": []
+        },
+        "select02": {
+          "isUnknown" : "N",
+          "cols": ["wed","Product Base ID", "Account Major Consol", "SKU ACV POS", "SKU ACV Inv"]
+        }
+      },
+      "rename" : {
+        "rename01" : {
+          "wed" : "Week End Date",
+          "Product Base ID" : "SKU",
+          "Account Major Consol" : "Account"
+        },
+        "rename02" : {
+          "Account Major Consol" : "Right_Account Major Consol",
+          "Entity ID" : "Right_Entity ID"
+        },
+        "rename03" : {
+          "Account Major Consol" : "Right_Account Major Consol"
+        }
+      },
+      "join": {
+        "join01": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["leftanti","inner"],
+          "joinCriteria": {
+            "left": ["Entity ID"],
+            "right": ["Right_Entity ID"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Right_Entity ID", "Entity Description"]
+          }
+        },
+        "join02": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["Account Major Consol","Entity ID"],
+            "right": ["Right_Account Major Consol","Right_Entity ID"]
+          },
+          "selectCriteria": {
+            "left": ["Account Major"],
+            "right": ["Right_Account Major Consol","Right_Entity ID"]
+          }
+        },
+        "join03": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["Account Major Consol"],
+            "right": ["Right_Account Major Consol"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Right_Account Major Consol"]
+          }
+        }
+      },
+      "filter": {
+        "filter01": {
+          "multiWordMap" : {
+            "accountMajor" : "Account Major",
+            "dhDistribution" : "D&H Distributing Co",
+            "newAgeElectronics" : "New Age Electronics Inc, a Division of Synnex Corporation",
+            "unitedStationary" : "United Stationers Supply Co"
+          },
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "accountMajor != dhDistribution",
+            "accountMajor != newAgeElectronics",
+            "accountMajor != Synnex",
+            "accountMajor != unitedStationary"
+
+          ]
+        },
+        "filter02": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": ["wed > 2014-11-07"]
+        },
+        "filter03": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": ["Online != 1"]
+        }
+      },
+      "group" : {
+        "group01": {
+          "cols" : ["Account Major Consol", "Online", "Product Base ID", "Product Base Desc", "wed", "season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year"],
+          "aggregations": {"sum" : { "POS Qty" : "Sum_POS Qty"}
+          },
+          "selectCriteria" : ["Account Major","Entity Desc","Entity ID","Product Base ID","Product Base Desc","Inventory Total Qty","POS Qty","POS Sales NDP","Account Major Consol","wed","season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Type","Online"]
+        },
+        "group02": {
+          "cols" : ["Product Base ID", "season", "Type", "Account Major Consol", "Product Base Desc", "Online", "Account Major", "Entity ID", "Max_wed", "wed"],
+          "aggregations": {
+            "sum" : {
+              "POS Sales NDP" : "POS Sales NDP",
+              "Inventory Total Qty" :  "Inventory Total Qty",
+              "POS Qty" : "POS Qty"
+            }
+          },
+          "selectCriteria" : ["Account Major","Entity Desc","Entity ID","Product Base ID","Product Base Desc","Inventory Total Qty","POS Qty","POS Sales NDP","Account Major Consol","wed","season","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Type","Online","Max_wed"]
+        },
+        "group03": {
+          "cols" : ["Account Major Consol", "Entity ID"],
+          "aggregations": {
+            "sum" : {
+              "POS Qty" : "Sum_POS Qty",
+              "POS Sales NDP" : "Sum_POS Sales NDP"
+            }
+          },
+          "selectCriteria" : ["Product Base ID","season","Type","Account Major Consol","Product Base Desc","Online","Account Major","Entity ID","Max_wed","wed","Sum_POS Sales NDP","Inventory Total Qty","Sum_POS Qty"]
+        },
+        "group04": {
+          "cols" : ["Account Major Consol"],
+          "aggregations": {
+            "sum" : {
+              "Sum_POS Qty" : "Sum_Sum_POS Qty",
+              "Sum_POS Sales NDP" : "Sum_Sum_POS Sales NDP"
+            }
+          },
+          "selectCriteria" : ["Account Major", "Entity ID", "Sum_Sum_POS Qty", "Sum_Sum_POS Sales NDP"]
+        },
+        "group05": {
+          "cols" : ["wed", "Product Base ID", "Product Base Desc", "Account Major Consol"],
+          "aggregations": {
+            "sum" : {
+              "Store POS" : "Sum_Store POS",
+              "Store Inv" : "Sum_Store Inv"
+            }
+          },
+          "selectCriteria" : ["Product Base ID","season","Type","Account Major Consol","Product Base Desc","Online","Entity ID","Max_wed","wed","POS Sales NDP","Inventory Total Qty","POS Qty","Sum_POS Qty","Sum_POS Sales NDP","Store POS","Store Inv"]
+        }
+      }
+    },
+    "AUX_TABLES_SKU_HIERARCHY": {
+      "name": "AUX_TABLES_SKU_HIERARCHY",
+      "filePath": "/etherData/managedSources/AUX/Aux_sku_hierarchy.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "N",
+          "cols": ["SKU", "Street Price", "Consol SKU", "Abbreviated Name", "Brand", "IPSLES","HPS/OPS","Series", "Category", "Category Subgroup", "Category_1","Category_2", "Category_3","Line", "PL", "Category Custom", "L1: Use Case", "L2: Key functionality", "GA date", "ES date"]
+        }
+      },
+      "join" : {
+        "join01": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["leftanti","inner"],
+          "joinCriteria": {
+            "left": ["Product Base ID"],
+            "right": ["SKU"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["SKU"]
+          }
+        }
+      },
+      "group" : {
+        "group01": {
+          "cols" : ["Product Base ID", "Product Base Desc"],
+          "aggregations": {"sum" : { "Sum_POS Qty" : "Sum_Sum_POS Qty"}
+          },
+          "selectCriteria" : ["Account Major Consol","Online","Product Base ID","season","wed","Sum_POS Qty","Product Base Desc","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Sum_Inv : Saleable Qty"]
+        },
+        "group02": {
+          "cols" : ["Account Major Consol", "Online", "Consol SKU", "Abbreviated Name", "Street Price", "wed", "season", "Brand", "IPSLES", "HPS/OPS","Series","Category","Category Subgroup", "Category_1","Category_2","Category_3","Line","PL","Category Custom","L1: Use Case", "L2: Key functionality", "GA date","ES date", "season_ordered", "cal_month","cal_year","fiscal_quarter","fiscal_year"],
+          "aggregations": {"sum" : { "Sum_POS Qty" : "POS Qty"}
+          },
+          "selectCriteria" : ["Account Major Consol","Online","Product Base ID","season","wed","Sum_POS Qty","Product Base Desc","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","Sum_Inv : Saleable Qty","Street Price","Consol SKU","Abbreviated Name","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Category Custom","L1: Use Case","L2: Key functionality","GA date","ES date"]
+        }
+      },
+      "rename" : {
+          "rename01" : {
+          "Account Major Consol" : "Account Major",
+          "Consol SKU" : "SKU",
+          "Abbreviated Name" : "SKU Name",
+          "wed" : "WED",
+          "season" : "Season"
+        }
+      },
+      "sort" : {
+        "sort01": {
+          "asc": ["Product Base ID"],
+          "desc": ["Sum_Sum_POS Qty"]
+        }
+      },
+      "filter" : {
+        "filter01": {
+          "multiWordMap" : {
+            "accountMajor" : "Account Major",
+            "bestBuy" : "Best Buy"
+          },
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": ["accountMajor = bestBuy"]
+        }
+      }
+    },
+    "BBY_BUNDLE_INFO": {
+      "name": "BBY_BUNDLE_INFO",
+      "filePath": "/etherData/managedSources/Best_Buy_Bundle/BestBuyBundle_Summary.csv",
+      "select": {
+        "select01": {
+          "isUnknown" : "Y",
+          "cols": []
+        }
+      },
+      "group" : {
+        "group01": {
+          "cols" : ["HP SKU", "Week Ending", "Online"],
+          "aggregations": {"sum" : { "Units" : "Units", "Bundle Qty Raw" :  "Bundle Qty Raw"}
+          },
+          "selectCriteria" : ["HP SKU", "Week Ending","Units", "Online", "Bundle Qty Raw"]
+        },
+        "group02": {
+          "cols" : ["SKU", "WED"],
+          "aggregations": {"sum" : { "POS Qty" : "Sum_POS Qty"}
+          },
+          "selectCriteria" : ["Account Major","Online","SKU","SKU Name","Street Price","WED","POS Qty","Season","Brand","IPSLES","HPS/OPS","Series","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","PL","Category Custom","L1: Use Case","L2: Key functionality","GA date","ES date","season_ordered","cal_month","cal_year","fiscal_quarter","fiscal_year","HP SKU","Units","Bundle Qty Raw"]
+        }
+      },
+      "join" : {
+        "join01": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["SKU", "WED", "Online"],
+            "right": ["HP SKU", "Week Ending", "Right_Online"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Week Ending", "Right_Online"]
+          }
+        },
+        "join02": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["inner"],
+          "joinCriteria": {
+            "left": ["SKU", "WED"],
+            "right": ["Right_SKU", "Right_WED"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Account Major","Right_SKU", "Right_WED", "HP SKU"]
+          }
+        },
+        "join03": {
+          "isUnknown" : "N",
+          "typeOfJoin": ["leftanti","inner"],
+          "joinCriteria": {
+            "left": ["SKU", "Online", "Account Major","WED"],
+            "right": ["Right_SKU", "Right_Online", "Right_Account Major","WED"]
+          },
+          "selectCriteria": {
+            "left": ["Account Major", "Online","SKU","SKU Name","IPSLES","WED", "Raw POS Qty", "Season", "Street Price","Category","Category Subgroup","Line","PL","L1: Use Case", "L2: Key functionality", "GA date","ES date","Category_1","Category_2","Category_3","HPS/OPS","Series","Category Custom", "Brand"],
+            "right": [ "POS Qty"]
+          }
+        },
+        "join04": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["leftanti","inner","rightanti"],
+          "joinCriteria": {
+            "left": ["Account","SKU","Week_End_Date"],
+            "right": ["Account","Right_SKU", "Week End Date"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": ["Week End Date", "Right_SKU", "Account", "SKU ACV POS"]
+          }
+        },
+        "join05": {
+          "isUnknown" : "Y",
+          "typeOfJoin": ["leftanti"],
+          "joinCriteria": {
+            "left": ["Week_End_Date"],
+            "right": ["Right_Week_End_Date"]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": []
+          }
+        }
+      },
+      "rename" : {
+        "rename01" : {
+          "Account Major" : "Account",
+          "SKU Name" : "SKU_Name",
+          "Street Price" : "Street_Price",
+          "WED" : "Week_End_Date",
+          "POS Qty" : "POS_Qty",
+          "Category Subgroup" : "Category_Subgroup",
+          "L1: Use Case" : "L1_Category",
+          "L2: Key functionality" : "L2_Category",
+          "GA date" : "GA_date",
+          "ES date" : "ES_date",
+          "season_ordered" : "Season_Ordered",
+          "cal_month" : "Cal_Month",
+          "cal_year" : "Cal_Year",
+          "fiscal_quarter": "Fiscal_Quarter",
+          "fiscal_year" : "Fiscal_Year",
+          "Raw POS Qty" : "Raw_POS_Qty",
+          "SKU ACV Inv" : "Distribution_Inv"
+        },
+        "rename02" : {
+          "Account" : "Right_Account",
+          "Online" : "Right_Online",
+          "SKU" : "Right_SKU",
+          "SKU_Name" : "Right_SKU_Name",
+          "IPSLES" : "Right_IPSLES",
+          "Week_End_Date" : "Right_Week_End_Date",
+          "POS_Qty" : "Right_POS_Qty",
+          "Season" : "Right_Season",
+          "Street_Price" : "Right_Street_Price",
+          "Category" : "Right_Category",
+          "Category_Subgroup" : "Right_Category_Subgroup",
+          "Line" : "Right_Line",
+          "PL" : "Right_PL",
+          "L1_Category" : "Right_L1_Category",
+          "L2_Category" : "Right_L2_Category",
+          "Raw_POS_Qty" : "Right_Raw_POS_Qty",
+          "GA_date" : "Right_GA_date",
+          "ES_date" : "Right_ES_date",
+          "Distribution_Inv" : "Right_Distribution_Inv",
+          "Category_1" : "Right_Category_1",
+          "Category_2" : "Right_Category_2",
+          "Category_3" : "Right_Category_3",
+          "HPS/OPS" : "Right_HPS/OPS",
+          "Series" : "Right_Series",
+          "Category Custom" : "Right_Category Custom",
+          "Brand" : "Right_Brand",
+          "Max_Week_End_Date" : "Right_Max_Week_End_Date"
+        },
+        "rename03" : {
+          "WED" : "Right_WED",
+          "SKU" : "Right_SKU",
+          "Right_Online" : "Right_Right_Online"
+        },
+        "rename04" : {
+          "Online" : "Right_Online",
+          "SKU" : "Right_SKU",
+          "Account Major" : "Right_Account Major"
+        },
+        "rename05" : {
+          "Account Major" : "Account",
+          "POS Qty" : "POS_Qty",
+          "season_ordered" :  "Season_Ordered",
+          "SKU Name": "SKU_Name",
+          "Street Price": "Street_Price",
+          "Raw POS Qty":  "Raw_POS_Qty",
+          "cal_month":  "Cal_Month",
+          "cal_year": "Cal_Year",
+          "Category Subgroup":  "Category_Subgroup",
+          "ES date":    "ES_date",
+          "fiscal_quarter":   "Fiscal_Qtr",
+          "fiscal_year":    "Fiscal_Year",
+          "GA date":    "GA_date",
+          "WED":  "Week_End_Date",
+          "L1: Use Case": "L1_Category" ,
+          "L2: Key functionality" : "L2_Category"
+        },
+        "rename06" : {
+          "SKU" :"Right_SKU",
+          "SKU ACV Inv":  "Distribution_Inv"
+        }
+      },
+      "filter" : {
+        "filter01": {
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": ["Week_End_Date > date_last_26weeks"]
+        }
+      },
+      "sort" : {
+        "sort01" : {
+          "asc": ["Week_End_Date", "SKU", "Account"],
+          "desc": []
+        }
+      }
+    },
+    "EXISTING_POS": {
+      "name": "EXISTING_POS",
+      "filePath": "/etherData/Pricing/Outputs/POS_Retail/temp/before_posqty_output_retail_%s.csv",
+      "select": {
+        "select01": {
+          "isUnknown": "Y",
+          "cols": [
+            "Top SKU",
+            "Consol SKU"
+          ]
+        },
+        "SELECT_ALL": {
+          "isUnknown": "Y",
+          "cols": []
+        }
+      }
+    },
+    "WALMART": {
+      "name": "WALMART",
+      "filePath": "/etherData/managedSources/Walmart/WalmartPOS.csv",
+      "select": {
+        "select01": {
+          "isUnknown": "Y",
+          "cols": []
+        },
+        "SELECT_LAST_WALMART": {
+          "isUnknown": "N",
+          "cols": ["Week", "Base SKU", "SKU ACV POS", "SKU ACV Inv", "wed", "Product Base ID", "Account Major Consol"]
+        },
+        "SELECT_EXCEPT_WED": {
+          "isUnknown": "Y",
+          "cols": ["wed"]
+        }
+      },
+      "rename": {
+        "RENAME_WED_PRODUCT_BASEID_AND_ACCOUNT_MAJOR_CONSOL": {
+          "wed": "Week_End_Date",
+          "Product Base ID": "SKU",
+          "Account Major Consol": "Account"
+        }
+      },
+      "filter" : {
+        "WALMART_STORE_TYPE_FILTER" : {
+        "multiWordMap" : {
+            "storetypeOIID" : "Store Type OIID"
+          },
+          "conditionTypes": [
+            "and",
+            "or",
+            "if-else"
+          ],
+          "conditions": [
+            "storetypeOIID != 8846"
+          ]
+        }
+      },
+      "group" : {
+        "GROUP_WEEK_BASESKU_STORENBR_AGG_POSQTY_POSSALES_STRONHANDQTY" : {
+         "cols": [
+            "Week",
+            "Base SKU",
+            "Store Nbr"
+          ],
+          "aggregations": {
+            "sum": {
+              "POS QTY": "Sum_POS QTY",
+              "POS Sales": "Sum_POS Sales",
+              "Str On Hand Qty": "Sum_Str On Hand Qty"
+            }
+          },
+          "selectCriteria": []
+        },
+        "GROUP_STORENBR_AGG_SUMPOSQTY_SUMPOSSALES" : {
+         "cols": [
+            "Store Nbr"
+          ],
+          "aggregations": {
+            "sum": {
+              "Sum_POS QTY": "Sum_Sum_POS QTY",
+              "Sum_POS Sales": "Sum_Sum_POS Sales"
+            }
+          },
+          "selectCriteria": []
+        },
+        "GROUP_WEEK_BASESKU_AGG_STOREPOS_STOREINV" : {
+         "cols": [
+            "Week",
+            "Base SKU"  
+          ],
+          "aggregations": {
+            "sum": {
+              "Store POS": "Sum_Store POS",
+              "Store Inv": "Sum_Store Inv"
+            }
+          },
+          "selectCriteria": []
+        }
+      },
+      "join" : {
+        "JOIN_TOTALPOSSALESFORMULA_AND_INITIALGROUP": {
+          "isUnknown": "Y",
+          "typeOfJoin": [
+            "inner"
+          ],
+          "joinCriteria": {
+            "left": [
+              "Store Nbr"
+            ],
+            "right": [
+              "Store Nbr"
+            ]
+          },
+          "selectCriteria": {
+            "left": [],
+            "right": []
+          }
+        },
+        "JOIN_WALMART_LASTSELECT_AND_AUXTABLES": {
+          "isUnknown": "Y",
+          "typeOfJoin": [
+            "inner"
+          ],
+          "joinCriteria": {
+            "left": [
+              "Week"
+            ],
+            "right": [
+              "fy_week"
+            ]
+          },
+          "selectCriteria": {
+            "left": ["Week", "SKU ACV POS"],
+            "right": ["fy_week", "cal_month", "cal_year", "fiscal_quarter", "fiscal_year"]
+          }
+        },
+        "JOIN_POS_AND_AUXTABLES_SELECT_EXCEPT_WED": {
+          "isUnknown": "Y",
+          "typeOfJoin": [
+            "leftanti","inner"
+          ],
+          "joinCriteria": {
+            "left": [
+              "Account", "SKU", "Week_End_Date"
+            ],
+            "right": [
+              "Account", "SKU", "Week_End_Date"
+            ]
+          },
+          "selectCriteria": {
+            "left": ["Distribution_Inv"],
+            "right": ["Week_End_Date", "SKU", "season", "season_ordered", "Account"]
+          }
+        }
+      }
+    }
+  }
+}

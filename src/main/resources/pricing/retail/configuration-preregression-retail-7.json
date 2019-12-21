@@ -1,0 +1,9 @@
+{
+  "config": "preregression-retail-HOLIDAYS",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "preregression-retail-7"
+  },
+  "sources": {
+  }
+}

@@ -1,7 +1,8 @@
 package com.scienaptic.jobs
 
 import com.scienaptic.jobs.config.{AppConfiguration, ConfigurationFactory}
-import com.scienaptic.jobs.core.RetailTransform
+import com.scienaptic.jobs.core.HPDataProcessor
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 object App {
@@ -16,14 +17,17 @@ class App(args: Array[String]) extends ConfigurationFactory[AppConfiguration](ar
 
   private def start(): Unit = {
     println("Spark-job Started.")
+    val sparkConf = new SparkConf()
+    sparkConf.set("spark.sql.crossJoin.enabled", "true")
     val spark = SparkSession.builder
       .master(configuration.sparkConfig.master)
       .appName(configuration.sparkConfig.appName)
+      .config(sparkConf)
+      //.enableHiveSupport()
       .getOrCreate
     val executionContext = ExecutionContext(spark, configuration)
     try {
-      //TODO: Based on cli options, call appropriate Transformation.
-      RetailTransform.execute(executionContext)
+      HPDataProcessor.execute(executionContext)
     } finally {
       spark.close()
     }

@@ -1,0 +1,29 @@
+{
+  "config": "npd-pc-monthly-us-stg",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "npd-pc-monthly-us-stg"
+  },
+  "sources": {
+    "DM_PC_US_Mth_Reseller": {
+      "name": "Stg_DM_PC_US_Mth_Reseller",
+      "filePath": "/NPD_DATA/raw/pc/monthly/us/latest/DM_PC_US_Mth_Reseller_clean.csv"
+    },
+    "DM_PC_US_Mth_Reseller_BTO": {
+      "name": "Stg_DM_PC_US_Mth_Reseller_BTO",
+      "filePath": "/NPD_DATA/raw/pc/monthly/us/latest/DM_PC_US_Mth_Reseller_BTO_clean.csv"
+    },
+    "DM_US_PC_Monthly_Dist": {
+      "name": "Stg_DM_US_PC_Monthly_Dist",
+      "filePath": "/NPD_DATA/raw/pc/monthly/us/latest/DM_US_PC_Monthly_Dist_clean.csv"
+    },
+    "DM_US_PC_Monthly_Dist_BTO": {
+      "name": "Stg_DM_US_PC_Monthly_Dist_BTO",
+      "filePath": "/NPD_DATA/raw/pc/monthly/us/latest/DM_US_PC_Monthly_Dist_BTO_clean.csv"
+    },
+    "DM_US_PC_Monthly_Retail": {
+      "name": "Stg_DM_US_PC_Monthly_Retail",
+      "filePath": "/NPD_DATA/raw/pc/monthly/us/latest/DM_US_PC_Monthly_Retail_clean.csv"
+    }
+  }
+}

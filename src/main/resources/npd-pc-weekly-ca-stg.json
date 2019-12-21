@@ -1,0 +1,13 @@
+{
+  "config": "npd-pc-weekly-ca-stg",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "npd-pc-weekly-ca-stg"
+  },
+  "sources": {
+    "DM_PC_CA_Weekly_Retail": {
+      "name": "Stg_DM_PC_CA_Weekly_Retail",
+      "filePath": "/NPD_DATA/raw/pc/weekly/ca/latest/DM_PC_CA_Weekly_Retail_clean.csv"
+    }
+  }
+}
