@@ -7,7 +7,7 @@ import com.scienaptic.jobs.bean.JoinAndSelectOperation.doJoinAndSelect
 import com.scienaptic.jobs.bean.SelectOperation.doSelect
 import com.scienaptic.jobs.bean.SortOperation.doSort
 import com.scienaptic.jobs.bean.UnionOperation.doUnion
-import com.scienaptic.jobs.utility.CommercialUtility.{baseSKUFormulaUDF, createBaseSKUFromProductIDUDF}
+import com.scienaptic.jobs.utility.CommercialUtility.{baseSKUFormulaUDF, createBaseSKUFromProductIDUDF,writeDF}
 import com.scienaptic.jobs.utility.Utils
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.functions._
@@ -191,7 +191,7 @@ object CommercialSimplifiedTransform {
     /*
     * Filter IEC Claims for Partner Ship Calendar Date  */
     val iecFilterShipDateDF = iecSelectDF.filter(to_date(col("Partner Ship Calendar Date")) <= lit("2016-12-31"))
-
+   //writeDF(iecFilterShipDateDF,"iecFilterShipDateDF")
 
     /*
     * Union IEC and XS Dataset */
@@ -213,7 +213,7 @@ object CommercialSimplifiedTransform {
       .drop("Temp_Date_Calc_Sub_Six")
       .withColumn("Base SKU",baseSKUFormulaUDF(col("Base SKU")))
       .withColumn("Week End Date", to_date(unix_timestamp(col("Week End Date"),"YYYY-MM-dd").cast("timestamp")))
-    //writeDF(iecXSNewFeaturesDF,"iecXSNewFeaturesDFCONVERTE_WED")
+   //writeDF(iecXSNewFeaturesDF,"iecXSNewFeaturesDFCONVERTE_WED")
     /**
     * Join Claims with Accounts based on Partner Desc and Account Company - 342 */
     val claimsAndAccountJoin = xsClaimsSource.joinOperation(CLAIMS_AND_ACCOUNTS)
@@ -230,7 +230,7 @@ object CommercialSimplifiedTransform {
       .withColumn("Reseller Cluster",lit("Other"))
 
     val claimsAndAccountJoinsUnionDF = doUnion(claimsAndAccountLeftJoinNewFeatDF, claimsAndAccountInnerJoinDF).get//897519
-    //writeDF(claimsAndAccountJoinsUnionDF,"Claims_Join_UNION")
+   //writeDF(claimsAndAccountJoinsUnionDF,"Claims_Join_UNION")
 
     /** Group on Account Consol, Grouping, Reseller Cluster, VPA, WED, Deal ID, SKU and sum Claim Quantity*/
     val claimsGroupAndAggClaimQuant = xsClaimsSource.groupOperation(GROUP_SKU_ACCOUNT_SUM_CLAIM_QUANT)
@@ -242,7 +242,7 @@ object CommercialSimplifiedTransform {
     val rawMasterCalendarDistinctSelect = rawCalendarSource.selectOperation(DISTINCT_SELECT)
     val rawMasterCalendarDistinctSelectDF = doSelect(rawCalendarSelectDF, rawMasterCalendarDistinctSelect.cols, rawMasterCalendarDistinctSelect.isUnknown).get
     .select("C2B Promo Code","Promo Name","SKU","Start Date","End Date").distinct()
-    //writeDF(rawMasterCalendarDistinctSelectDF,"Aftersummarize")
+   //writeDF(rawMasterCalendarDistinctSelectDF,"rawMasterCommercialAftersummarize")
     /*
     * Join Claims and Master Calendar on Deal ID, SKU*/
     val claimsAndMasterCalendarJoin = xsClaimsSource.joinOperation(CLAIMS_AND_MASTER_CALENDAR)
@@ -254,11 +254,11 @@ object CommercialSimplifiedTransform {
     /*
     * Add new features - Program, Total Amount*/
     val claimsAndCalendarLeftJoinNewFeat = claimsAndMasterCalendarLeftJoinDF
-    .withColumn("Program", lit("Big.Deal"))
+    .withColumn("Program", lit("Big_Deal"))  //AVIK Change Dec20 :::   Replace '.' with '_'
     .withColumn("Total Amount", col("Claim Partner Unit Rebate")*col("Sum_Claim Quantity"))
 
     val claimsAndCalendarInnerJoinNewFeat = claimsAndMasterCalendarInnerJoinDF
-    .withColumn("Program", when(col("Promo Name")==="Option C","Promo.Option.C").otherwise("Promo"))
+    .withColumn("Program", when(col("Promo Name")==="Option C","Promo_Option_C").otherwise("Promo"))
     .withColumn("Total Amount",col("Claim Partner Unit Rebate")*col("Sum_Claim Quantity"))
 
     val claimsAndCalendarJoinsUnionDF = doUnion(claimsAndCalendarLeftJoinNewFeat, claimsAndCalendarInnerJoinNewFeat).get//499133
@@ -277,8 +277,8 @@ object CommercialSimplifiedTransform {
     val claimsAndCalJoinBrowseDF = claimsAndCalendarInnerJoinDF.where(col("Program")===lit("Big_Deal"))
       .groupBy("Base SKU","Season_Ordered","season")
       .agg(sum("Total Amount").as("Sum_Total Amount"), sum("Sum_Claim Quantity").as("Sum_Sum_Claim Quantity"))
-      .withColumnRenamed("Total Amount","Sum_Total Amount")
-      .withColumnRenamed("Sum_Claim Quantity","Sum_Sum_Claim Quantity")
+      //.withColumnRenamed("Total Amount","Sum_Total Amount")
+      //.withColumnRenamed("Sum_Claim Quantity","Sum_Sum_Claim Quantity")
       .withColumn("Avg BD per Unit",col("Sum_Total Amount")/col("Sum_Sum_Claim Quantity"))
       .withColumnRenamed("Base SKU","SKU").withColumnRenamed("Season_Ordered","Season_2").withColumnRenamed("season","Season")
       .withColumnRenamed("Sum_Sum_Claim Quantity","BD Units").withColumnRenamed("Avg BD per Unit","BD Claim Avg")
@@ -293,6 +293,7 @@ object CommercialSimplifiedTransform {
     * */
     val skuHierProdTypeFilter = skuHierarchySource.filterOperation(PRODUCT_TYPE_EQ_UNITS)
     val skuHierProdTypeFilteredDF = doFilter(skuHierarchySelectDF, skuHierProdTypeFilter, skuHierProdTypeFilter.conditionTypes(NUMERAL0)).get
+  //writeDF(skuHierProdTypeFilteredDF,"skuHierProdTypeFilteredDF")  //1620
 
     /*
     * Join Claims and SKU Hierarchy on SclaimsAndSKUHierInnerJoinDFKU - 254 */
@@ -305,26 +306,27 @@ object CommercialSimplifiedTransform {
     256 - Union
     * */
     val claimsAndSKUJoinsUnionDF = doUnion(claimsAndSKUHierLeftJoinDF, claimsAndSKUHierInnerJoinDF).get
-    //writeDF(claimsAndSKUJoinsUnionDF,"claims_consolidated") //7.16 lacs
+   //writeDF(claimsAndSKUJoinsUnionDF,"claims_consolidated") //7.16 lacs
     /*
     * OUTPUT - claims_consolidated.csv
     * */
     claimsAndSKUJoinsUnionDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/claims_consolidated_"+currentTS+".csv")
     //claimsAndSKUJoinsUnionDF.write.option("header","true").mode(SaveMode.Overwrite).csv("E:\\Scienaptic\\HP\\Pricing\\Testing\\Commercial_Alteryx\\spark-intermediate\\claims_consolidated.csv")
+
     /*Group - 365*/
     val claimsResellerWEDSKUProgramGroup = xsClaimsSource.groupOperation(RESELLER_WED_SKU_PROGRAM_AGG_CLAIM_REBATE_QUANTITY)
     val claimsResellerWEDSKUProgramGroupDF = doGroup(claimsAndSKUJoinsUnionDF, claimsResellerWEDSKUProgramGroup).get
-    //writeDF(claimsResellerWEDSKUProgramGroupDF,"Reseller_Cluster_Grouping_output")   //TODO: Massive difference: gives 1362, spark - 74841 (WED, others null in Alteryx)
+   //writeDF(claimsResellerWEDSKUProgramGroupDF,"Reseller_Cluster_Grouping_output") //150118   //TODO: Massive difference: gives 1362, spark - 74841 (WED, others null in Alteryx)
 
     /*
     * Filter Program = Big_Deal*/
     val programFilterBigDeal = xsClaimsSource.filterOperation(FILTER_PROGRAM_EQ_BID_DEAL)
     val claimsProgramFilterBigDealDF = doFilter(claimsResellerWEDSKUProgramGroupDF, programFilterBigDeal, programFilterBigDeal.conditionTypes(NUMERAL0)).get
-    //writeDF(claimsProgramFilterBigDealDF,"claimsProgramFilterBigDealDF")
+   //writeDF(claimsProgramFilterBigDealDF,"claimsProgramFilterBigDealDF")  //92446
     //385
     val programFilterPromoOptionC = xsClaimsSource.filterOperation(FILTER_PROGRAM_EQ_PROMO_OPTION_C)
     val claimsProgramFilterPromoOptionCDF = doFilter(claimsResellerWEDSKUProgramGroupDF, programFilterPromoOptionC, programFilterPromoOptionC.conditionTypes(NUMERAL0)).get
-    //writeDF(claimsProgramFilterPromoOptionCDF,"Program_Promo_Option_C")
+   //writeDF(claimsProgramFilterPromoOptionCDF,"Program_Promo_Option_C")  //4936
 
     val claimsProgramOptionCUniqueDF = claimsProgramFilterPromoOptionCDF.dropDuplicates(List("Reseller Cluster","Week End Date","Consol SKU")) //Dont Remove
     //writeDF(claimsProgramOptionCUniqueDF,"claimsProgramOptionCUniqueDF")
@@ -342,17 +344,17 @@ object CommercialSimplifiedTransform {
     .withColumn("Outside Promo Date", when(col("Partner Ship Calendar Date").cast("timestamp")>col("EndDatePlus3").cast("timestamp"),"Y")
     .otherwise("N"))
     .drop("EndDatePlus3") //17057
-    //writeDF(claimsWithOutsidePromoDateFeatDF,"claimsWithOutsidePromoDateFeatDF")
+    //writeDF(claimsWithOutsidePromoDateFeatDF,"claimsWithOutsidePromoDateFeatDF")  //347110
 
     /*
     * Filter where 'Outside Promo Date' = N and Y
     * */
     val claimsOutsidePromoDateFilter = xsClaimsSource.filterOperation(FILTER_OUTSIDE_PROMO_DATE_EQ_N)
     val claimsOutsidePromoDateEqNDF = doFilter(claimsWithOutsidePromoDateFeatDF, claimsOutsidePromoDateFilter, claimsOutsidePromoDateFilter.conditionTypes(NUMERAL0)).get
-    //writeDF(claimsOutsidePromoDateEqNDF,"claims_Filter_Outside_Promo_Date_N")
+    //writeDF(claimsOutsidePromoDateEqNDF,"claims_Filter_Outside_Promo_Date_N") //334267
     val claimsOutsidePromoDateEqYFilter = xsClaimsSource.filterOperation(FILTER_OUTSIDE_PROMO_DATE_EQ_Y)
     val claimsOutsidePromoDateEqYDF = doFilter(claimsWithOutsidePromoDateFeatDF, claimsOutsidePromoDateEqYFilter, claimsOutsidePromoDateEqYFilter.conditionTypes(NUMERAL0)).get
-    //writeDF(claimsOutsidePromoDateEqYDF,"Outside_Promo_N_Not_Eq")
+   //writeDF(claimsOutsidePromoDateEqYDF,"Outside_Promo_N_Not_Eq")  //12844
     /*
     * Group WED, SKU, Promo Code and sum Sum_Claim_Quantity
     * And
@@ -367,6 +369,8 @@ object CommercialSimplifiedTransform {
     //134
     val claimsWEDSKUClaimRebatePromoCodeGroup = xsClaimsSource.groupOperation(WED_SKU_CLAIM_REBATE_PROMO_CODE_SUM_CLAIM_QUANTITY)
     val claimsWEDSKUClaimRebatePromoCodeGroupDF = doGroup(claimsOutsidePromoDateEqYDF, claimsWEDSKUClaimRebatePromoCodeGroup).get
+   //writeDF(claimsWEDSKUClaimRebatePromoCodeGroupDF,"claimsWEDSKUClaimRebatePromoCodeGroupDF")  //7496
+
     /*
     * Join Claims Outside Promo Code = Y and N
     * AND create 'Include' as IF Sum_Sum_Claim Quantity > 0.2*Avg_Sum_Sum_Claim Quantity THEN "Y" ELSE "N"
@@ -379,21 +383,21 @@ object CommercialSimplifiedTransform {
     //writeDF(claimsJoinOutsidePromoYAndNDF,"Outside_Promo_Grouped_Join")
     val claimsJoinOutsidePromoYAndNWithIncludeDF = claimsJoinOutsidePromoYAndNDF
     .withColumn("Include", when(col("Sum_Sum_Claim Quantity") > lit(0.2)*col("Avg_Sum_Sum_Claim Quantity"),"Y").otherwise("N"))
-    //writeDF(claimsJoinOutsidePromoYAndNWithIncludeDF,"claimsJoinOutsidePromoYAndNWithIncludeDF")
+   //writeDF(claimsJoinOutsidePromoYAndNWithIncludeDF,"claimsJoinOutsidePromoYAndNWithIncludeDF") //7318
 
     /*
     * Filter where Include = Y ,i.e, Sum_Sum_Claim Quantity > 0.2 * Avg_Sum_Sum_Claim Quantity
     * */
     val claimsIncludeEqYFilter = xsClaimsSource.filterOperation(FILTER_INCLUDE_EQ_Y)
     val claimsIncludeEqYDF = doFilter(claimsJoinOutsidePromoYAndNWithIncludeDF, claimsIncludeEqYFilter, claimsIncludeEqYFilter.conditionTypes(NUMERAL0)).get
-    //writeDF(claimsIncludeEqYDF,"claims_include_Eq_Y")
+   //writeDF(claimsIncludeEqYDF,"claims_include_Eq_Y") //333
     /*
     * Group C2B Promo Code and Base SKU and Max Week End Date - 144
     * */
 
     val claimsPromoCodeSKUGroup = xsClaimsSource.groupOperation(PROMO_CODE_SKU_MAX_WED)//TODO: Max on Week End Date
     val claimsPromoCodeSKUDF = doGroup(claimsIncludeEqYDF, claimsPromoCodeSKUGroup).get
-    //writeDF(claimsPromoCodeSKUDF,"claimsPromoCodeSKUDF")
+   //writeDF(claimsPromoCodeSKUDF,"claimsPromoCodeSKUDF") //257
     /*
     * Join Claims back with Calendar after aggregations - 146
     * */
@@ -402,7 +406,7 @@ object CommercialSimplifiedTransform {
     val claimsAndCalendarAfterAggJoinMap = doJoinAndSelect(rawCalendarSelectDF, claimsPromoCodeSKURenamedDF, claimsAndCalendarAfterAggJoin)
     val claimsAndCalendarAfterAggLeftJoinDF = claimsAndCalendarAfterAggJoinMap(LEFT)
     val claimsAndCalendarAfterAggInnerJoinDF = claimsAndCalendarAfterAggJoinMap(INNER)
-    //writeDF(claimsAndCalendarAfterAggInnerJoinDF,"JoiclaimsPromoCodeSKUDFn_Back_Calendar")
+   //writeDF(claimsAndCalendarAfterAggInnerJoinDF,"JoiclaimsPromoCodeSKUDFn_Back_Calendar") //257
     /*
     * Add 'New End Date' using 'End Date'
     * */
@@ -436,7 +440,7 @@ object CommercialSimplifiedTransform {
     val wedSelectRenamedDF = wedRenamedDF.withColumnRenamed("season","Source_season").withColumnRenamed("Season_Ordered","Source_Season_Ordered")
     .select("Week_End_Date","Source_season","Source_Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year")
     val claimsCartJoinWEDDF = wedSelectRenamedDF.join(claimsWithEndDateChangeDF)
-    //writeDF(claimsCartJoinWEDDF,"claimsCartJoinWEDDF_DF")
+   //writeDF(claimsCartJoinWEDDF,"claimsCartJoinWEDDF_DF") //1538204
 
     /*
     * Create variables 'Start - Week End', 'Week End - End', 'Option Type' - 159
@@ -456,27 +460,30 @@ object CommercialSimplifiedTransform {
     * Filter 'Start - Week End' <= -3 AND 'Week End - End' <= 3
     * */
     //TODO: BU Removed as missing in Alteryx
-    val claimsJoinWEDWithStartnWEDFilteredDF = claimsJoinWEDWithStartEndnOptionTypeVarsDF
+    var claimsJoinWEDWithStartnWEDFilteredDF = claimsJoinWEDWithStartEndnOptionTypeVarsDF
     .withColumn("StartMinusEnd", col("Start - Week End"))
     .withColumn("WeekEndMinusEnd", col("Week End - End"))
     .filter("StartMinusEnd <= -3").filter("WeekEndMinusEnd <= 3")
     .drop("StartMinusEnd").drop("WeekEndMinusEnd")
+   //writeDF(claimsJoinWEDWithStartnWEDFilteredDF,"claimsJoinWEDWithStartnWEDFilteredDF_BEFORESELECT")
+
+    claimsJoinWEDWithStartnWEDFilteredDF = claimsJoinWEDWithStartnWEDFilteredDF
     .select("SKU","C2B Promo Code","Promo Name","Season"/*,"BU"*/,"Product","Rebate Amount","Week_End_Date","Option Type","Source_season","Source_Season_Ordered","Cal_Month","Cal_Year","Fiscal_Year","Fiscal_Qtr")
-    //writeDF(claimsJoinWEDWithStartnWEDFilteredDF,"claimsJoinWEDWithStartnWEDFilteredDF")
+   //writeDF(claimsJoinWEDWithStartnWEDFilteredDF,"claimsJoinWEDWithStartnWEDFilteredDF") //20015
     /*
     * Sort SKU, WED and Rebate Amount - 162
     * */
     val claimsSKUWEDRebateAmountSort = xsClaimsSource.sortOperation(ASC_SKU_WED_DESC_REBATE)
     val claimsSKUWEDRebateAmountSortDF = doSort(claimsJoinWEDWithStartnWEDFilteredDF, claimsSKUWEDRebateAmountSort.ascending, claimsSKUWEDRebateAmountSort.descending).get
     .dropDuplicates(List("SKU","C2B Promo Code","Week_End_Date"))
-    //writeDF(claimsSKUWEDRebateAmountSortDF,"UniquesFromNewEndDate")
+   //writeDF(claimsSKUWEDRebateAmountSortDF,"UniquesFromNewEndDate") //20015
 
     /*
     * Filter Option Type != Option C - 368
     * */
     val claimsOptionTypeNotEqOptionCFilter = xsClaimsSource.filterOperation(OPTION_TYPE_NOT_EQUALS_OPTION_C)
     val claimsOptionTypeNotEqOptionCFilterDF = doFilter(claimsSKUWEDRebateAmountSortDF, claimsOptionTypeNotEqOptionCFilter, claimsOptionTypeNotEqOptionCFilter.conditionTypes(NUMERAL0)).get
-    //writeDF(claimsOptionTypeNotEqOptionCFilterDF,"claimsOptionTypeNotEqOptionCFilterDF")
+   //writeDF(claimsOptionTypeNotEqOptionCFilterDF,"claimsOptionTypeNotEqOptionCFilterDF")  //14545
     /*
     * Group SKU, WED, Promo Code and max aggregate Rebate Amount - 364
     * */
@@ -489,7 +496,7 @@ object CommercialSimplifiedTransform {
     val masterCalSelectForDistinct = rawCalendarSource.selectOperation(SELECT_FOR_DISTINCT)
     val masterCalSelectForDistinctDF = doSelect(rawCalendarSelectDF, masterCalSelectForDistinct.cols, masterCalSelectForDistinct.isUnknown).get
     .dropDuplicates(List("C2B Promo Code","Promo Name"))
-    //writeDF(masterCalSelectForDistinctDF,"PromoIDList")
+   //writeDF(masterCalSelectForDistinctDF,"PromoIDList")  //907
     /* ---------------------------- TIDY HISTORICAL POS ------------------------- */
     /*
     * Filter Channel equals commercial - 418
@@ -524,7 +531,7 @@ object CommercialSimplifiedTransform {
     * * */
     val tidyHistSelectAfterQtyIRFilter = stOnyxSource.selectOperation(SELECT_AFTER_QTY_TAILER_IR_FILTER)
     val tidyHistIRQtyTailerFilterSelectDF = doSelect(tidyHistWithDealQtyETailerIRPromoFlagDF, tidyHistSelectAfterQtyIRFilter.cols, tidyHistSelectAfterQtyIRFilter.isUnknown).get
-
+    //writeDF(tidyHistIRQtyTailerFilterSelectDF,"tidyHistIRQtyTailerFilterSelectDF") //9504
     /*
     * Join Tidy Hist pos with SKU Hierarchy on SKU - 420
     * */
@@ -534,6 +541,8 @@ object CommercialSimplifiedTransform {
     .withColumnRenamed("Consol SKU","SKU")
     .withColumnRenamed("Abbreviated Name","SKU_Name")*/
     //writeDF(tidyHistAndSKUHierInnerJoinDF,"BIG_DEAL_QTY_ETAILER_NON_BIG_DEAL")
+
+    //TILL HERE DONE
 
     /* ---------------------------- STT (CI) ---------------------------- */
     /*
@@ -549,10 +558,10 @@ object CommercialSimplifiedTransform {
       .withColumn("Account Consol", lit("Others"))
       .withColumn("Grouping", lit("Distributor"))
       .withColumn("VPA", lit("Non-VPA"))
-    //writeDF(sttOnyxAndAccountsLeftJoinDF,"CI_Join")
+   //writeDF(sttOnyxAndAccountsInnerJoinDF,"A") //711838
 
     val sttOnyxAndAccountJoinsUnionDF = doUnion(sttOnyxAndAccountsLeftJoinDF, sttOnyxAndAccountsInnerJoinDF).get
-    //writeDF(sttOnyxAndAccountJoinsUnionDF,"Account_merge_UNION")
+   //writeDF(sttOnyxAndAccountJoinsUnionDF,"Account_merge_UNION")  //742396
 
     /*
     * Merge Consol SKU using SKU Hierarchy - 409
@@ -561,20 +570,21 @@ object CommercialSimplifiedTransform {
     val skuHierarchySelectRenamedForSTTDF = skuHierProdTypeFilteredDF.withColumnRenamed("SKU","Join_SKU")
     .withColumnRenamed("Consol SKU","SKU")
     val sttOnyxAndSkuHierInnerJoinDF = doJoinAndSelect(sttOnyxAndAccountJoinsUnionDF, skuHierarchySelectRenamedForSTTDF, sttOnyxAndSkuHierJoin)(INNER)
-    //writeDF(sttOnyxAndSkuHierInnerJoinDF,"MERGE_CONSOLE_SKU")
+   //writeDF(sttOnyxAndSkuHierInnerJoinDF,"MERGE_CONSOLE_SKU")  //518488
     /*
     * Merge WED using WED - 410
     * */
     val sttOnyxAndWEDJoin = sttOnyxSource.joinOperation(STT_ONYX_AND_WED_MERGE_WED)
     val sttOnyxAndWEDInnerJoinDF = doJoinAndSelect(sttOnyxAndSkuHierInnerJoinDF, wedRenamedDF, sttOnyxAndWEDJoin)(INNER)
-    //writeDF(sttOnyxAndWEDInnerJoinDF,"sttOnyxAndWEDInnerJoinDF")
+    //writeDF(sttOnyxAndWEDInnerJoinDF,"sttOnyxAndWEDInnerJoinDF") //518488
     /*
     * Group Reseller Cluster, SKU, Week_End_Date - 411 AND add 7 days to Week_End_Date - 414 - Week shift
     * */
     val wedSelectDFsttOnyxResellerSKUWEDGroup = sttOnyxSource.groupOperation(RESELLER_SKU_WED_SUM_AGG_INVENTORY_TOTAL)
     val sttOnyxResellerSKUWEDGroupDF = doGroup(sttOnyxAndWEDInnerJoinDF, wedSelectDFsttOnyxResellerSKUWEDGroup).get
     .withColumn("Week_End_Date",date_add(col("Week_End_Date").cast("timestamp"), 7))
-    //writeDF(sttOnyxResellerSKUWEDGroupDF,"Account_WEEK_SHIFT")
+   //writeDF(sttOnyxResellerSKUWEDGroupDF,"Account_WEEK_SHIFT") //301432
+
     /* ---------------------------- ST ----------------------------- */
     /*
     * Join ST ONYX and Aux Accounts - 345
@@ -585,7 +595,7 @@ object CommercialSimplifiedTransform {
     val stOnyxAndAccountsJoinMap = doJoinAndSelect(stONYXSelectDF, commAccountsSelectRenamedDF, stOnyxAndAccountsJoin)
     val stOnyxAndAccountsLeftJoinDF = stOnyxAndAccountsJoinMap(LEFT)
     val stOnyxAndAccountsInnerJoinDF = stOnyxAndAccountsJoinMap(INNER)
-    //writeDF(stOnyxAndAccountsLeftJoinDF,"ST_Account_JOIN_Inner")
+   //writeDF(stOnyxAndAccountsLeftJoinDF,"ST_Account_JOIN_Inner") //380100
     /*
     * Add Features - 'Account Consol', 'Grouping', 'VPA', 'Reseller Cluster'
     * */
@@ -599,7 +609,7 @@ object CommercialSimplifiedTransform {
     * Union ST joins
     * */
     val stOnyxAndAccountJoinsUnion = doUnion(stOnyxAndAccountWithFeaturesDF, stOnyxAndAccountsInnerJoinDF).get
-    //writeDF(stOnyxAndAccountJoinsUnion,"AccountSTUnion")
+   //writeDF(stOnyxAndAccountJoinsUnion,"AccountSTUnion") //1114635
     /*
     * Join ST ONYX And SKU Hierarchy on Product Base Id and SKU - 348
     * */
@@ -609,7 +619,7 @@ object CommercialSimplifiedTransform {
     val stOnyxAndSKUHierJoinMap = doJoinAndSelect(stOnyxAndAccountJoinsUnion, skuHierarchySelectRenamedDF, stOnyxAndSKUHierJoin)
     val stOnyxAndSKUHierLeftJoinDF = stOnyxAndSKUHierJoinMap(LEFT)
     val stOnyxAndSKUHierInnerJoinDF = stOnyxAndSKUHierJoinMap(INNER)
-    //writeDF(stOnyxAndSKUHierInnerJoinDF,"stOnyxAndSKUHierInnerJoinDF"); //writeDF(stOnyxAndSKUHierLeftJoinDF,"stOnyxAndSKUHierLeftJoinDF")
+   //writeDF(stOnyxAndSKUHierInnerJoinDF,"stOnyxAndSKUHierInnerJoinDF"); //896584 //writeDF(stOnyxAndSKUHierLeftJoinDF,"stOnyxAndSKUHierLeftJoinDF")
     /*
     * Group Left join on Product Base Id, Product Base Desc and sum Aggregate Sell Thru Qty, Sell-to Qty
     * And
@@ -620,21 +630,21 @@ object CommercialSimplifiedTransform {
       .withColumnRenamed("Product Category Desc","Group By_Product Category Desc")
     val stOnyxSellThruAndToSort = stOnyxSource.sortOperation(DESC_SELL_THRU_SELL_TO)
     val stOnyxSellThruAndToSortDF = doSort(stOnyxProductBaseGroupDF, stOnyxSellThruAndToSort.ascending, stOnyxSellThruAndToSort.descending).get
-    //writeDF(stOnyxSellThruAndToSortDF,"CHECK_SKU_Fallout")
-
+   //writeDF(stOnyxSellThruAndToSortDF,"CHECK_SKU_Fallout") //1288
+    stOnyxSellThruAndToSortDF.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/SKU_Fallout_"+currentTS+".csv")
     /*
     * Group Week on St ONYX and SKU Join - 350
     * */
     val stOnyxWeekJoin = stOnyxSource.joinOperation(ST_ONYX_AND_WED)
     val stOnyxWeekInnerJoinDF = doJoinAndSelect(stOnyxAndSKUHierInnerJoinDF, wedRenamedDF, stOnyxWeekJoin)(INNER)
     .withColumnRenamed("Abbreviated Name","SKU_Name")
-    //writeDF(stOnyxWeekInnerJoinDF,"stOnyxWeekInnerJoinDF")
+   //writeDF(stOnyxWeekInnerJoinDF,"stOnyxWeekInnerJoinDF") //896584
     /*
     * 351 - Group Deal ID 1, eTailers,
     * */
     val stOnyxGroup = stOnyxSource.groupOperation(DEAL_ETAILERS_ACCOUNT_SEASON_CAL_SKU_FISCAL_SUM_AGG_SELL_THRU_TO_QTY)
     val stOnyxGroupDF = doGroup(stOnyxWeekInnerJoinDF, stOnyxGroup).get
-    //writeDF(stOnyxGroupDF,"ST_Join_Group")
+   //writeDF(stOnyxGroupDF,"ST_Join_Group") //609364
     //TODO: GA and ES date are blank here!
     /*
     * Join ST and Promo ID list - 352
@@ -643,7 +653,7 @@ object CommercialSimplifiedTransform {
     val stOnyxAndPromoIDJoinMap = doJoinAndSelect(stOnyxGroupDF, masterCalSelectForDistinctDF, stOnyxAndPromoIDJoin)
     val stOnyxAndPromoIDLeftJoinDF = stOnyxAndPromoIDJoinMap(LEFT)
     val stOnyxAndPromoIDInnerJoinDF = stOnyxAndPromoIDJoinMap(INNER)
-    //writeDF(stOnyxAndPromoIDInnerJoinDF,"ST_INNER_Join_Sample")
+   //writeDF(stOnyxAndPromoIDInnerJoinDF,"ST_INNER_Join_Sample")  //70774
     /*
     * Add 'Big Deal Qty', 'Non Big Deal Qty', 'Qty', 'Promo' variables - 355
     * AND 356
@@ -668,7 +678,7 @@ object CommercialSimplifiedTransform {
     val stOnyxAllColumSumAggQtyGroup = stOnyxSource.groupOperation(GROUP_ALL_SUM_AGG_BIG_NON_BIG_DEAL_QTY)
     val stOnyxAllColumSumAggQtyGroupDF = doGroup(stOnyxAndPromoJoinsUnionDF, stOnyxAllColumSumAggQtyGroup).get
       .withColumnRenamed("season","Season")
-    //writeDF(stOnyxAllColumSumAggQtyGroupDF,"stOnyxAllColumSumAggQtyGroupDF")
+   //writeDF(stOnyxAllColumSumAggQtyGroupDF,"stOnyxAllColumSumAggQtyGroupDF") //436864
     /*
     * Group All columns except Account, Promo, Grouping and Sum aggregation Qty, Big deal Qty, Non big deal qty - 369
     * */
@@ -682,7 +692,7 @@ object CommercialSimplifiedTransform {
     val stOnyxETailersEqYFilter = stOnyxSource.filterOperation(FILTER_ETAILERS_EQ_Y)
     val stOnyxETailersNotEqYFilterDF = doFilter(stOnyxAllExceptAccountGroupPromoGroupDF, stOnyxETailersNotEqYFilter, stOnyxETailersNotEqYFilter.conditionTypes(NUMERAL0)).get
     val stOnyxETailersEqYFilterDF = doFilter(stOnyxAllExceptAccountGroupPromoGroupDF, stOnyxETailersEqYFilter, stOnyxETailersEqYFilter.conditionTypes(NUMERAL0)).get
-    //writeDF(stOnyxETailersEqYFilterDF,"ETAILERS_EQ_Y")
+   //writeDF(stOnyxETailersEqYFilterDF,"ETAILERS_EQ_Y") //16246
     /*
     * Join ST ONYX With Aggregated Claims on Reseller Cluster, SKU, Week End Date
     * */
@@ -695,7 +705,7 @@ object CommercialSimplifiedTransform {
     .withColumnRenamed("Sum_Sum_Claim Quantity","Claimed Big Deal Qty")
     val stOnyxAndAggClaimsInnerJoinDF = stOnyxAndAggClaimsJoinMap(INNER)
     .withColumnRenamed("Sum_Sum_Claim Quantity","Claimed Big Deal Qty")
-    //writeDF(stOnyxAndAggClaimsInnerJoinDF,"BIG_DEAL_Completion")
+   //writeDF(stOnyxAndAggClaimsInnerJoinDF,"BIG_DEAL_Completion")   //76815
     //writeDF(stOnyxAndAggClaimsLeftJoinDF,"stOnyxAndAggClaimsLeftJoinDF")
     /*
     * Add Variables 'Big Deal Claim Difference', 'Big_Deal_Qty','Non_Big_Deal_Qty' - 381
@@ -708,12 +718,11 @@ object CommercialSimplifiedTransform {
     .withColumn("Non_Big_Deal_Qty", col("Non_Big_Deal_Qty")-col("Big Deal Claim Difference"))
     //writeDF(stOnyxAndAggClaimsInnerJoinWithClaimDifferenceDealQtyDF,"stOnyxAndAggClaimsInnerJoinWithClaimDifferenceDealQtyDF")
     val stOnyAndAggClaimsJoinsUnion = doUnion(stOnyxAndAggClaimsLeftJoinDF, stOnyxAndAggClaimsInnerJoinWithClaimDifferenceDealQtyDF).get
-    //writeDF(stOnyAndAggClaimsJoinsUnion,"ST_Nig_Deal_Claim_Union")
+   //writeDF(stOnyAndAggClaimsJoinsUnion,"ST_Nig_Deal_Claim_Union") //187775
     /*
     * Option C Join - 386
     * */
     val stOnyxOptionCJoin = stOnyxSource.joinOperation(ST_ONYX_OPTION_C_JOIN)
-    //val claimsProgramFilterPromoOptionCRenamedDF = claimsProgramOptionCUniqueDF
     val claimsProgramFilterPromoOptionCRenamedDF = claimsProgramFilterPromoOptionCDF
     .withColumnRenamed("Reseller Cluster","Right_Reseller Cluster")
     .withColumnRenamed("Claim Partner Unit Rebate", "Option C IR")
@@ -721,7 +730,8 @@ object CommercialSimplifiedTransform {
     val stOnyxOptionCJoinMap = doJoinAndSelect(stOnyAndAggClaimsJoinsUnion, claimsProgramFilterPromoOptionCRenamedDF, stOnyxOptionCJoin)
     val stOnyxOptionCLeftJoinDF = stOnyxOptionCJoinMap(LEFT)
     val stOnyxOptionCInnerJoinDF = stOnyxOptionCJoinMap(INNER)
-    //writeDF(stOnyxOptionCInnerJoinDF,"stOnyxOptionCInnerJoinDF"); //writeDF(stOnyxOptionCLeftJoinDF,"stOnyxOptionCLeftJoinDF")
+   //writeDF(stOnyxOptionCInnerJoinDF,"stOnyxOptionCInnerJoinDF") //4061
+   //writeDF(stOnyxOptionCLeftJoinDF,"stOnyxOptionCLeftJoinDF") //183714
     /*
     * Add Variables Option C Qty Adj, Non_Big_Deal_Qty, Qty
     * */
@@ -735,18 +745,21 @@ object CommercialSimplifiedTransform {
     */
     //val stOnyxETailersEqYFilterDF2 = spark.read.option("header","true").option("inferSchema","true").csv("E:\\Scienaptic\\HP\\Pricing\\Testing\\Commercial_Alteryx\\spark-intermediate\\ETAILERS_EQ_Y.csv")
     val stOnyxUnionETailersOptionCDF = doUnion(stOnyxOptionCLeftJoinDF, doUnion(stOnyxOptionCInnerJoinWithOptionCQtyDealQty, stOnyxETailersEqYFilterDF).get).get
-    //writeDF(stOnyxUnionETailersOptionCDF,"Bringing_Back_ETailers")
+   //writeDF(stOnyxUnionETailersOptionCDF,"Bringing_Back_ETailers")  //204021
     /*
     * Group Summarize - 397 - Group after bringing back etailers
     * */
     val stOnyxAllResellerVPATailerWEDSeasFisGroup = stOnyxSource.groupOperation(GROUP_ALL_RESELLER_VPA_TAILER_SKU_WED_SEASON_CAL_FISCAL_AGG_QTY)
     val sstOnyxAllResellerVPATailerWEDSeasFisGroupDF = doGroup(stOnyxUnionETailersOptionCDF, stOnyxAllResellerVPATailerWEDSeasFisGroup).get
+   //writeDF(sstOnyxAllResellerVPATailerWEDSeasFisGroupDF, "sstOnyxAllResellerVPATailerWEDSeasFisGroupDF")  //20421
+
     /*
     * Filter Option C Qty Adj > 0 - 388
     * */
     val stOnyxOptionCQtyAdjFilter = stOnyxSource.filterOperation(FILTER_OPTION_C_QTY_ADJ_GR_0)
     val stOnyxOptionCQtyAdjFilterDF = doFilter(stOnyxOptionCInnerJoinWithOptionCQtyDealQty, stOnyxOptionCQtyAdjFilter, stOnyxOptionCQtyAdjFilter.conditionTypes(NUMERAL0)).get
-    //writeDF(stOnyxOptionCQtyAdjFilterDF,"Option_C_Qty_Adj_GT_0")
+   //writeDF(stOnyxOptionCQtyAdjFilterDF,"Option_C_Qty_Adj_GT_0") //3844
+
     /*
     * Add Reseller Cluster, Qty, Non_Big_Deal_Qty, Big_Deal_Qty, IR, Promo Flag  - 394
     * */
@@ -768,7 +781,8 @@ object CommercialSimplifiedTransform {
     val stOnyxPromoJoinMap = doJoinAndSelect(stOnyxUnionETailersOptionCDF, claimsSKUWEDPromoCodeGroupRenamedDF, stOnyxPromoJoin)
     val stOnyxPromoLeftJoinDF = stOnyxPromoJoinMap(LEFT)
     val stOnyxPromoInnerJoinDF = stOnyxPromoJoinMap(INNER)
-    //writeDF(stOnyxPromoInnerJoinDF,"PROMO_INNER_JOIN")
+   //writeDF(stOnyxPromoInnerJoinDF,"PROMO_INNER_JOIN") //61140
+   //writeDF(stOnyxPromoLeftJoinDF, "stOnyxPromoLeftJoinDF")  //143418
     /*
     * Add Promo Flag = 0 to Left join - 372
     * AND Add Promo Flag = 1 to  Inner Join 371
@@ -780,7 +794,7 @@ object CommercialSimplifiedTransform {
     * Union St Onyx joins - Bring back Option C - 373
     * */
     val stOnyxPromoJoinsWithPromoFlagUnionDF = doUnion(doUnion(stOnyxPromoLeftJoinWithPromoFlagDF, stOnyxPromoInnerJoinWithPromoFlagDF).get,stOnyxOptionCWithResellerQtyIRPromoFlagDF).get
-    //writeDF(stOnyxPromoJoinsWithPromoFlagUnionDF,"Bringing_Back_Option_C")
+   //writeDF(stOnyxPromoJoinsWithPromoFlagUnionDF,"Bringing_Back_Option_C")  //208402
     /*
     * Merge inventory Join - 412
     * */
@@ -792,14 +806,15 @@ object CommercialSimplifiedTransform {
     val stOnyxMergeInventoryJoinMap = doJoinAndSelect(stOnyxPromoJoinsWithPromoFlagUnionDF, sttOnyxResellerSKUWEDGroupRenamedDF, stOnyxMergeInventoryJoin)
     val stOnyxMergeInventoryInnerJoinDF = stOnyxMergeInventoryJoinMap(INNER)
     val stOnyxMergeInventoryLeftJoinDF = stOnyxMergeInventoryJoinMap(LEFT)
-    //writeDF(stOnyxMergeInventoryInnerJoinDF,"Merge_Inevntory_INNER_Join")
-    //writeDF(stOnyxMergeInventoryLeftJoinDF,"stOnyxMergeInventoryLeftJoinDF")
+   //writeDF(stOnyxMergeInventoryInnerJoinDF,"Merge_Inevntory_INNER_Join") //162351
+   //writeDF(stOnyxMergeInventoryLeftJoinDF,"stOnyxMergeInventoryLeftJoinDF")  //46051
     /*
     * Union Inventory and S-Print Union - 413
     * */
     /* Avik Change : RCode: Version Apr6: Tidy Dataframe had Reseller_Cluster, but other had Reseller Cluster */
-    val stOnyxInventorySPrintUnionDF = doUnion(tidyHistIRQtyTailerFilterSelectDF/*.withColumnRenamed("Reseller_Cluster","Reseller Cluster")*/, doUnion(stOnyxMergeInventoryInnerJoinDF, stOnyxMergeInventoryLeftJoinDF).get).get
-    //writeDF(stOnyxInventorySPrintUnionDF,"INVENTORY_AND_S-PRINT")
+    val tidyHistIRQtyTailerFilterSelectDFRenamedDF = tidyHistIRQtyTailerFilterSelectDF.withColumn("SKU",col("HP_SKU_Short"))
+    val stOnyxInventorySPrintUnionDF = doUnion(tidyHistIRQtyTailerFilterSelectDFRenamedDF/*.withColumnRenamed("Reseller_Cluster","Reseller Cluster")*/, doUnion(stOnyxMergeInventoryInnerJoinDF, stOnyxMergeInventoryLeftJoinDF).get).get
+    //writeDF(stOnyxInventorySPrintUnionDF,"INVENTORY_AND_S-PRINT")  //217906
 
     /*
     * Calculate Promo Spend, eTailer, Reseller Cluster - 398
@@ -821,6 +836,8 @@ object CommercialSimplifiedTransform {
     val tidyHistAndSKUHierJoin = tidyHistSource.joinOperation(TIDY_HIST_AND_SKU_HIER)
     val skuHierProdTypeFilteredUpdSKUDF = skuHierProdTypeFilteredDF.withColumnRenamed("SKU","Right_SKU")
     val tidyHistAndSKUHierInnerJoinDF = doJoinAndSelect(stOnyxWithPromoSpendETailerResellerAndNullImputeDF, skuHierProdTypeFilteredUpdSKUDF, tidyHistAndSKUHierJoin)(INNER)
+    //writeDF(tidyHistAndSKUHierInnerJoinDF, "tidyHistAndSKUHierInnerJoinDF")  //215506
+    tidyHistAndSKUHierInnerJoinDF.printSchema()
 
     /*
     * Select before output - 402

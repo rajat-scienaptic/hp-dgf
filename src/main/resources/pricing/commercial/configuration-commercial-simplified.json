@@ -154,12 +154,12 @@
         "FILTER_PROGRAM_EQ_BID_DEAL": {
           "multiWordMap": {},
           "conditionTypes": ["and"],
-          "conditions": ["Program = Big.Deal"]
+          "conditions": ["Program = Big_Deal"]
         },
         "FILTER_PROGRAM_EQ_PROMO_OPTION_C": {
           "multiWordMap": {},
           "conditionTypes": ["and"],
-          "conditions": ["Program = Promo.Option.C"]
+          "conditions": ["Program = Promo_Option_C"]
         },
         "FILTER_OUTSIDE_PROMO_DATE_EQ_N": {
           "multiWordMap": {"out_prom_date": "Outside Promo Date"},
