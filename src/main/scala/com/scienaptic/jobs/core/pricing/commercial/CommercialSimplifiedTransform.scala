@@ -286,7 +286,7 @@ object CommercialSimplifiedTransform {
     /*
     * OUTPUT - big_deal_avg_discount.csv - 423
     * */
-    claimsAndCalJoinBrowseDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/big_deal_avg_discount"+currentTS+".csv")
+    claimsAndCalJoinBrowseDF.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/big_deal_avg_discount_"+currentTS+".csv")
 
     /*
     * 427 - Filter PRODUCT TYPE CONSOLE = Units
