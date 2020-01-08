@@ -781,6 +781,8 @@ object CommercialSimplifiedTransform {
     val stOnyxPromoJoinMap = doJoinAndSelect(stOnyxUnionETailersOptionCDF, claimsSKUWEDPromoCodeGroupRenamedDF, stOnyxPromoJoin)
     val stOnyxPromoLeftJoinDF = stOnyxPromoJoinMap(LEFT)
     val stOnyxPromoInnerJoinDF = stOnyxPromoJoinMap(INNER)
+    val stOnyxPromoRightJoinDF = stOnyxPromoJoinMap(RIGHT)
+    stOnyxPromoRightJoinDF.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/check_big_deal_claim_fallout_"+currentTS+".csv")
    //writeDF(stOnyxPromoInnerJoinDF,"PROMO_INNER_JOIN") //61140
    //writeDF(stOnyxPromoLeftJoinDF, "stOnyxPromoLeftJoinDF")  //143418
     /*
