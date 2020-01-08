@@ -851,11 +851,12 @@ object CommercialSimplifiedTransform {
         .withColumn("Spend",col("Promo Spend"))
       .withColumn("SKU_Name",col("Abbreviated Name"))
       //TODO: Promo ID, Right_SKU,Consol SKU,Full Name removed from here
-        .select("Reseller Cluster","VPA","SKU","Week_End_Date","Street Price","Season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Big_Deal_Qty","Non_Big_Deal_Qty","Qty","IR","Promo Flag","Inv_Qty","eTailer","Spend","Product Base Desc","Product Type Desc","PL","PL Desc","Product Category Desc","Product Type Consol","SKU_Name","List Price","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category Custom","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","Mono/Color","L1_Category","L2_Category","PLC Status","GA date","ES date"/*,"Right_SKU","Consol SKU","Full Name"*/)
+        .select("Reseller Cluster","VPA","SKU","Week_End_Date","Street Price","Season","Season_Ordered","Cal_Month","Cal_Year","Fiscal_Qtr","Fiscal_Year","Big_Deal_Qty","Non_Big_Deal_Qty","Qty","C2B Promo Code","IR","Promo Flag","Inv_Qty","eTailer","Spend","Product Base Desc","Product Type Desc","PL","PL Desc","Product Category Desc","Product Type Consol","SKU_Name","List Price","Platform Name","Brand","IPSLES","HPS/OPS","Series","Category Custom","Category","Category Subgroup","Category_1","Category_2","Category_3","Line","Mono/Color","L1_Category","L2_Category","PLC Status","GA date","ES date"/*,"Right_SKU","Consol SKU","Full Name"*/)
       .withColumn("Street Price", regexp_replace(col("Street Price"),"\\$",""))
       .withColumn("Street Price", regexp_replace(col("Street Price"),",","").cast("double"))
       .withColumn("IR", regexp_replace(col("Street Price"),"\\$",""))
       .withColumn("IR", regexp_replace(col("Street Price"),",","").cast("double"))
+      .withColumnRenamed("C2B Promo Code","Promo_ID")
     //writeDF(posqtyOutputCommercialDF,"POSQTY_OUTPUT_COMMERCIAL")
     //posqtyOutputCommercialDF.write.option("header","true").mode(SaveMode.Overwrite).csv("/home/avik/Scienaptic/HP/data/April13/spark_outputs/posqty_commercial_output.csv")
     posqtyOutputCommercialDF.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_"+currentTS+".csv")
