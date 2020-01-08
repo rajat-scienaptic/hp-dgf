@@ -631,7 +631,7 @@ object CommercialSimplifiedTransform {
     val stOnyxSellThruAndToSort = stOnyxSource.sortOperation(DESC_SELL_THRU_SELL_TO)
     val stOnyxSellThruAndToSortDF = doSort(stOnyxProductBaseGroupDF, stOnyxSellThruAndToSort.ascending, stOnyxSellThruAndToSort.descending).get
    //writeDF(stOnyxSellThruAndToSortDF,"CHECK_SKU_Fallout") //1288
-    stOnyxSellThruAndToSortDF.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/SKU_Fallout_"+currentTS+".csv")
+    stOnyxSellThruAndToSortDF.coalesce(1).write.option("header","true").mode(SaveMode.Overwrite).csv("/etherData/Pricing/Outputs/POS_Commercial/SKU_Fallout_"+currentTS+".csv")
     /*
     * Group Week on St ONYX and SKU Join - 350
     * */
@@ -675,7 +675,6 @@ object CommercialSimplifiedTransform {
     /*
     * Group on all columns and compote sum for Big Deal, Non Big deal Qty and Qty - 359
     * */
-    val stOnyxAllColumSumAggQtyGroup = stOnyxSource.groupOperation(GROUP_ALL_SUM_AGG_BIG_NON_BIG_DEAL_QTY)
     val stOnyxAllColumSumAggQtyGroupDF = doGroup(stOnyxAndPromoJoinsUnionDF, stOnyxAllColumSumAggQtyGroup).get
       .withColumnRenamed("season","Season")
    //writeDF(stOnyxAllColumSumAggQtyGroupDF,"stOnyxAllColumSumAggQtyGroupDF") //436864
