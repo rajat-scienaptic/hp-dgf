@@ -54,7 +54,7 @@ object RetailTransform2 {
   val SORT02 = "sort02"
   val SORT03 = "sort03"
   val SORT04 = "sort04"
-  val PATH_TO_WRITE_TEST_OUTPUT = "/etherData/Pricing/intermediate_temp_output"
+  val PATH_TO_WRITE_TEST_OUTPUT = ""
 
   val ODOM_ONLINE_ORCA_SOURCE = "ODOM_ONLINE_ORCA"
   val STAPLES_COM_UNITS_SOURCE = "STAPLES_COM_UNITS"
@@ -387,7 +387,8 @@ object RetailTransform2 {
       .select("Account", "Online", "SKU", "SKU_Name", "IPSLES", "Week_End_Date", "POS_Qty", "Season", "Street_Price",
         "Category", "Category_Subgroup", "Line", "PL", "L1_Category", "L2_Category", "Raw_POS_Qty", "GA_date", "ES_date",
         "Distribution_Inv", "Category_1", "Category_2", "Category_3", "HPS/OPS", "Series", "Category Custom", "Brand",
-        "Max_Week_End_Date", "Season_Ordered", "Cal_Month", "Cal_Year", "Fiscal_Qtr", "Fiscal_Year")
+        "Max_Week_End_Date", "Season_Ordered", "Cal_Month", "Cal_Year", "Fiscal_Qtr", "Fiscal_Year","Product Base Desc",
+        "Product Category Desc","Product Business Unit Desc","Product Type Consol")
       .coalesce(1).write.mode(SaveMode.Overwrite).option("header", true).csv("/etherData/Pricing/Outputs/POS_Retail/temp/before_posqty_output_retail_" + currentTS + ".csv")
     // formula
     //val bbyBundleInfoFormula08DF = bbyBundleInfoSort01DF.withColumn("Workflow Run Date", current_date())
