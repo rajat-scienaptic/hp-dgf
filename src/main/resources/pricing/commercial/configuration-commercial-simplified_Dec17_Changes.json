@@ -345,7 +345,7 @@
         },
         "ST_ONYX_PROMO_JOIN": {
           "isUnknown": "y",
-          "typeOfJoin": ["leftanti","inner"],
+          "typeOfJoin": ["leftanti","inner","rightanti"],
           "joinCriteria": {
             "left": ["SKU","Week_End_Date"],
             "right": ["Right_SKU","Right_Week_End_Date"]
