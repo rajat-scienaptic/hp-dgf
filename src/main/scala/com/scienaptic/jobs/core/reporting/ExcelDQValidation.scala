@@ -593,10 +593,10 @@ object ExcelDQValidation {
 
     //-------------------------------------------------Alteryx  for Commercial----------------------------------------------
     val recentCommercialData = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxCommercialInputLocation + "posqty_output_commercial_" +currentTS + ".csv")).orderBy(col("season").desc)
+      .csv(alteryxCommercialInputLocation + "posqty_commercial_output_" +currentTS + ".csv")).orderBy(col("season").desc)
       .select("SKU", "Reseller Cluster", "season", "Qty", "Inv_Qty")
     val previousWeekCommercialData = renameColumns(spark.read.option("header", "true").option("inferSchema", "true")
-      .csv(alteryxCommercialInputLocation + "posqty_output_commercial_" + currentTS + ".csv")).orderBy(col("season").desc)
+      .csv(alteryxCommercialInputLocation + "posqty_commercial_output_" + currentTS + ".csv")).orderBy(col("season").desc)
       .withColumnRenamed("Qty", "Pre_Qty")
       .withColumnRenamed("Inv_Qty", "Pre_Inv_Qty")
       .select("SKU", "Reseller Cluster", "season", "Pre_Qty", "Pre_Inv_Qty")
