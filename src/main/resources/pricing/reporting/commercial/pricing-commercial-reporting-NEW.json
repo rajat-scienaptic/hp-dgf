@@ -1,0 +1,20 @@
+{
+  "config" : "reporting-NEW",
+  "sparkConfig": {
+    "master": "yarn-client",
+    "appName": "hp-reporting"
+  },
+  "reporting": {
+    "grouping-columns" : "SKU,Reseller Cluster",
+    "aggregating-columns": "sum(Qty)",
+    "commercial-preregression-basepath" : "",
+    "alteryx-current-pos-path" : "/etherData/Pricing/Outputs/POS_Retail/posqty_commercial_output_%s.csv",
+    "commercial-alteryx-basepath" : "/etherData/Pricing/Outputs/POS_Commercial/posqty_commercial_output_",
+    "output-basepath" : "/etherData/Pricing/reporting/",
+    "alteryx-agg-pos-result-path" : "/etherData/retailTemp/retailAlteryx/commercial-pos-aggregation-comparison.csv",
+    "retail-alteryx-basepath" : "/etherData/Pricing/Outputs/POS_Retail/",
+    "retail-preregression-basepath" : "",
+    "sku-hierarchy-basepath" :""
+
+  }
+}
