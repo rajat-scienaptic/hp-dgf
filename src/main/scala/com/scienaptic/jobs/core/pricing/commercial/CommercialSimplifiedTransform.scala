@@ -675,6 +675,7 @@ object CommercialSimplifiedTransform {
     /*
     * Group on all columns and compote sum for Big Deal, Non Big deal Qty and Qty - 359
     * */
+    val stOnyxAllColumSumAggQtyGroup = stOnyxSource.groupOperation(GROUP_ALL_SUM_AGG_BIG_NON_BIG_DEAL_QTY)
     val stOnyxAllColumSumAggQtyGroupDF = doGroup(stOnyxAndPromoJoinsUnionDF, stOnyxAllColumSumAggQtyGroup).get
       .withColumnRenamed("season","Season")
    //writeDF(stOnyxAllColumSumAggQtyGroupDF,"stOnyxAllColumSumAggQtyGroupDF") //436864
