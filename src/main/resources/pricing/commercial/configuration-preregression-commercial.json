@@ -1,9 +1,0 @@
-{
-  "config": "preregression-commercial-price_holidays",
-  "sparkConfig": {
-    "master": "yarn-client",
-    "appName": "hp-preregression-commercial"
-  },
-  "sources": {
-  }
-}

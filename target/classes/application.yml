@@ -1,0 +1,15 @@
+server:
+  port: 9001
+spring:
+  datasource:
+    driverClassName: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/dgf
+    username: rajat
+    password: 123456789
+  jpa:
+    hibernate.ddl-auto: none
+    show-sql: true
+  security:
+    user:
+      name: admin
+      password: hp

@@ -1,9 +1,0 @@
-{
-  "config": "preregression-retail-GAP_AND_AD_INITIAL_JOIN",
-  "sparkConfig": {
-    "master": "yarn-client",
-    "appName": "preregression-retail"
-  },
-  "sources": {
-  }
-}

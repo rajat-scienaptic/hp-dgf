@@ -1,9 +1,0 @@
-{
-  "config": "preregression-retail-UNION_OTHER_ACCOUNTS",
-  "sparkConfig": {
-    "master": "yarn-client",
-    "appName": "preregression-retail-4"
-  },
-  "sources": {
-  }
-}

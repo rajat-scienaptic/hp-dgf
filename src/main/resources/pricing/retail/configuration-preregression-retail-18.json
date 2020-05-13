@@ -1,9 +1,0 @@
-{
-  "config": "preregression-retail-PRICE_BRAND_CANN_OFFLINE_ONLINE",
-  "sparkConfig": {
-    "master": "yarn-client",
-    "appName": "preregression-retail-18"
-  },
-  "sources": {
-  }
-}

@@ -1,9 +1,0 @@
-{
-  "config": "preregression-retail-L1_L2_COMPETITION",
-  "sparkConfig": {
-    "master": "yarn-client",
-    "appName": "preregression-retail-9"
-  },
-  "sources": {
-  }
-}

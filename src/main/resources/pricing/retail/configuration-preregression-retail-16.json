@@ -1,9 +1,0 @@
-{
-  "config": "preregression-retail-L1_L2_INNERCANN_OFFLINE_HALF",
-  "sparkConfig": {
-    "master": "yarn-client",
-    "appName": "preregression-retail-16"
-  },
-  "sources": {
-  }
-}

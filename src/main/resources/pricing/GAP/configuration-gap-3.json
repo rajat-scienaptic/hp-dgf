@@ -1,9 +1,0 @@
-{
-  "config": "gap-3",
-  "sparkConfig": {
-    "master": "yarn-client",
-    "appName": "gap-3"
-  },
-  "sources": {
-  }
-}

@@ -1,9 +1,0 @@
-{
-  "config": "amz",
-  "sparkConfig": {
-    "master": "yarn-client",
-    "appName": "hp-amz"
-  },
-  "sources": {
-  }
-}

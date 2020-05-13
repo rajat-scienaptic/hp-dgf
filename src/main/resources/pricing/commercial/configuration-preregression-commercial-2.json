@@ -1,9 +1,0 @@
-{
-  "config": "preregression-commercial-competition",
-  "sparkConfig": {
-    "master": "yarn-client",
-    "appName": "hp-preregression-commercial-2"
-  },
-  "sources": {
-  }
-}

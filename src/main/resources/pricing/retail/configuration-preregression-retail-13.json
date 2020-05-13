@@ -1,9 +1,0 @@
-{
-  "config": "preregression-retail-SUPPLIES_GM",
-  "sparkConfig": {
-    "master": "yarn-client",
-    "appName": "preregression-retail-13"
-  },
-  "sources": {
-  }
-}
