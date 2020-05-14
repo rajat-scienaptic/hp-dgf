@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hp.dgf.dto.Column;
 import com.hp.dgf.dto.DataObject;
+import com.hp.dgf.dto.HeaderObject;
 import com.hp.dgf.model.*;
 import com.hp.dgf.repository.BusinessCategoryRepository;
 import com.hp.dgf.repository.ColorCodeRepository;
@@ -35,21 +36,39 @@ public class DGFServiceImpl implements DGFService {
     final String modifiedBy = Constants.MODIFIED_BY.replaceAll("\"", "");
     final String baseRate = Constants.BASE_RATE.replaceAll("\"", "");
     final String children = Constants.CHILDREN.replaceAll("\"", "");
+    final String code = Constants.CODE.replaceAll("\"", "");
 
     @Override
     public final List<Object> getDgfGroups() {
+        //Getting List of Business Categories
         List<BusinessCategory> businessCategoryList = businessCategoryRepository.findAll();
+
+        //Initialized Object Mapper to Map Json Object
         ObjectMapper mapper = new ObjectMapper();
-        List<Object> finalOutput = new ArrayList<>();
+
+        //Initialized final response object
+        List<Object> dgfGroupData = new ArrayList<>();
 
         businessCategoryList.forEach(businessCategory -> {
+            //Mapped Business Categories as JSON Node
             JsonNode businessCategoryNode = mapper.convertValue(businessCategory, JsonNode.class);
+            //If a business category has children object
             if (businessCategoryNode.has(Constants.CHILDREN)) {
+                //Get all children of a business category
                 JsonNode businessSubCategoryNode = businessCategoryNode.get(Constants.CHILDREN);
+                //If business sub category is not empty
                 if (!businessSubCategoryNode.isEmpty()) {
-                    finalOutput.add(new Column(getTitleObject(businessSubCategoryNode.get(0))));
-                    for (int i = 1; i < businessSubCategoryNode.size(); i++) {
-                        List<Map<String, Object>> columnList = new ArrayList<>();
+                    //Processing rest of the children of a business category
+                    for (int i = 0; i < businessSubCategoryNode.size(); i++) {
+                        List<Object> columnList = new ArrayList<>();
+
+                        //Processing first children to add title object to final output response
+                        if (i == 0) {
+                            Map<String, Object> titleMap = new HashMap<>();
+                            titleMap.put(Constants.TITLE, Constants.TITLE_VALUE);
+                            titleMap.put(Constants.DATA_INDEX, Constants.TITLE_DATA_INDEX_VALUE);
+                            columnList.add(titleMap);
+                        }
 
                         Map<String, Object> iconMap = new HashMap<>();
                         iconMap.put(Constants.TITLE, Constants.ICON_VALUE);
@@ -57,67 +76,38 @@ public class DGFServiceImpl implements DGFService {
                         columnList.add(iconMap);
 
                         JsonNode columns = businessSubCategoryNode.get(i).get(Constants.COLUMNS);
+
+                        //Processing product lines for each sub category
                         columns.forEach(column -> {
                             Map<String, Object> columnData = new HashMap<>();
-                            columnData.put(Constants.TITLE, column.get("code"));
-                            columnData.put(Constants.DATA_INDEX, column.get("code"));
+                            columnData.put(Constants.TITLE, column.get(Constants.CODE));
+                            columnData.put(Constants.DATA_INDEX, column.get(Constants.CODE));
                             columnList.add(columnData);
                         });
 
-                        finalOutput.add(new Column(columnList));
+                        //Added columns object to the final output
+                        dgfGroupData.add(new Column(columnList));
                     }
                 }
             }
         });
 
-        finalOutput.add(new DataObject(getDataObject()));
+        //Added data object to the final output
+        dgfGroupData.add(new DataObject(getDataObject()));
 
-        return finalOutput;
+        return dgfGroupData;
     }
 
-    @Override
-    public final List<Object> getHeaderData() {
-        List<BusinessCategory> businessCategoryList = businessCategoryRepository.findAll();
+    public final List<Object> getDataObject() {
+        //Initialized Data Object
+        List<Object> dataObject = new ArrayList<>();
+        //Initialized Object Mapper
         ObjectMapper mapper = new ObjectMapper();
-        List<Object> finalOutput = new ArrayList<>();
 
-        businessCategoryList.forEach(businessCategory -> {
-            JsonNode businessCategoryNode = mapper.convertValue(businessCategory, JsonNode.class);
-            if (businessCategoryNode.has(Constants.CHILDREN)) {
-                JsonNode businessSubCategoryNode = businessCategoryNode.get(Constants.CHILDREN);
-                if (!businessSubCategoryNode.isEmpty()) {
-                    finalOutput.add(new Column(getTitleObject(businessSubCategoryNode.get(0))));
-                    for (int i = 1; i < businessSubCategoryNode.size(); i++) {
-                        List<Map<String, Object>> columnList = new ArrayList<>();
-
-                        Map<String, Object> iconMap = new HashMap<>();
-                        iconMap.put(Constants.TITLE, Constants.ICON_VALUE);
-                        iconMap.put(Constants.DATA_INDEX, "");
-                        columnList.add(iconMap);
-
-                        JsonNode columns = businessSubCategoryNode.get(i).get(Constants.COLUMNS);
-                        columns.forEach(column -> {
-                            Map<String, Object> columnData = new HashMap<>();
-                            columnData.put(Constants.TITLE, column.get("code"));
-                            columnData.put(Constants.DATA_INDEX, column.get("code"));
-                            columnList.add(columnData);
-                        });
-
-                        finalOutput.add(new Column(columnList));
-                    }
-                }
-            }
-        });
-
-        finalOutput.add(new DataObject(getDataObject()));
-
-        return finalOutput;
-    }
-
-    public final List<Map<String, Object>> getDataObject() {
-        List<Map<String, Object>> dataObject = new ArrayList<>();
-        ObjectMapper mapper = new ObjectMapper();
+        //Getting list of All Dgf Groups
         List<DGFGroups> dgfGroupsList = dgfRepository.findAll();
+
+        //
         for (DGFGroups dgfGroup : dgfGroupsList) {
             //Parent DGF Group
             Map<String, Object> dg = new HashMap<>();
@@ -127,7 +117,7 @@ public class DGFServiceImpl implements DGFService {
             dg.put(baseRate, dgfGroup.getBaseRate());
             JsonNode dgfGroupObject = mapper.convertValue(dgfGroup, JsonNode.class);
 
-            //DGF Sub Group 1
+            //Processing DGF Sub Group 1
             JsonNode dgfSubGroup1Object = dgfGroupObject.get(Constants.CHILDREN);
             List<Map<String, Object>> dg1List = new ArrayList<>();
             dgfSubGroup1Object.forEach(dgfSubGroup1 -> {
@@ -137,7 +127,7 @@ public class DGFServiceImpl implements DGFService {
                 dg1.put(modifiedBy, dgfSubGroup1.get(Constants.MODIFIED_BY));
                 dg1.put(baseRate, dgfSubGroup1.get(Constants.BASE_RATE));
 
-                //DGF Sub Group 2
+                //Processing DGF Sub Group 2
                 JsonNode dgfSubGroup2Object = dgfSubGroup1.get(Constants.CHILDREN);
                 List<Map<String, Object>> dg2List = new ArrayList<>();
                 dgfSubGroup2Object.forEach(dgfSubGroup2 -> {
@@ -148,19 +138,19 @@ public class DGFServiceImpl implements DGFService {
                     dg2.put(baseRate, dgfSubGroup2.get(Constants.BASE_RATE));
                     List<Map<String, Object>> dg2PLsList = new ArrayList<>();
 
-                    //DGF Sub Group 2 PLs (Columns)
+                    //Processing DGF Sub Group 2 PLs (Columns)
                     JsonNode subGroup2Data = dgfSubGroup2.get(Constants.COLUMNS);
                     subGroup2Data.forEach(data -> {
                         Map<String, Object> dg2Data = new HashMap<>();
                         Map<String, Object> dg2DataValues = new HashMap<>();
                         dg2DataValues.put("quarter", data.get("colorCodeSet").get("fyQuarter"));
                         dg2DataValues.put("value", new ArrayList<>(Collections.singletonList(data.get(Constants.DGF_RATE_ENTRY).get(Constants.DGF_RATE))));
-                        String k2 = data.get("code").toString().replaceAll("\"", "");
+                        String k2 = data.get(Constants.CODE).toString().replaceAll("\"", "");
                         dg2Data.put(k2, dg2DataValues);
                         dg2PLsList.add(dg2Data);
                     });
 
-                    //DGF Sub Group 3
+                    //Processing DGF Sub Group 3
                     JsonNode dgSubGroup3Object = dgfSubGroup2.get(Constants.CHILDREN);
                     List<Map<String, Object>> dg3List = new ArrayList<>();
                     dgSubGroup3Object.forEach(dgfSubGroup3 -> {
@@ -171,14 +161,14 @@ public class DGFServiceImpl implements DGFService {
                         dg3.put(baseRate, dgfSubGroup3.get(Constants.BASE_RATE));
                         List<Map<String, Object>> dg3PLsList = new ArrayList<>();
 
-                        //DGF Sub Group 3 PLs (Columns)
+                        //Processing DGF Sub Group 3 PLs (Columns)
                         JsonNode subGroup3Data = dgfSubGroup3.get(Constants.COLUMNS);
                         subGroup3Data.forEach(data -> {
                             Map<String, Object> dg3Data = new HashMap<>();
                             Map<String, Object> dg3DataValues = new HashMap<>();
                             dg3DataValues.put("quarter", data.get("colorCodeSet").get("fyQuarter"));
                             dg3DataValues.put("value", new ArrayList<>(Collections.singletonList(data.get(Constants.DGF_RATE_ENTRY).get("dgfRate"))));
-                            String k3 = data.get("code").toString().replaceAll("\"", "");
+                            String k3 = data.get(Constants.CODE).toString().replaceAll("\"", "");
                             dg3Data.put(k3, dg3DataValues);
                             dg3PLsList.add(dg3Data);
                         });
@@ -195,68 +185,70 @@ public class DGFServiceImpl implements DGFService {
             dg.put(children, dg1List);
             dataObject.add(dg);
         }
+
         return dataObject;
     }
 
-    public final List<Map<String, Object>> getTitleObject(final JsonNode categoryList) {
-        List<Map<String, Object>> titleColumnList = new ArrayList<>();
+    @Override
+    public final List<Object> getHeaderData() {
+        List<BusinessCategory> businessCategoryList = businessCategoryRepository.findAll();
+        ObjectMapper mapper = new ObjectMapper();
 
-        Map<String, Object> titleMap = new HashMap<>();
-        titleMap.put(Constants.TITLE, Constants.TITLE_VALUE);
-        titleMap.put(Constants.DATA_INDEX, Constants.TITLE_DATA_INDEX_VALUE);
+        List<Object> headerData = new ArrayList<>();
 
-        titleColumnList.add(titleMap);
+        businessCategoryList.forEach(businessCategory -> {
+            JsonNode businessCategoryNode = mapper.convertValue(businessCategory, JsonNode.class);
+            if (businessCategoryNode.has(Constants.CHILDREN)) {
+                JsonNode businessSubCategoryNode = businessCategoryNode.get(Constants.CHILDREN);
+                if (!businessSubCategoryNode.isEmpty()) {
+                    for (int i = 0; i < businessSubCategoryNode.size(); i++) {
 
-        Map<String, Object> titleIconMap = new HashMap<>();
-        titleIconMap.put(Constants.TITLE, Constants.ICON_VALUE);
-        titleIconMap.put(Constants.DATA_INDEX, "");
+                        Map<String, Object> dataObject1 = new HashMap<>();
+                        Map<String, Object> dataObject2 = new HashMap<>();
+                        Map<String, Object> dataObject3 = new HashMap<>();
 
-        titleColumnList.add(titleIconMap);
-        JsonNode columns = categoryList.get("columns");
-        
-        columns.forEach(column -> {
-            Map<String, Object> titleColumnData = new HashMap<>();
-            titleColumnData.put(Constants.TITLE, column.get("code"));
-            titleColumnData.put(Constants.DATA_INDEX, column.get("code"));
-            titleColumnList.add(titleColumnData);
+                        dataObject1.put(baseRate, "Base Rate FY20");
+                        dataObject2.put(baseRate, "Effective Nov 2019 (FY20)");
+                        dataObject3.put(baseRate, "Effective Jan 2020 (FY20)");
+
+                        List<Object> columnList = new ArrayList<>();
+                        List<Object> dataList = new ArrayList<>();
+
+                        if (i == 0) {
+                            Map<String, Object> titleMap = new HashMap<>();
+                            titleMap.put(Constants.TITLE, Constants.TITLE_VALUE);
+                            titleMap.put(Constants.DATA_INDEX, Constants.TITLE_DATA_INDEX_VALUE);
+                            columnList.add(titleMap);
+                        }
+
+                        Map<String, Object> iconMap = new HashMap<>();
+                        iconMap.put(Constants.TITLE, Constants.ICON_VALUE);
+                        iconMap.put(Constants.DATA_INDEX, "");
+                        columnList.add(iconMap);
+
+                        JsonNode columns = businessSubCategoryNode.get(i).get(Constants.COLUMNS);
+
+                        columns.forEach(column -> {
+                            Map<String, Object> columnData = new HashMap<>();
+                            columnData.put(Constants.TITLE, column.get(Constants.CODE));
+                            columnData.put(Constants.DATA_INDEX, column.get(Constants.CODE));
+                            columnList.add(columnData);
+                            String pl = column.get(Constants.CODE).toString().replaceAll("\"", "");
+                            dataObject1.put(pl, column.get(Constants.DGF_RATE_ENTRY).get(Constants.DGF_RATE));
+                            dataObject2.put(pl, column.get("colorCodeSet").get("name"));
+                            dataObject3.put(pl, column.get("colorCodeSet").get("name"));
+                        });
+
+                        dataList.add(dataObject1);
+                        dataList.add(dataObject2);
+                        dataList.add(dataObject3);
+
+                        headerData.add(new HeaderObject(columnList, dataList));
+                    }
+                }
+            }
         });
-
-        return titleColumnList;
-    }
-
-    public final List<Map<String, Object>> getHeaderTitleObject(final JsonNode categoryList) {
-        List<Map<String, Object>> titleColumnList = new ArrayList<>();
-        List<Map<String, Object>> dataList = new ArrayList<>();
-
-        Map<String, Object> titleMap = new HashMap<>();
-        titleMap.put(Constants.TITLE, Constants.TITLE_VALUE);
-        titleMap.put(Constants.DATA_INDEX, Constants.TITLE_DATA_INDEX_VALUE);
-
-        titleColumnList.add(titleMap);
-
-        Map<String, Object> titleIconMap = new HashMap<>();
-        titleIconMap.put(Constants.TITLE, Constants.ICON_VALUE);
-        titleIconMap.put(Constants.DATA_INDEX, "");
-
-        Map<String, Object> dataObject1 = new HashMap<>();
-        Map<String, Object> dataObject2 = new HashMap<>();
-        Map<String, Object> dataObject3 = new HashMap<>();
-        dataObject1.put(baseRate, "Base Rate FY20");
-        dataObject2.put(baseRate, "Effective Nov 2019 (FY20)");
-        dataObject3.put(baseRate, "Effective Jan 2020 (FY20)");
-
-        titleColumnList.add(titleIconMap);
-        JsonNode columns = categoryList.get(Constants.COLUMNS);
-        columns.forEach(column -> {
-            Map<String, Object> titleColumnData = new HashMap<>();
-            titleColumnData.put(Constants.TITLE, column.get("code"));
-            titleColumnData.put(Constants.DATA_INDEX, column.get("code"));
-            dataObject1.put(column.get("code").toString(), column.get(Constants.DGF_RATE_ENTRY).get(Constants.DGF_RATE));
-            dataObject2.put(column.get("code").toString(), column.get(Constants.DGF_RATE_ENTRY).get(Constants.DGF_RATE));
-            dataObject3.put(column.get("code").toString(), column.get(Constants.DGF_RATE_ENTRY).get(Constants.DGF_RATE));
-            titleColumnList.add(titleColumnData);
-        });
-        return titleColumnList;
+        return headerData;
     }
 
     @Override

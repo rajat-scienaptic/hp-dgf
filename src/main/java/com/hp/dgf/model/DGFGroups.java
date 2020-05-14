@@ -32,5 +32,4 @@ public class DGFGroups {
     @JoinColumn(name = "dgf_groups_id", referencedColumnName = "id")
     private Set<DGFSubGroupLevel1> children;
 
-
 }

@@ -9,5 +9,5 @@ import java.util.Map;
 @AllArgsConstructor
 @Data
 public class Column {
-    private List<Map<String, Object>> columns;
+    private List<Object> columns;
 }

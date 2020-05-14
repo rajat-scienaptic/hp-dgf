@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@RequestMapping("/hp")
+@RequestMapping("/api/v1")
 @RestController
 public class DGFController {
 
@@ -49,7 +49,7 @@ public class DGFController {
     return new ResponseEntity<>(businessCategoryRepository.findAll(), HttpStatus.OK);
   }
 
-  @GetMapping("/")
+  @GetMapping("/getHeaderData")
   public ResponseEntity<Object> getHeaderData(){
     return new ResponseEntity<>(dgfService.getHeaderData(), HttpStatus.OK);
   }

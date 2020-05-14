@@ -4,10 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 
 @AllArgsConstructor
 @Data
-public class DataObject {
+public class HeaderObject {
+    private List<Object> column;
     private List<Object> data;
 }
