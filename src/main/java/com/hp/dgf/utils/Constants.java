@@ -20,4 +20,5 @@ public class Constants {
     public static final String ACCESS_DENIED = "Access Denied";
     public static final String SOMETHING_WENT_WRONG = "Something Went Wrong !";
     public static final String CODE = "code";
+    public static final String COLOR_CODE_SET = "colorCodeSet";
 }

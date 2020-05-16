@@ -1,13 +1,12 @@
-package com.hp.dgf.dto;
+package com.hp.dgf.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 
 @AllArgsConstructor
 @Data
-public class Column {
-    private List<Object> columns;
+public class DataObject {
+    private List<Object> data;
 }

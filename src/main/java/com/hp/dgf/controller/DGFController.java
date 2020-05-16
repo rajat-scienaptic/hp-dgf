@@ -1,9 +1,9 @@
 package com.hp.dgf.controller;
 
+import com.hp.dgf.dto.request.PLRequest;
 import com.hp.dgf.model.BusinessCategory;
 import com.hp.dgf.model.ColorCode;
 import com.hp.dgf.model.DGFRateChangeLog;
-import com.hp.dgf.model.DGFRateEntry;
 import com.hp.dgf.repository.BusinessCategoryRepository;
 import com.hp.dgf.repository.DGFRepository;
 import com.hp.dgf.service.DGFService;
@@ -11,11 +11,9 @@ import com.hp.dgf.service.ReportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RequestMapping("/api/v1")
@@ -39,9 +37,9 @@ public class DGFController {
     return new ResponseEntity<>(dgfService.getDgfGroups(), HttpStatus.OK);
   }
 
-  @GetMapping("/getDgfGroups1")
-  public ResponseEntity<Object> getDgfGroups1(){
-    return new ResponseEntity<>(dgfRepository.findAll(), HttpStatus.OK);
+  @PostMapping("/addPL")
+  public ResponseEntity<Object> addPL(@RequestBody @Valid PLRequest plRequest){
+    return new ResponseEntity<>(dgfService.addPL(plRequest), HttpStatus.CREATED);
   }
 
   @GetMapping("/getBusinessGroups")
@@ -74,11 +72,6 @@ public class DGFController {
   public ResponseEntity<Object> generateDGFReport(){
     reportService.generateDGFReport();
     return new ResponseEntity<>("Report Successfully Generated", HttpStatus.OK);
-  }
-
-  @GetMapping("/getBaseRateByPLs")
-  public ResponseEntity<List<DGFRateEntry>> getBaseRateByPLs(){
-    return new ResponseEntity<>(dgfService.getBaseRateByPLs(), HttpStatus.OK);
   }
 
   @GetMapping("/getDGFRateChangeLogByRateEntryId/{rateEntryId}")
