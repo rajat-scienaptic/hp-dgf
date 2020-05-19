@@ -15,9 +15,9 @@ import java.util.Set;
 @Table(name = "dgf_groups")
 public class DGFGroups {
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
     @Column(name = "id")
-    private int key;
+    private int id;
 
     @Column(name = "is_active")
     private Byte isActive;
@@ -27,7 +27,8 @@ public class DGFGroups {
     private Integer modifiedBy;
     @Column(name = "name")
     private String baseRate;
-
+    @Column(name = "business_category_id")
+    private int businessCategoryId;
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name = "dgf_groups_id", referencedColumnName = "id")
     private Set<DGFSubGroupLevel1> children;

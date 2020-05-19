@@ -15,9 +15,9 @@ import java.util.Set;
 @Table(name = "business_sub_category")
 public class BusinessSubCategory {
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
     @Column(name = "id")
-    private int key;
+    private int id;
 
     @Column(name = "business_category_id")
     private int businessCategoryId;

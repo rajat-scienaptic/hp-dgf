@@ -15,9 +15,9 @@ import java.util.Set;
 @Table(name = "business_category")
 public class BusinessCategory {
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
     @Column(name = "id")
-    private int key;
+    private int id;
 
     @Column(name = "description")
     private String description;
@@ -33,4 +33,8 @@ public class BusinessCategory {
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name = "business_category_id", referencedColumnName = "id")
     private Set<BusinessSubCategory> children;
+
+    @OneToMany(fetch = FetchType.EAGER)
+    @JoinColumn(name = "business_category_id", referencedColumnName = "id")
+    private Set<DGFGroups> dgfGroups;
 }

@@ -13,9 +13,9 @@ import javax.persistence.*;
 @Table(name = "attachment")
 public class Attachment {
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    private int key;
+    private int id;
 
     @Column(name = "attachment_path")
     private String attachmentPath;

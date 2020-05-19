@@ -15,9 +15,9 @@ import javax.persistence.*;
 @Table(name = "color_code")
 public class ColorCode {
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
     @Column(name = "id")
-    private int key;
+    private int id;
 
     @Column(name = "code")
     private String code;

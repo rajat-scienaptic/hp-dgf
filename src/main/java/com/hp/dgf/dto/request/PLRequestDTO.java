@@ -7,21 +7,17 @@ import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 @Data
-public class PLRequest {
+public class PLRequestDTO {
     @NotNull @NotBlank
     private String code;
-    @NotNull @NotBlank
+    @NotNull
     private Integer businessSubCategoryId;
-    @NotNull @NotBlank
     private Integer colorCodeId;
-    @NotNull @NotBlank
+    @NotNull
     private BigDecimal baseRate;
-    @NotNull @NotBlank
     private Integer modifiedBy;
-    @NotNull @NotBlank
     private Integer dgfSubGroup2Id;
-    @NotNull @NotBlank
     private Integer dgfSubGroup3Id;
-    @NotNull @NotBlank
+    @NotNull
     private Byte isActive;
 }

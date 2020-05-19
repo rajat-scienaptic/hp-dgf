@@ -17,7 +17,7 @@ public class DGFSubGroupLevel2 {
     @Id
     @GeneratedValue(strategy= GenerationType.AUTO)
     @Column(name = "id")
-    private int key;
+    private int id;
 
     @Column(name = "dgf_sub_group_level_1_id")
     private Integer dgfSubGroupLevel1Id;

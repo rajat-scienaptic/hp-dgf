@@ -8,7 +8,6 @@ spring:
     password: 123456789
   jpa:
     hibernate.ddl-auto: none
-    show-sql: true
   security:
     user:
       name: admin

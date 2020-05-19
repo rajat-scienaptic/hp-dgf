@@ -14,9 +14,9 @@ import java.time.LocalDateTime;
 @Table(name = "dgf_rate_change_log")
 public class DGFRateChangeLog {
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
     @Column(name = "id")
-    private int key;
+    private int id;
 
     @Column(name = "attachment_id")
     private Integer attachmentId;

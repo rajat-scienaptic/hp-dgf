@@ -15,9 +15,9 @@ import java.util.Set;
 @Table(name = "dgf_sub_group_level_1")
 public class DGFSubGroupLevel1 {
     @Id
-    @GeneratedValue(strategy= GenerationType.AUTO)
+    @GeneratedValue(strategy= GenerationType.IDENTITY)
     @Column(name = "id")
-    private int key;
+    private int id;
 
     @Column(name = "dgf_groups_id")
     private Integer dgfGroupsId;
