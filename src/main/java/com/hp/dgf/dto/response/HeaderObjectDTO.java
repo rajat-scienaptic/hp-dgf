@@ -10,4 +10,5 @@ import java.util.List;
 public class HeaderObjectDTO {
     private List<Object> column;
     private List<Object> data;
+    private List<Object> business;
 }

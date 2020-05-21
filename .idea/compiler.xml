@@ -11,7 +11,7 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="HP-DGF" target="1.8" />
+      <module name="HP-DGF" target="9" />
     </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">

@@ -21,4 +21,9 @@ public class Constants {
     public static final String SOMETHING_WENT_WRONG = "Something Went Wrong !";
     public static final String CODE = "code";
     public static final String COLOR_CODE_SET = "colorCodeSet";
+    public static final String SUCCESS = "SUCCESS";
+    public static final String FAILURE = "FAILURE";
+    public static final String ADD_A_SUB_GROUP = "Add a sub group";
+    public static final String QUARTER = "quarter";
+    public static final String VALUE = "value";
 }
