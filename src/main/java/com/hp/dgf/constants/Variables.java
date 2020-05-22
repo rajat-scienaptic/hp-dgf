@@ -1,7 +1,7 @@
-package com.hp.dgf.utils;
+package com.hp.dgf.constants;
 
-public class Constants {
-    private Constants(){}
+public class Variables {
+    private Variables(){}
     public static final String TITLE = "title";
     public static final String BASE_INDEX = "baseIndex";
     public static final String DATA_INDEX = "dataIndex";
