@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 
 @RequestMapping("/api/v1")
 @RestController
-public class DGFController {
+public final class DGFController {
 
   @Autowired
   private DGFService dgfService;
@@ -43,7 +43,7 @@ public class DGFController {
           @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
   })
   @GetMapping("/getDgfGroupsData/{businessCategoryId}")
-  public ResponseEntity<Object> getDgfGroupsDataByBusinessId(@PathVariable ("businessCategoryId") int businessCategoryId){
+  public final ResponseEntity<Object> getDgfGroupsDataByBusinessId(@PathVariable ("businessCategoryId") final int businessCategoryId){
     return new ResponseEntity<>(dgfService.getDgfGroups(businessCategoryId), HttpStatus.OK);
   }
 
@@ -55,7 +55,7 @@ public class DGFController {
           @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
   })
   @GetMapping("/getHeaderData")
-  public ResponseEntity<Object> getHeaderData(){
+  public final ResponseEntity<Object> getHeaderData(){
     return new ResponseEntity<>(dgfService.getHeaderData(), HttpStatus.OK);
   }
 
@@ -68,7 +68,7 @@ public class DGFController {
           @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
   })
   @PostMapping("/addPL")
-  public ResponseEntity<Object> addProductLine(@RequestBody(required = false) @Valid AddPLRequestDTO addPlRequestDTO, HttpServletRequest request){
+  public final ResponseEntity<Object> addProductLine(@RequestBody(required = false) @Valid final AddPLRequestDTO addPlRequestDTO, final HttpServletRequest request){
     if (addPlRequestDTO == null) {
       return new ResponseEntity<>(ApiResponseDTO.builder()
               .status(HttpStatus.BAD_REQUEST.value())
@@ -88,7 +88,7 @@ public class DGFController {
           @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
   })
   @PutMapping("/updatePL/{productLineId}")
-  public ResponseEntity<Object> updateProductLine(@RequestBody(required = false) @Valid UpdatePLRequestDTO updatePLRequestDTO, @PathVariable ("productLineId") int productLineId, HttpServletRequest request){
+  public final ResponseEntity<Object> updateProductLine(@RequestBody(required = false) @Valid UpdatePLRequestDTO updatePLRequestDTO, @PathVariable ("productLineId") int productLineId, HttpServletRequest request){
     if (updatePLRequestDTO == null) {
       return new ResponseEntity<>(ApiResponseDTO.builder()
               .status(HttpStatus.BAD_REQUEST.value())

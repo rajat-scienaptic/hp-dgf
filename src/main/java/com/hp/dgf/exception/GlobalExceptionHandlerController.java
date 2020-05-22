@@ -28,34 +28,34 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice
-public class GlobalExceptionHandlerController {
+public final class GlobalExceptionHandlerController {
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
-    public void handleCustomException(HttpServletResponse res, CustomException e) throws IOException {
+    public final void handleCustomException(HttpServletResponse res, CustomException e) throws IOException {
         LOG.error("ERROR", e);
         res.sendError(e.getHttpStatus().value(), e.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public void handleAccessDeniedException(HttpServletResponse res, AccessDeniedException e) throws IOException {
+    public final void handleAccessDeniedException(HttpServletResponse res, AccessDeniedException e) throws IOException {
         LOG.error("ERROR", e);
         res.sendError(HttpStatus.FORBIDDEN.value(), "Access denied");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public void handleIllegalArgumentException(HttpServletResponse res, IllegalArgumentException e) throws IOException {
+    public final void handleIllegalArgumentException(HttpServletResponse res, IllegalArgumentException e) throws IOException {
         LOG.error("ERROR", e);
         res.sendError(BAD_REQUEST.value(), "Something went wrong");
     }
 
     @ExceptionHandler(Exception.class)
-    public void handleException(HttpServletResponse res, Exception e) throws IOException {
+    public final void handleException(HttpServletResponse res, Exception e) throws IOException {
         LOG.error("ERROR", e);
         res.sendError(BAD_REQUEST.value(), "Something went wrong");
     }
 
     @ExceptionHandler(CustomException.class)
-    public ResponseEntity<ApiResponseDTO> handleCustomException(CustomException e) {
+    public final ResponseEntity<ApiResponseDTO> handleCustomException(CustomException e) {
         LOG.error(e.getMessage());
         return new ResponseEntity<>(ApiResponseDTO.builder()
                 .timestamp(LocalDateTime.now())
@@ -67,7 +67,7 @@ public class GlobalExceptionHandlerController {
     @ResponseStatus(BAD_REQUEST)
     @ResponseBody
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Error methodArgumentNotValidException(MethodArgumentNotValidException ex) {
+    public final Error methodArgumentNotValidException(MethodArgumentNotValidException ex) {
         BindingResult result = ex.getBindingResult();
         List<org.springframework.validation.FieldError> fieldErrors = result.getFieldErrors();
         return processFieldErrors(fieldErrors);
@@ -82,26 +82,26 @@ public class GlobalExceptionHandlerController {
     }
 
     @Data
-    static class Error {
+    static final class Error {
         private final int status;
         private final String message;
-        private List<FieldError> fieldErrors = new ArrayList<>();
+        private final List<FieldError> fieldErrors = new ArrayList<>();
 
-        public void addFieldError(String type, String path, String message) {
+        public final void addFieldError(String type, String path, String message) {
             FieldError error = new FieldError(type, path, message);
             fieldErrors.add(error);
         }
 
-        public List<FieldError> getFieldErrors() {
+        public final List<FieldError> getFieldErrors() {
             return fieldErrors;
         }
     }
 
     @Data
     @AllArgsConstructor
-    static class FieldError{
-        String type;
-        String path;
-        String message;
+    static final class FieldError{
+        final String type;
+        final String path;
+        final String message;
     }
 }

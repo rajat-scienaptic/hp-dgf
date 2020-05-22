@@ -6,7 +6,7 @@ import javax.validation.constraints.Min;
 import java.math.BigDecimal;
 
 @Data
-public class UpdatePLRequestDTO {
+public final class UpdatePLRequestDTO {
     private String code;
     @Min(value = 0)
     private BigDecimal baseRate;

@@ -7,7 +7,7 @@ import java.util.List;
 
 @AllArgsConstructor
 @Data
-public class HeaderObjectDTO {
+public final class HeaderObjectDTO {
     private List<Object> column;
     private List<Object> data;
     private List<Object> business;

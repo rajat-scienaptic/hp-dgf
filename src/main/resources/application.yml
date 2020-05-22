@@ -1,6 +1,8 @@
 server:
   port: 9002
 spring:
+  application:
+    name: hp-dgf-tool
   datasource:
     driverClassName: com.mysql.jdbc.Driver
     url: jdbc:mysql://localhost:3306/dgf

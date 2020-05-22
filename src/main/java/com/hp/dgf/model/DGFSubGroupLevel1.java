@@ -13,7 +13,7 @@ import java.util.Set;
 @NoArgsConstructor
 @Entity
 @Table(name = "dgf_sub_group_level_1")
-public class DGFSubGroupLevel1 {
+public final class DGFSubGroupLevel1 {
     @Id
     @GeneratedValue(strategy= GenerationType.IDENTITY)
     @Column(name = "id")

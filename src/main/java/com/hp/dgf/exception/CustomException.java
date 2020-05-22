@@ -2,7 +2,7 @@ package com.hp.dgf.exception;
 
 import org.springframework.http.HttpStatus;
 
-public class CustomException extends RuntimeException{
+public final class CustomException extends RuntimeException{
     private static final long serialVersionUID = 1L;
 
     private final String message;
@@ -14,11 +14,11 @@ public class CustomException extends RuntimeException{
     }
 
     @Override
-    public String getMessage() {
+    public final String getMessage() {
         return message;
     }
 
-    public HttpStatus getHttpStatus() {
+    public final HttpStatus getHttpStatus() {
         return httpStatus;
     }
 }

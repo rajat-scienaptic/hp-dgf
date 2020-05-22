@@ -8,8 +8,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 public interface DGFService {
-    List<Object> getDgfGroups(int businessCategoryId);
+    List<Object> getDgfGroups(final int businessCategoryId);
     List<Object> getHeaderData();
-    ApiResponseDTO addPL(AddPLRequestDTO addPlRequestDTO, HttpServletRequest request);
-    ApiResponseDTO updatePL(UpdatePLRequestDTO updatePLRequestDTO, int productLineId, HttpServletRequest request);
+    ApiResponseDTO addPL(final AddPLRequestDTO addPlRequestDTO, final HttpServletRequest request);
+    ApiResponseDTO updatePL(final UpdatePLRequestDTO updatePLRequestDTO, final int productLineId, final HttpServletRequest request);
 }

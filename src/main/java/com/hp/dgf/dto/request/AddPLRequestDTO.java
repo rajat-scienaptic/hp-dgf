@@ -8,7 +8,7 @@ import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 @Data
-public class AddPLRequestDTO {
+public final class AddPLRequestDTO {
     @NotNull @NotBlank
     private String code;
     @NotNull

@@ -9,6 +9,7 @@ import com.hp.dgf.exception.CustomException;
 import com.hp.dgf.model.*;
 import com.hp.dgf.repository.BusinessCategoryRepository;
 import com.hp.dgf.repository.DGFLogRepository;
+import com.hp.dgf.repository.DgfRateChangeLogRepository;
 import com.hp.dgf.repository.ProductLineRepository;
 import com.hp.dgf.service.DGFService;
 import com.hp.dgf.utils.Constants;
@@ -24,13 +25,15 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
-public class DGFServiceImpl implements DGFService {
+public final class DGFServiceImpl implements DGFService {
     @Autowired
     private BusinessCategoryRepository businessCategoryRepository;
     @Autowired
     private ProductLineRepository productLineRepository;
     @Autowired
     private DGFLogRepository dgfLogRepository;
+    @Autowired
+    private DgfRateChangeLogRepository dgfRateChangeLogRepository;
 
     final String key = Constants.KEY.replaceAll("\"", "");
     final String isActive = Constants.IS_ACTIVE.replaceAll("\"", "");
@@ -43,18 +46,21 @@ public class DGFServiceImpl implements DGFService {
     @Override
     public final List<Object> getDgfGroups(int businessCategoryId) {
         //Getting List of Business Categories
-        Optional<BusinessCategory> businessCategory = businessCategoryRepository.findById(businessCategoryId);
+        BusinessCategory businessCategory = businessCategoryRepository
+                .findById(businessCategoryId)
+                .orElseThrow(() -> {
+                    throw new CustomException("No Business Category Found for ID : "+businessCategoryId, HttpStatus.BAD_REQUEST);
+                });
+
         //Initialized Object Mapper to Map Json Object
         ObjectMapper mapper = new ObjectMapper();
         //Initialized final response object
         List<Object> dgfGroupData = new ArrayList<>();
-
         //If business category exists then process it else throw error
-        businessCategory.ifPresentOrElse(bc -> {
             //Output Map
             Map<String, Object> outputMap = new LinkedHashMap<>();
             //Mapped Business Categories as JSON Node
-            JsonNode businessCategoryNode = mapper.convertValue(bc, JsonNode.class);
+            JsonNode businessCategoryNode = mapper.convertValue(businessCategory, JsonNode.class);
             //If a business category has children object
             if (businessCategoryNode.has(Constants.CHILDREN)) {
                 //Get all children of a business category
@@ -100,9 +106,6 @@ public class DGFServiceImpl implements DGFService {
                     dgfGroupData.add(outputMap);
                 }
             }
-        }, () -> {
-            throw new CustomException("No Business Category Found for ID : "+businessCategoryId, HttpStatus.BAD_REQUEST);
-        });
 
         //Returning DGF group data
         return dgfGroupData;
@@ -356,10 +359,10 @@ public class DGFServiceImpl implements DGFService {
     }
 
     @Override
-    public ApiResponseDTO addPL(AddPLRequestDTO addPlRequestDTO, HttpServletRequest request) {
+    public final ApiResponseDTO addPL(final AddPLRequestDTO addPlRequestDTO, final HttpServletRequest request) {
         try{
             checkIfPLAlreadyExists(addPlRequestDTO.getCode());
-            int productLineId = productLineRepository.save(ProductLine.builder()
+            final int productLineId = productLineRepository.save(ProductLine.builder()
                     .code(addPlRequestDTO.getCode())
                     .businessSubCategoryId(addPlRequestDTO.getBusinessSubCategoryId())
                     .baseRate(addPlRequestDTO.getBaseRate())
@@ -399,26 +402,26 @@ public class DGFServiceImpl implements DGFService {
     }
 
     @Override
-    public ApiResponseDTO updatePL(UpdatePLRequestDTO updatePLRequestDTO, int productLineId, HttpServletRequest request) {
+    public final ApiResponseDTO updatePL(final UpdatePLRequestDTO updatePLRequestDTO, final int productLineId, final HttpServletRequest request) {
         try{
-            Optional<ProductLine> productLine = productLineRepository.findById(productLineId);
+            ProductLine productLine = productLineRepository
+                    .findById(productLineId)
+                    .orElseThrow(() -> {
+                        throw new CustomException("Update failed, PL with id : "+productLineId+ " doesn't exist !", HttpStatus.NOT_FOUND);
+                    });
 
-            productLine.ifPresentOrElse(pl -> {
                 if(updatePLRequestDTO.getCode() == null && updatePLRequestDTO.getBaseRate() != null){
-                    pl.setBaseRate(updatePLRequestDTO.getBaseRate());
+                    productLine.setBaseRate(updatePLRequestDTO.getBaseRate());
                 }else if(updatePLRequestDTO.getBaseRate() == null && updatePLRequestDTO.getCode() != null){
-                    pl.setCode(updatePLRequestDTO.getCode());
+                    productLine.setCode(updatePLRequestDTO.getCode());
                 }else  if(updatePLRequestDTO.getCode() != null && updatePLRequestDTO.getBaseRate() != null){
-                    pl.setBaseRate(updatePLRequestDTO.getBaseRate());
-                    pl.setCode(updatePLRequestDTO.getCode());
+                    productLine.setBaseRate(updatePLRequestDTO.getBaseRate());
+                    productLine.setCode(updatePLRequestDTO.getCode());
                 }else{
                     throw new CustomException("Values of both code and base rate cannot be null", HttpStatus.BAD_REQUEST);
                 }
 
-                productLineRepository.save(pl);
-            }, () -> {
-                throw new CustomException("Update failed, PL with id : "+productLineId+ " doesn't exist !", HttpStatus.NOT_FOUND);
-            });
+                productLineRepository.save(productLine);
 
             if(request != null){
                 dgfLogRepository.save(DGFLogs.builder()
