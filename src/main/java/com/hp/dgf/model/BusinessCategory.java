@@ -1,8 +1,10 @@
 package com.hp.dgf.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Where;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -24,6 +26,7 @@ public final class BusinessCategory {
     @Column(name = "is_active")
     private Byte isActive;
     @Column(name = "last_modified_timestamp")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime lastModifiedTimestamp;
     @Column(name = "modified_by")
     private Integer modifiedBy;
@@ -31,10 +34,12 @@ public final class BusinessCategory {
     private String name;
 
     @OneToMany(fetch = FetchType.EAGER)
+    @Where(clause = "is_active = 1")
     @JoinColumn(name = "business_category_id", referencedColumnName = "id")
     private Set<BusinessSubCategory> children;
 
     @OneToMany(fetch = FetchType.EAGER)
+    @Where(clause = "is_active = 1")
     @JoinColumn(name = "business_category_id", referencedColumnName = "id")
     private Set<DGFGroups> dgfGroups;
 }

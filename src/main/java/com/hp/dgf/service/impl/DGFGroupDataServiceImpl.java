@@ -3,16 +3,20 @@ package com.hp.dgf.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hp.dgf.constants.MapKeys;
+import com.hp.dgf.constants.Variables;
+import com.hp.dgf.dto.request.DGFGroupDTO;
+import com.hp.dgf.dto.response.ApiResponseDTO;
 import com.hp.dgf.exception.CustomException;
 import com.hp.dgf.model.*;
-import com.hp.dgf.repository.BusinessCategoryRepository;
-import com.hp.dgf.repository.DgfRateChangeLogRepository;
+import com.hp.dgf.repository.*;
 import com.hp.dgf.service.DGFGroupDataService;
-import com.hp.dgf.constants.Variables;
+import com.hp.dgf.utils.MonthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -20,9 +24,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     @Autowired
     private BusinessCategoryRepository businessCategoryRepository;
-
     @Autowired
-    private DgfRateChangeLogRepository dgfRateChangeLogRepository;
+    private DGFRateChangeLogRepository dgfRateChangeLogRepository;
+    @Autowired
+    private ProductLineRepository productLineRepository;
+    @Autowired
+    private MonthService monthService;
+    @Autowired
+    private DGFGroupsRepository dgfGroupsRepository;
+    @Autowired
+    private DGFSubGroupLevel1Repository dgfSubGroupLevel1Repository;
+    @Autowired
+    private DGFSubGroupLevel2Repository dgfSubGroupLevel2Repository;
+    @Autowired
+    private DGFSubGroupLevel3Repository dgfSubGroupLevel3Repository;
+    @Autowired
+    private DGFLogRepository dgfLogRepository;
+    @Autowired
+    private DGFRateEntryRepository dgfRateEntryRepository;
 
     @Override
     public final List<Object> getDgfGroups(int businessCategoryId) {
@@ -36,7 +55,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
         //Initialized Object Mapper to Map Json Object
         ObjectMapper mapper = new ObjectMapper();
         //Initialized final response object
-        List<Object> dgfGroupData = new ArrayList<>();
+        List<Object> dgfGroupData = new LinkedList<>();
         //If business category exists then process it else throw error
         //Output Map
         Map<String, Object> outputMap = new LinkedHashMap<>();
@@ -49,15 +68,17 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
             //If business sub category is not empty
             if (!businessSubCategoryNode.isEmpty()) {
                 //Initializing columns map list
-                List<Object> columnsMapList = new ArrayList<>();
+                List<Object> columnsMapList = new LinkedList<>();
                 //Processing rest of the children of a business category
                 for (int i = 0; i < businessSubCategoryNode.size(); i++) {
-                    List<Object> columnList = new ArrayList<>();
+                    int businessSubCategoryId = Integer.parseInt(businessSubCategoryNode.get(i).get("id").toString());
+                    List<Object> columnList = new LinkedList<>();
                     //Processing first children to add title object to final output response
                     if (i == 0) {
                         Map<String, Object> titleMap = new LinkedHashMap<>();
                         titleMap.put(Variables.TITLE, Variables.TITLE_VALUE);
                         titleMap.put(Variables.DATA_INDEX, Variables.TITLE_DATA_INDEX_VALUE);
+                        titleMap.put(MapKeys.BUSINESS_SUB_CATEGORY_ID, businessSubCategoryId);
                         columnList.add(titleMap);
                     }
 
@@ -68,6 +89,8 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         Map<String, Object> columnData = new LinkedHashMap<>();
                         columnData.put(Variables.TITLE, column.get(Variables.CODE));
                         columnData.put(Variables.DATA_INDEX, column.get(Variables.CODE));
+                        columnData.put(MapKeys.BUSINESS_SUB_CATEGORY_ID, businessSubCategoryId);
+                        columnData.put(MapKeys.PRODUCT_LINE_ID, column.get("id"));
                         columnList.add(columnData);
                     });
 
@@ -95,7 +118,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     public final List<Object> getDGFDataObject(int businessCategoryId) {
         AtomicInteger id = new AtomicInteger(1);
         //Initialized Data Object
-        List<Object> dataObject = new ArrayList<>();
+        List<Object> dataObject = new LinkedList<>();
         //Initialized Object Mapper
         ObjectMapper mapper = new ObjectMapper();
 
@@ -108,97 +131,123 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
             for (DGFGroups dgfGroup : dgfGroupsSet) {
                 //Parent DGF Group
                 Map<String, Object> dg = new LinkedHashMap<>();
-                dg.put(MapKeys.key, id.getAndIncrement());
-                dg.put(MapKeys.isActive, dgfGroup.getIsActive());
-                dg.put(MapKeys.modifiedBy, dgfGroup.getModifiedBy());
-                dg.put(MapKeys.baseRate, dgfGroup.getBaseRate());
+                dg.put(MapKeys.KEY, id.getAndIncrement());
+                dg.put("dgfGroupsId", dgfGroup.getId());
+                dg.put(MapKeys.IS_ACTIVE, dgfGroup.getIsActive());
+                dg.put(MapKeys.MODIFIED_BY, dgfGroup.getModifiedBy());
+                dg.put(MapKeys.BASE_RATE, dgfGroup.getBaseRate());
                 JsonNode dgfGroupObject = mapper.convertValue(dgfGroup, JsonNode.class);
 
                 //Processing DGF Sub Group 1
                 JsonNode dgfSubGroup1Object = dgfGroupObject.get(Variables.CHILDREN);
-                List<Map<String, Object>> dg1List = new ArrayList<>();
+                List<Map<String, Object>> dg1List = new LinkedList<>();
                 Map<String, Object> addDgfSubGroup1Map = new LinkedHashMap<>();
 
                 dgfSubGroup1Object.forEach(dgfSubGroup1 -> {
                     Map<String, Object> dg1 = new LinkedHashMap<>();
                     Map<String, Object> addDgfSubGroup2Map = new LinkedHashMap<>();
 
-                    dg1.put(MapKeys.key, id.getAndIncrement());
-                    dg1.put(MapKeys.isActive, dgfSubGroup1.get(Variables.IS_ACTIVE));
-                    dg1.put(MapKeys.modifiedBy, dgfSubGroup1.get(Variables.MODIFIED_BY));
-                    dg1.put(MapKeys.baseRate, dgfSubGroup1.get(Variables.BASE_RATE));
+                    dg1.put(MapKeys.KEY, id.getAndIncrement());
+                    dg1.put("dgfSubGroupLevel1Id", dgfSubGroup1.get("id"));
+                    dg1.put(MapKeys.IS_ACTIVE, dgfSubGroup1.get(Variables.IS_ACTIVE));
+                    dg1.put(MapKeys.MODIFIED_BY, dgfSubGroup1.get(Variables.MODIFIED_BY));
+                    dg1.put(MapKeys.BASE_RATE, dgfSubGroup1.get(Variables.BASE_RATE));
 
                     //Processing DGF Sub Group 2
                     JsonNode dgfSubGroup2Object = dgfSubGroup1.get(Variables.CHILDREN);
-                    List<Map<String, Object>> dg2List = new ArrayList<>();
+                    List<Map<String, Object>> dg2List = new LinkedList<>();
                     dgfSubGroup2Object.forEach(dgfSubGroup2 -> {
                         Map<String, Object> dg2 = new LinkedHashMap<>();
                         Map<String, Object> addDgfSubGroup3Map = new LinkedHashMap<>();
 
-                        dg2.put(MapKeys.key, id.getAndIncrement());
-                        dg2.put(MapKeys.isActive, dgfSubGroup2.get(Variables.IS_ACTIVE));
-                        dg2.put(MapKeys.modifiedBy, dgfSubGroup2.get(Variables.MODIFIED_BY));
-                        dg2.put(MapKeys.baseRate, dgfSubGroup2.get(Variables.BASE_RATE));
+                        dg2.put(MapKeys.KEY, id.getAndIncrement());
+                        dg2.put("dgfSubGroupLevel2Id", dgfSubGroup2.get("id"));
+                        dg2.put(MapKeys.IS_ACTIVE, dgfSubGroup2.get(Variables.IS_ACTIVE));
+                        dg2.put(MapKeys.MODIFIED_BY, dgfSubGroup2.get(Variables.MODIFIED_BY));
+                        dg2.put(MapKeys.BASE_RATE, dgfSubGroup2.get(Variables.BASE_RATE));
 
                         //Processing DGF Sub Group 2 PLs (Columns)
                         JsonNode subGroup2Data = dgfSubGroup2.get(Variables.COLUMNS);
                         subGroup2Data.forEach(data -> {
                             Map<String, Object> dg2DataValues = new LinkedHashMap<>();
-                            dg2DataValues.put(MapKeys.quarter, data.get(Variables.COLOR_CODE_SET).get("fyQuarter"));
-                            dg2DataValues.put(MapKeys.value, new ArrayList<>(Collections.singletonList(data.get(Variables.DGF_RATE_ENTRY).get(Variables.DGF_RATE))));
-                            String k2 = data.get(Variables.CODE).toString().replaceAll("\"", "");
+                            dg2DataValues.put(MapKeys.QUARTER, monthService.getQuarter());
+                            dg2DataValues.put(MapKeys.VALUE, new LinkedList<>(Collections.singletonList(data.get(Variables.DGF_RATE))));
+
+
+                            int plId = Integer.parseInt(data.get("productLineId").toString());
+
+                            ProductLine pl = productLineRepository.findById(plId)
+                                    .orElseThrow(() -> {
+                                        throw new CustomException("PL Not Found", HttpStatus.BAD_REQUEST);
+                                    });
+
+                            String k2 = pl.getCode().replaceAll("\"", "");
+                            dg2DataValues.put(MapKeys.BUSINESS_SUB_CATEGORY_ID, productLineRepository.getBusinessSubCategoryIdByPLId(k2));
+                            dg2DataValues.put(MapKeys.DGF_RATE_ENTRY_ID, data.get("id"));
+                            dg2DataValues.put(MapKeys.PRODUCT_LINE_ID, plId);
                             dg2.put(k2, dg2DataValues);
                         });
 
                         //Processing DGF Sub Group 3
                         JsonNode dgSubGroup3Object = dgfSubGroup2.get(Variables.CHILDREN);
-                        List<Map<String, Object>> dg3List = new ArrayList<>();
+                        List<Map<String, Object>> dg3List = new LinkedList<>();
                         dgSubGroup3Object.forEach(dgfSubGroup3 -> {
                             Map<String, Object> dg3 = new LinkedHashMap<>();
-                            dg3.put(MapKeys.key, id.getAndIncrement());
-                            dg3.put(MapKeys.isActive, dgfSubGroup3.get(Variables.IS_ACTIVE));
-                            dg3.put(MapKeys.modifiedBy, dgfSubGroup3.get(Variables.MODIFIED_BY));
-                            dg3.put(MapKeys.baseRate, dgfSubGroup3.get(Variables.BASE_RATE));
+                            dg3.put(MapKeys.KEY, id.getAndIncrement());
+                            dg3.put("dgfSubGroupLevel3Id", dgfSubGroup3.get("id"));
+                            dg3.put(MapKeys.IS_ACTIVE, dgfSubGroup3.get(Variables.IS_ACTIVE));
+                            dg3.put(MapKeys.MODIFIED_BY, dgfSubGroup3.get(Variables.MODIFIED_BY));
+                            dg3.put(MapKeys.BASE_RATE, dgfSubGroup3.get(Variables.BASE_RATE));
 
                             //Processing DGF Sub Group 3 PLs (Columns)
                             JsonNode subGroup3Data = dgfSubGroup3.get(Variables.COLUMNS);
                             subGroup3Data.forEach(data -> {
                                 Map<String, Object> dg3DataValues = new LinkedHashMap<>();
-                                dg3DataValues.put(MapKeys.quarter, data.get(Variables.COLOR_CODE_SET).get("fyQuarter"));
-                                dg3DataValues.put(MapKeys.value, new ArrayList<>(Collections.singletonList(data.get(Variables.DGF_RATE_ENTRY).get("dgfRate"))));
-                                String k3 = data.get(Variables.CODE).toString().replaceAll("\"", "");
+                                dg3DataValues.put(MapKeys.QUARTER, monthService.getQuarter());
+                                dg3DataValues.put(MapKeys.VALUE, new LinkedList<>(Collections.singletonList(data.get("dgfRate"))));
+
+                                int plId = Integer.parseInt(data.get("productLineId").toString());
+                                ProductLine pl = productLineRepository.findById(plId)
+                                        .orElseThrow(() -> {
+                                            throw new CustomException("PL Not Found", HttpStatus.BAD_REQUEST);
+                                        });
+
+                                String k3 = pl.getCode().replaceAll("\"", "");
+                                dg3DataValues.put(MapKeys.BUSINESS_SUB_CATEGORY_ID, productLineRepository.getBusinessSubCategoryIdByPLId(k3));
+                                dg3DataValues.put(MapKeys.DGF_RATE_ENTRY_ID, data.get("id"));
+                                dg3DataValues.put(MapKeys.PRODUCT_LINE_ID, plId);
                                 dg3.put(k3, dg3DataValues);
                             });
                             dg3List.add(dg3);
                         });
 
-                        addDgfSubGroup3Map.put(MapKeys.key, id.getAndIncrement());
-                        addDgfSubGroup3Map.put("dgfSubGroup2Id", dgfSubGroup2.get("id"));
-                        addDgfSubGroup3Map.put(MapKeys.baseRate, Variables.ADD_A_SUB_GROUP);
+                        addDgfSubGroup3Map.put(MapKeys.KEY, id.getAndIncrement());
+                        addDgfSubGroup3Map.put("dgfSubGroup2LevelId", dgfSubGroup2.get("id"));
+                        addDgfSubGroup3Map.put(MapKeys.BASE_RATE, Variables.ADD_A_SUB_GROUP);
 
                         dg3List.add(addDgfSubGroup3Map);
 
-                        dg2.put(MapKeys.children, dg3List);
+                        dg2.put(MapKeys.CHILDREN, dg3List);
                         dg2List.add(dg2);
                     });
 
-                    addDgfSubGroup2Map.put(MapKeys.key, id.getAndIncrement());
-                    addDgfSubGroup2Map.put("dgfSubGroup1Id", dgfSubGroup1.get("id"));
-                    addDgfSubGroup2Map.put(MapKeys.baseRate, Variables.ADD_A_SUB_GROUP);
+                    addDgfSubGroup2Map.put(MapKeys.KEY, id.getAndIncrement());
+                    addDgfSubGroup2Map.put("dgfSubGroup1LevelId", dgfSubGroup1.get("id"));
+                    addDgfSubGroup2Map.put(MapKeys.BASE_RATE, Variables.ADD_A_SUB_GROUP);
 
                     dg2List.add(addDgfSubGroup2Map);
 
-                    dg1.put(MapKeys.children, dg2List);
+                    dg1.put(MapKeys.CHILDREN, dg2List);
                     dg1List.add(dg1);
                 });
 
-                addDgfSubGroup1Map.put(MapKeys.key, id.getAndIncrement());
+                addDgfSubGroup1Map.put(MapKeys.KEY, id.getAndIncrement());
                 addDgfSubGroup1Map.put("dgfGroupsId", dgfGroup.getId());
-                addDgfSubGroup1Map.put(MapKeys.baseRate, Variables.ADD_A_SUB_GROUP);
+                addDgfSubGroup1Map.put(MapKeys.BASE_RATE, Variables.ADD_A_SUB_GROUP);
 
                 dg1List.add(addDgfSubGroup1Map);
 
-                dg.put(MapKeys.children, dg1List);
+                dg.put(MapKeys.CHILDREN, dg1List);
                 dataObject.add(dg);
             }
         });
@@ -206,4 +255,535 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
         return dataObject;
     }
 
+    @Override
+    public ApiResponseDTO addDgfGroup(DGFGroupDTO dgfGroupDTO, HttpServletRequest request) {
+        try {
+            DGFGroups dgfGroups = dgfGroupsRepository.getDGFGroup(dgfGroupDTO.getBusinessCategoryId(), dgfGroupDTO.getName());
+
+            if (dgfGroups != null) {
+                throw new CustomException("DGF Group with name : " + dgfGroupDTO.getName() +
+                        " already exists for Business Category with id : " + dgfGroupDTO.getBusinessCategoryId(),
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            int dgfGroupId = dgfGroupsRepository.save(DGFGroups.builder()
+                    .baseRate(dgfGroupDTO.getName())
+                    .businessCategoryId(dgfGroupDTO.getBusinessCategoryId())
+                    .modifiedBy(dgfGroupDTO.getModifiedBy())
+                    .isActive((byte) 1)
+                    .lastModifiedTimestamp(LocalDateTime.now())
+                    .build()).getId();
+
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Group with name : "+dgfGroupDTO.getName()+ " and id : " + dgfGroupId + " has been successfully created !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            return ApiResponseDTO.builder()
+                    .timestamp(LocalDateTime.now())
+                    .message("DGF Group with name : "+dgfGroupDTO.getName()+ " and id : " + dgfGroupId + " has been successfully created !")
+                    .status(HttpStatus.CREATED.value())
+                    .build();
+        } catch (Exception e) {
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO addDgfSubGroupLevel1(DGFGroupDTO dgfGroupDTO, HttpServletRequest request) {
+        try{
+            DGFSubGroupLevel1 dgfSubGroupLevel1 = dgfSubGroupLevel1Repository.getDGFSubGroupLevel1(dgfGroupDTO.getDgfGroupsId(), dgfGroupDTO.getName());
+
+            if (dgfSubGroupLevel1 != null) {
+                throw new CustomException("DGF Sub Group Level 1 with name : " + dgfGroupDTO.getName() +
+                        " already exists for DGF Group with Id : " + dgfGroupDTO.getDgfGroupsId(),
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            int dgfSubGroupLevel1Id = dgfSubGroupLevel1Repository.save(DGFSubGroupLevel1.builder()
+                    .baseRate(dgfGroupDTO.getName())
+                    .dgfGroupsId(dgfGroupDTO.getDgfGroupsId())
+                    .modifiedBy(dgfGroupDTO.getModifiedBy())
+                    .isActive((byte) 1)
+                    .lastModifiedTimestamp(LocalDateTime.now())
+                    .build()).getId();
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Sub Group Level 1 with name : "+dgfGroupDTO.getName()+" and id : "+dgfSubGroupLevel1Id +" has been successfully created !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            return ApiResponseDTO.builder()
+                    .timestamp(LocalDateTime.now())
+                    .message("DGF Sub Group Level 1 with name : "+dgfGroupDTO.getName()+" and id : "+dgfSubGroupLevel1Id +" has been successfully created !")
+                    .status(HttpStatus.CREATED.value())
+                    .build();
+        }catch (Exception e){
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO addDgfSubGroupLevel2(DGFGroupDTO dgfGroupDTO, HttpServletRequest request) {
+        try{
+            DGFSubGroupLevel2 dgfSubGroupLevel2 = dgfSubGroupLevel2Repository.getDGFSubGroupLevel2(dgfGroupDTO.getDgfSubGroupLevel1Id(), dgfGroupDTO.getName());
+
+            if (dgfSubGroupLevel2 != null) {
+                throw new CustomException("DGF Sub Group Level 2 with name : " + dgfGroupDTO.getName() +
+                        " already exists for DGF Sub Group Level 1 with Id : " + dgfGroupDTO.getDgfSubGroupLevel1Id(),
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            int dgfSubGroupLevel2Id = dgfSubGroupLevel2Repository.save(DGFSubGroupLevel2.builder()
+                    .baseRate(dgfGroupDTO.getName())
+                    .dgfSubGroupLevel1Id(dgfGroupDTO.getDgfSubGroupLevel1Id())
+                    .modifiedBy(dgfGroupDTO.getModifiedBy())
+                    .isActive((byte) 1)
+                    .lastModifiedTimestamp(LocalDateTime.now())
+                    .build()).getId();
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Sub Group Level 2 with name : "+dgfGroupDTO.getName()+" and id : "+dgfSubGroupLevel2Id +" has been successfully created !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            return ApiResponseDTO.builder()
+                    .timestamp(LocalDateTime.now())
+                    .message("DGF Sub Group Level 2 with name : "+dgfGroupDTO.getName()+" and id : "+dgfSubGroupLevel2Id +" has been successfully created !")
+                    .status(HttpStatus.CREATED.value())
+                    .build();
+        }catch (Exception e){
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO addDgfSubGroupLevel3(DGFGroupDTO dgfGroupDTO, HttpServletRequest request) {
+        try{
+            DGFSubGroupLevel3 dgfSubGroupLevel3 = dgfSubGroupLevel3Repository.getDGFSubGroupLevel3(dgfGroupDTO.getDgfSubGroupLevel2Id(), dgfGroupDTO.getName());
+
+            if (dgfSubGroupLevel3 != null) {
+                throw new CustomException("DGF Sub Group Level 3 with name : " + dgfGroupDTO.getName() +
+                        " already exists for DGF Sub Group Level 2 with Id : " + dgfGroupDTO.getDgfSubGroupLevel2Id(),
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            int dgfSubGroupLevel3Id = dgfSubGroupLevel3Repository.save(DGFSubGroupLevel3.builder()
+                    .baseRate(dgfGroupDTO.getName())
+                    .dgfSubGroupLevel2Id(dgfGroupDTO.getDgfSubGroupLevel2Id())
+                    .modifiedBy(dgfGroupDTO.getModifiedBy())
+                    .isActive((byte) 1)
+                    .lastModifiedTimestamp(LocalDateTime.now())
+                    .build()).getId();
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Sub Group Level 3 with name : "+dgfGroupDTO.getName()+" and id : "+dgfSubGroupLevel3Id +" has been successfully created !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            return ApiResponseDTO.builder()
+                    .timestamp(LocalDateTime.now())
+                    .message("DGF Sub Group Level 3 with name : "+dgfGroupDTO.getName()+" and id : "+dgfSubGroupLevel3Id +" has been successfully created !")
+                    .status(HttpStatus.CREATED.value())
+                    .build();
+        }catch (Exception e){
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO deleteDgfGroup(int dgfGroupId, HttpServletRequest request) {
+        try {
+            DGFGroups dgfGroups = dgfGroupsRepository.findById(dgfGroupId)
+                    .orElseThrow(() -> {
+                        throw new CustomException("Deletion failed, DGF Group not found for id : " + dgfGroupId, HttpStatus.BAD_REQUEST);
+                    });
+            dgfGroups.setIsActive((byte) 0);
+            dgfGroupsRepository.save(dgfGroups);
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Group with id : " + dgfGroupId + " has been successfully deleted !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            return ApiResponseDTO.builder()
+                    .message("DGF Group with id : " + dgfGroupId + " has been successfully deleted !")
+                    .timestamp(LocalDateTime.now())
+                    .status(HttpStatus.OK.value())
+                    .build();
+        } catch (Exception e) {
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO deleteDgfSubGroupLevel1(int dgfSubGroupLevel1Id, HttpServletRequest request) {
+        try {
+            DGFSubGroupLevel1 dgfSubGroupLevel1 = dgfSubGroupLevel1Repository.findById(dgfSubGroupLevel1Id)
+                    .orElseThrow(() -> {
+                        throw new CustomException("Deletion failed, DGF Sub Group Level 1 not found for id : " + dgfSubGroupLevel1Id, HttpStatus.BAD_REQUEST);
+                    });
+            dgfSubGroupLevel1.setIsActive((byte) 0);
+            dgfSubGroupLevel1Repository.save(dgfSubGroupLevel1);
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Sub Group Level 1 with id : " + dgfSubGroupLevel1Id + " has been successfully deleted !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            return ApiResponseDTO.builder()
+                    .message("DGF Sub Group Level 1 with id : " + dgfSubGroupLevel1Id + " has been successfully deleted !")
+                    .timestamp(LocalDateTime.now())
+                    .status(HttpStatus.OK.value())
+                    .build();
+        } catch (Exception e) {
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO deleteDgfSubGroupLevel2(int dgfSubGroupLevel2Id, HttpServletRequest request) {
+        try {
+            DGFSubGroupLevel2 dgfSubGroupLevel2 = dgfSubGroupLevel2Repository.findById(dgfSubGroupLevel2Id)
+                    .orElseThrow(() -> {
+                        throw new CustomException("Deletion failed, DGF Sub Group Level 2 not found for id : " + dgfSubGroupLevel2Id, HttpStatus.BAD_REQUEST);
+                    });
+            dgfSubGroupLevel2.setIsActive((byte) 0);
+            dgfSubGroupLevel2Repository.save(dgfSubGroupLevel2);
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Sub Group Level 2 with id : " + dgfSubGroupLevel2Id + " has been successfully deleted !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            return ApiResponseDTO.builder()
+                    .message("DGF Sub Group Level 2 with id : " + dgfSubGroupLevel2Id + " has been successfully deleted !")
+                    .timestamp(LocalDateTime.now())
+                    .status(HttpStatus.OK.value())
+                    .build();
+        } catch (Exception e) {
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO deleteDgfSubGroupLevel3(int dgfSubGroupLevel3Id, HttpServletRequest request) {
+        try {
+            DGFSubGroupLevel3 dgfSubGroupLevel3 = dgfSubGroupLevel3Repository.findById(dgfSubGroupLevel3Id)
+                    .orElseThrow(() -> {
+                        throw new CustomException("Deletion failed, DGF Sub Group Level 3 not found for id : " + dgfSubGroupLevel3Id, HttpStatus.BAD_REQUEST);
+                    });
+            dgfSubGroupLevel3.setIsActive((byte) 0);
+            dgfSubGroupLevel3Repository.save(dgfSubGroupLevel3);
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Sub Group Level 3 with id : " + dgfSubGroupLevel3Id + " has been successfully deleted !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            return ApiResponseDTO.builder()
+                    .message("DGF Sub Group Level 3 with id : " + dgfSubGroupLevel3Id + " has been successfully deleted !")
+                    .timestamp(LocalDateTime.now())
+                    .status(HttpStatus.OK.value())
+                    .build();
+        } catch (Exception e) {
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO updateDgfGroup(DGFGroupDTO dgfGroupDTO, int dgfGroupId, HttpServletRequest request) {
+        try {
+            DGFGroups dgfGroups = dgfGroupsRepository.findById(dgfGroupId)
+                    .orElseThrow(() -> {
+                        throw new CustomException("DGF Group not found for id : " + dgfGroupId, HttpStatus.BAD_REQUEST);
+                    });
+            dgfGroups.setBaseRate(dgfGroupDTO.getName());
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Group with id : " + dgfGroupId + " has been successfully updated !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            dgfGroupsRepository.save(dgfGroups);
+            return ApiResponseDTO.builder()
+                    .message("DGF Group with id : " + dgfGroupId + " has been successfully updated !")
+                    .timestamp(LocalDateTime.now())
+                    .status(HttpStatus.OK.value())
+                    .build();
+        } catch (Exception e) {
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO updateDgfSubGroupLevel1(DGFGroupDTO dgfGroupDTO, int dgfSubGroupLevel1Id, HttpServletRequest request) {
+        try {
+            DGFSubGroupLevel1 dgfSubGroupLevel1 = dgfSubGroupLevel1Repository.findById(dgfSubGroupLevel1Id)
+                    .orElseThrow(() -> {
+                        throw new CustomException("DGF Sub Group Level 1 not found for id : " + dgfSubGroupLevel1Id, HttpStatus.BAD_REQUEST);
+                    });
+            dgfSubGroupLevel1.setBaseRate(dgfGroupDTO.getName());
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Sub Group Level 1 with id : " + dgfSubGroupLevel1Id + " has been successfully updated !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            dgfSubGroupLevel1Repository.save(dgfSubGroupLevel1);
+
+            return ApiResponseDTO.builder()
+                    .message("DGF Sub Group Level 1 with id : " + dgfSubGroupLevel1Id + " has been successfully updated !")
+                    .timestamp(LocalDateTime.now())
+                    .status(HttpStatus.OK.value())
+                    .build();
+        } catch (Exception e) {
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO updateDgfSubGroupLevel2(DGFGroupDTO dgfGroupDTO, int dgfSubGroupLevel2Id, HttpServletRequest request) {
+        try {
+            DGFSubGroupLevel2 dgfSubGroupLevel2 = dgfSubGroupLevel2Repository.findById(dgfSubGroupLevel2Id)
+                    .orElseThrow(() -> {
+                        throw new CustomException("DGF Sub Group Level 2 not found for id : " + dgfSubGroupLevel2Id, HttpStatus.BAD_REQUEST);
+                    });
+            dgfSubGroupLevel2.setBaseRate(dgfGroupDTO.getName());
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Sub Group Level 2 with id : " + dgfSubGroupLevel2Id + " has been successfully updated !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            dgfSubGroupLevel2Repository.save(dgfSubGroupLevel2);
+
+            return ApiResponseDTO.builder()
+                    .message("DGF Sub Group Level 2 with id : " + dgfSubGroupLevel2Id + " has been successfully updated !")
+                    .timestamp(LocalDateTime.now())
+                    .status(HttpStatus.OK.value())
+                    .build();
+        } catch (Exception e) {
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Override
+    public ApiResponseDTO updateDgfSubGroupLevel3(DGFGroupDTO dgfGroupDTO, int dgfSubGroupLevel3Id, HttpServletRequest request) {
+        try {
+            DGFSubGroupLevel3 dgfSubGroupLevel3 = dgfSubGroupLevel3Repository.findById(dgfSubGroupLevel3Id)
+                    .orElseThrow(() -> {
+                        throw new CustomException("DGF Sub Group Level 3 not found for id : " + dgfSubGroupLevel3Id, HttpStatus.BAD_REQUEST);
+                    });
+            dgfSubGroupLevel3.setBaseRate(dgfGroupDTO.getName());
+
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("DGF Sub Group Level 3 with id : " + dgfSubGroupLevel3Id + " has been successfully updated !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+
+            dgfSubGroupLevel3Repository.save(dgfSubGroupLevel3);
+
+            return ApiResponseDTO.builder()
+                    .message("DGF Sub Group Level 3 with id : " + dgfSubGroupLevel3Id + " has been successfully updated !")
+                    .timestamp(LocalDateTime.now())
+                    .status(HttpStatus.OK.value())
+                    .build();
+        } catch (Exception e) {
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
 }

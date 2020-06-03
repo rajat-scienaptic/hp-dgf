@@ -3,6 +3,7 @@ package com.hp.dgf.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hp.dgf.constants.MapKeys;
+import com.hp.dgf.constants.Variables;
 import com.hp.dgf.dto.request.AddPLRequestDTO;
 import com.hp.dgf.dto.request.UpdatePLRequestDTO;
 import com.hp.dgf.dto.response.ApiResponseDTO;
@@ -13,10 +14,10 @@ import com.hp.dgf.model.DGFLogs;
 import com.hp.dgf.model.ProductLine;
 import com.hp.dgf.repository.BusinessCategoryRepository;
 import com.hp.dgf.repository.DGFLogRepository;
-import com.hp.dgf.repository.DgfRateChangeLogRepository;
+import com.hp.dgf.repository.DGFRateChangeLogRepository;
 import com.hp.dgf.repository.ProductLineRepository;
 import com.hp.dgf.service.DGFHeaderDataService;
-import com.hp.dgf.constants.Variables;
+import com.hp.dgf.utils.MonthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,7 +25,6 @@ import org.springframework.stereotype.Service;
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Month;
 import java.util.*;
 
 @Service
@@ -36,73 +36,89 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
     @Autowired
     private BusinessCategoryRepository businessCategoryRepository;
     @Autowired
-    private DgfRateChangeLogRepository dgfRateChangeLogRepository;
+    private DGFRateChangeLogRepository dgfRateChangeLogRepository;
+    @Autowired
+    private MonthService monthService;
 
     @Override
-    public final List<Object> getHeaderData() {
-        List<BusinessCategory> businessCategoryList = businessCategoryRepository.findAll();
-        ObjectMapper mapper = new ObjectMapper();
-        List<Object> headerData = new ArrayList<>();
+    public final List<Object> getHeaderData(int businessCategoryId) {
+        final BusinessCategory businessCategory = businessCategoryRepository
+                .findById(businessCategoryId)
+                .orElseThrow(() -> {
+                    throw new CustomException("Business category with id : " + businessCategoryId + " does not exists !", HttpStatus.NOT_FOUND);
+                });
+
+        final ObjectMapper mapper = new ObjectMapper();
+        final List<Object> headerData = new LinkedList<>();
 
         //Output Map
-        Map<String, Object> outputMap = new LinkedHashMap<>();
-        List<Object> columnsMapList = new ArrayList<>();
-        List<Object> businessMapList = new ArrayList<>();
+        final Map<String, Object> outputMap = new LinkedHashMap<>();
+        final List<Object> columnsMapList = new LinkedList<>();
+        final List<Object> businessMapList = new LinkedList<>();
 
-        businessCategoryList.forEach(businessCategory -> {
-            Map<String, Object> businessMap = new LinkedHashMap<>();
-            //Mapped Business Categories as JSON Node
-            JsonNode businessCategoryNode = mapper.convertValue(businessCategory, JsonNode.class);
-            //If a business category has children object
-            if (businessCategoryNode.has(Variables.CHILDREN)) {
-                //Get all children of a business category
-                JsonNode businessSubCategoryNode = businessCategoryNode.get(Variables.CHILDREN);
-                //If business sub category is not empty
-                if (!businessSubCategoryNode.isEmpty()) {
-                    //Processing rest of the children of a business category
-                    for (int i = 0; i < businessSubCategoryNode.size(); i++) {
-                        List<Object> columnList = new ArrayList<>();
-                        //Processing first children to add title object to final output response
-                        if (i == 0) {
-                            Map<String, Object> titleMap = new LinkedHashMap<>();
-                            titleMap.put(Variables.TITLE, Variables.TITLE_VALUE);
-                            titleMap.put(Variables.DATA_INDEX, Variables.TITLE_DATA_INDEX_VALUE);
-                            columnList.add(titleMap);
-                        }
+        //Mapped Business Categories as JSON Node
+        final JsonNode businessCategoryNode = mapper.convertValue(businessCategory, JsonNode.class);
+        //If a business category has children object
+        if (businessCategoryNode.has(Variables.CHILDREN)) {
+            //Get all children of a business category
+            final JsonNode businessSubCategoryNode = businessCategoryNode.get(Variables.CHILDREN);
+            //If business sub category is not empty
+            if (!businessSubCategoryNode.isEmpty()) {
+                //Processing rest of the children of a business category
+                for (int i = 0; i < businessSubCategoryNode.size(); i++) {
+                    List<Object> columnList = new LinkedList<>();
+                    //Processing first children to add title object to final output response
+                    int businessSubCategoryId = Integer.parseInt(businessSubCategoryNode.get(i).get("id").toString());
 
-                        Map<String, Object> iconMap = new LinkedHashMap<>();
-                        iconMap.put(Variables.TITLE, Variables.ICON_VALUE);
-                        iconMap.put(Variables.DATA_INDEX, "");
-                        columnList.add(iconMap);
-
-                        JsonNode columns = businessSubCategoryNode.get(i).get(Variables.COLUMNS);
-
-                        //Processing product lines for each sub category
-                        columns.forEach(column -> {
-                            Map<String, Object> columnData = new LinkedHashMap<>();
-                            columnData.put(Variables.TITLE, column.get(Variables.CODE));
-                            columnData.put(Variables.DATA_INDEX, column.get(Variables.CODE));
-                            columnList.add(columnData);
-                        });
-
-                        //Added columns to children map
-                        Map<String, Object> columnsMap = new LinkedHashMap<>();
-                        columnsMap.put("title", businessSubCategoryNode.get(i).get("name"));
-                        columnsMap.put("children", columnList);
-
-                        columnsMapList.add(columnsMap);
+                    if (i == 0) {
+                        Map<String, Object> titleMap = new LinkedHashMap<>();
+                        titleMap.put(Variables.TITLE, Variables.TITLE_VALUE);
+                        titleMap.put(Variables.DATA_INDEX, Variables.TITLE_DATA_INDEX_VALUE);
+                        titleMap.put(MapKeys.BUSINESS_SUB_CATEGORY_ID, businessSubCategoryId);
+                        columnList.add(titleMap);
                     }
-                    //end of business sub category loop
-                }
-            }
 
-            businessMap.put("id", businessCategory.getId());
-            businessMap.put("label", businessCategory.getName());
+                    Map<String, Object> iconMap = new LinkedHashMap<>();
+                    iconMap.put(Variables.TITLE, Variables.ICON_VALUE);
+                    iconMap.put(Variables.DATA_INDEX, "");
+                    iconMap.put(MapKeys.BUSINESS_SUB_CATEGORY_ID, businessSubCategoryId);
+                    columnList.add(iconMap);
+
+                    JsonNode columns = businessSubCategoryNode.get(i).get(Variables.COLUMNS);
+
+                    //Processing product lines for each sub category
+                    columns.forEach(column -> {
+                        Map<String, Object> columnData = new LinkedHashMap<>();
+                        columnData.put(Variables.TITLE, column.get(Variables.CODE));
+                        columnData.put(Variables.DATA_INDEX, column.get(Variables.CODE));
+                        columnData.put(MapKeys.BUSINESS_SUB_CATEGORY_ID, businessSubCategoryId);
+                        columnData.put("id", column.get("id"));
+                        columnList.add(columnData);
+                    });
+
+                    //Added columns to children map
+                    Map<String, Object> columnsMap = new LinkedHashMap<>();
+                    columnsMap.put("title", businessSubCategoryNode.get(i).get("name"));
+                    columnsMap.put("children", columnList);
+
+                    columnsMapList.add(columnsMap);
+                }
+                //end of business sub category loop
+            }
+        }
+
+        final List<BusinessCategory> businessCategoryList = businessCategoryRepository.findAll();
+
+        businessCategoryList.forEach(bc -> {
+            //Business Category Map
+            final Map<String, Object> businessMap = new LinkedHashMap<>();
+            businessMap.put("id", bc.getId());
+            businessMap.put("label", bc.getName());
             businessMapList.add(businessMap);
         });
 
         outputMap.put("columns", columnsMapList);
-        outputMap.put("data", getHeaderDataObject());
+        outputMap.put("data", getHeaderDataObject(businessCategoryId));
         outputMap.put("business", businessMapList);
 
         //Added columns object to the final output
@@ -111,54 +127,67 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
         return headerData;
     }
 
-    public final List<Object> getHeaderDataObject() {
+    public final List<Object> getHeaderDataObject(int businessCategoryId) {
         //Initialized Data Object
-        final List<Object> dataObject = new ArrayList<>();
+        final List<Object> dataObject = new LinkedList<>();
 
         final LocalDate currentDate = LocalDate.now();
-        Month month = currentDate.getMonth();
-        String year = String.valueOf(currentDate.getYear());
-        String fyYear = year.substring(year.length() - 2);
+        final String year = String.valueOf(currentDate.getYear());
+        final String fyYear = year.substring(year.length() - 2);
 
+        final int quarter = monthService.getQuarter();
         final String headerBaseRateTitle = "BASE RATES FY" + fyYear;
 
-        final StringBuilder effectiveFirstQuarterTitle = new StringBuilder("Effective ");
-        effectiveFirstQuarterTitle.append(month).append(" ");
-        effectiveFirstQuarterTitle.append(year).append(" ");
-        effectiveFirstQuarterTitle.append("(FY").append(fyYear).append(")");
-
-        final StringBuilder effectiveSecondQuarterTitle = new StringBuilder("Effective ");
-        effectiveSecondQuarterTitle.append(month.plus(2)).append(" ");
-        effectiveSecondQuarterTitle.append(year).append(" ");
-        effectiveSecondQuarterTitle.append("(FY").append(fyYear).append(")");
-
         //Getting business category data based on id
-        final List<BusinessCategory> businessCategoryList = businessCategoryRepository.findAll();
+        final BusinessCategory businessCategory = businessCategoryRepository
+                .findById(businessCategoryId)
+                .orElseThrow(() -> {
+                    throw new CustomException("No data found for id : " + businessCategoryId, HttpStatus.NOT_FOUND);
+                });
 
         final Map<String, Object> headerBaseRateMap = new LinkedHashMap<>();
         final Map<String, Object> effectiveFirstQuarterMap = new LinkedHashMap<>();
         final Map<String, Object> effectiveSecondQuarterMap = new LinkedHashMap<>();
 
-        headerBaseRateMap.put(MapKeys.baseRate, headerBaseRateTitle);
-        effectiveFirstQuarterMap.put(MapKeys.baseRate, effectiveFirstQuarterTitle.toString());
-        effectiveSecondQuarterMap.put(MapKeys.baseRate, effectiveSecondQuarterTitle.toString());
+        headerBaseRateMap.put(MapKeys.BASE_RATE, headerBaseRateTitle);
 
-        businessCategoryList.forEach(businessCategory -> {
-            //Getting Set of All Sub Categories
-            final Set<BusinessSubCategory> businessSubCategorySet = businessCategory.getChildren();
-            businessSubCategorySet.forEach(businessSubCategory -> {
-                //Getting list of PL data for each sub category
-                final Set<ProductLine> productLineSet = businessSubCategory.getColumns();
-                //Iterating over list of product lines
-                productLineSet.forEach(productLine -> {
-                    final Map<String, Object> plMap = new LinkedHashMap<>();
-                    plMap.put("quarter", productLine.getColorCodeSet().getFyQuarter());
-                    plMap.put("value", new ArrayList<>(Collections.singletonList(productLine.getBaseRate())));
-                    String pl = productLine.getCode().replaceAll("\"", "");
-                    headerBaseRateMap.put(pl, plMap);
-                    effectiveFirstQuarterMap.put(pl, plMap);
-                    effectiveSecondQuarterMap.put(pl, plMap);
-                });
+        final String effectiveFirstQuarterTitle = "Effective " + monthService.getMonthRange(quarter) + " " +
+                monthService.getYear() + " " + "(" + monthService.getQuarterName(quarter) + ")";
+
+        effectiveFirstQuarterMap.put(MapKeys.BASE_RATE, effectiveFirstQuarterTitle);
+
+        final String effectiveSecondQuarterTitle = "Effective " + monthService.getMonthRange(quarter + 1) + " " +
+                year + " " + "(" + monthService.getQuarterName(quarter + 1) + ")";
+
+        effectiveSecondQuarterMap.put(MapKeys.BASE_RATE, effectiveSecondQuarterTitle);
+
+        //Getting Set of All Sub Categories
+        final Set<BusinessSubCategory> businessSubCategorySet = businessCategory.getChildren();
+
+        businessSubCategorySet.forEach(businessSubCategory -> {
+            //Getting list of PL data for each sub category
+            final Set<ProductLine> productLineSet = businessSubCategory.getColumns();
+            //Iterating over list of product lines
+            productLineSet.forEach(productLine -> {
+                final Map<String, Object> plMap = new LinkedHashMap<>();
+                plMap.put(MapKeys.QUARTER, "");
+                plMap.put(MapKeys.VALUE, new LinkedList<>(Collections.singletonList(productLine.getBaseRate())));
+                plMap.put(MapKeys.BUSINESS_SUB_CATEGORY_ID, businessSubCategory.getId());
+                String pl = productLine.getCode().replaceAll("\"", "");
+                headerBaseRateMap.put(pl, plMap);
+
+                final Map<String, Object> quartersMap1 = new LinkedHashMap<>();
+                quartersMap1.put(MapKeys.QUARTER, monthService.getQuarter());
+                quartersMap1.put(MapKeys.VALUE, new LinkedList<>());
+                quartersMap1.put(MapKeys.BUSINESS_SUB_CATEGORY_ID, businessSubCategory.getId());
+
+                final Map<String, Object> quartersMap2 = new LinkedHashMap<>();
+                quartersMap2.put(MapKeys.QUARTER, monthService.getQuarter() + 1);
+                quartersMap2.put(MapKeys.VALUE, new LinkedList<>());
+                quartersMap2.put(MapKeys.BUSINESS_SUB_CATEGORY_ID, businessSubCategory.getId());
+
+                effectiveFirstQuarterMap.put(pl, quartersMap1);
+                effectiveSecondQuarterMap.put(pl, quartersMap2);
             });
         });
 
@@ -177,7 +206,7 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
                     .code(addPlRequestDTO.getCode())
                     .businessSubCategoryId(addPlRequestDTO.getBusinessSubCategoryId())
                     .baseRate(addPlRequestDTO.getBaseRate())
-                    .isActive(addPlRequestDTO.getIsActive())
+                    .isActive((byte) 1)
                     .lastModifiedTimestamp(LocalDateTime.now())
                     .build()).getId();
 
@@ -269,8 +298,47 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
         }
     }
 
+    @Override
+    public ApiResponseDTO deletePL(int productLineId, HttpServletRequest request) {
+        try {
+            ProductLine productLine = productLineRepository.findById(productLineId)
+                    .orElseThrow(() -> {
+                        throw new CustomException("Deletion failed, PL not found for id : " + productLineId, HttpStatus.BAD_REQUEST);
+                    });
+            productLine.setIsActive((byte) 0);
+            productLineRepository.save(productLine);
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.SUCCESS)
+                        .message("PL with id : " + productLineId + " has been successfully deleted !")
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            return ApiResponseDTO.builder()
+                    .message("PL with id : " + productLineId + " has been successfully deleted !")
+                    .timestamp(LocalDateTime.now())
+                    .status(HttpStatus.OK.value())
+                    .build();
+        } catch (Exception e) {
+            if (request != null) {
+                dgfLogRepository.save(DGFLogs.builder()
+                        .ip(request.getRemoteAddr())
+                        .endpoint(request.getRequestURI())
+                        .type(request.getMethod())
+                        .status(Variables.FAILURE)
+                        .message(e.getMessage())
+                        .createTime(LocalDateTime.now())
+                        .build());
+            }
+            throw new CustomException("Soft deletion failed for Product Line id : " + productLineId, HttpStatus.OK);
+        }
+    }
+
     private void checkIfPLAlreadyExists(String code) {
-        String productLine = productLineRepository.checkIfPlExists(code);
+        ProductLine productLine = productLineRepository.checkIfPlExists(code);
         if (productLine != null) {
             throw new CustomException("PL with code : " + code + " already exists !", HttpStatus.BAD_REQUEST);
         }

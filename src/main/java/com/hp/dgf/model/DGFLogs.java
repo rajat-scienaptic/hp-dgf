@@ -1,5 +1,6 @@
 package com.hp.dgf.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
 
@@ -35,5 +36,6 @@ public final class DGFLogs {
     private String message;
     @NotNull
     @Column(name = "create_time")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime createTime;
 }

@@ -1,5 +1,6 @@
 package com.hp.dgf.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,13 +29,10 @@ public final class ProductLine {
     @Column(name = "is_active")
     private Byte isActive;
     @Column(name = "last_modified_timestamp")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime lastModifiedTimestamp;
     @Column(name = "modified_by")
     private Integer modifiedBy;
-    @Column(name = "dgf_sub_group_level_2_id")
-    private Integer dgfSubGroupLevel2Id;
-    @Column(name = "dgf_sub_group_level_3_id")
-    private Integer dgfSubGroupLevel3Id;
     @Column(name = "base_rate")
     private BigDecimal baseRate;
 

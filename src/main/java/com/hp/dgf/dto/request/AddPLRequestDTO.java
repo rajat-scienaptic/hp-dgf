@@ -19,6 +19,4 @@ public final class AddPLRequestDTO {
     private Integer modifiedBy;
     private Integer dgfSubGroup2Id;
     private Integer dgfSubGroup3Id;
-    @NotNull
-    private Byte isActive;
 }

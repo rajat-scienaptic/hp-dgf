@@ -10,6 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 @Repository
 public interface ProductLineRepository extends JpaRepository<ProductLine, Integer> {
-    @Query(value = "select p.code from ProductLine p where p.code = :code")
-    String checkIfPlExists(@Param ("code") String code);
+    @Query(value = "select p from ProductLine p where p.code = :code")
+    ProductLine checkIfPlExists(@Param ("code") String code);
+
+    @Query(value = "select p.businessSubCategoryId from ProductLine p where p.code = :code")
+    Integer getBusinessSubCategoryIdByPLId(@Param ("code") String code);
 }

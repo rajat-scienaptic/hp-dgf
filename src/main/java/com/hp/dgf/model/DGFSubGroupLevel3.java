@@ -1,6 +1,8 @@
 package com.hp.dgf.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -8,6 +10,8 @@ import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+
+@Builder(toBuilder = true)
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -24,7 +28,8 @@ public final class DGFSubGroupLevel3 {
     @Column(name = "is_active")
     private Byte isActive;
     @Column(name = "last_modified_by")
-    private LocalDateTime lastModifiedBy;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm")
+    private LocalDateTime lastModifiedTimestamp;
     @Column(name = "modified_by")
     private Integer modifiedBy;
     @Column(name = "name")
@@ -32,5 +37,5 @@ public final class DGFSubGroupLevel3 {
 
     @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name = "dgf_sub_group_level_3_id", referencedColumnName = "id")
-    private Set<ProductLine> columns;
+    private Set<DGFRateEntry> columns;
 }

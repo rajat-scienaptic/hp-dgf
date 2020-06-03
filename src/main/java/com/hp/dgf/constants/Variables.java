@@ -16,7 +16,7 @@ public class Variables {
     public static final String COLUMNS = "columns";
     public static final String DGF_RATE_ENTRY = "dgfRateEntry";
     public static final String DGF_RATE = "dgfRate";
-    public static final String ERROR = "error";
+    public static final String REQUEST_BODY_ERROR = "Required request body is missing";
     public static final String ACCESS_DENIED = "Access Denied";
     public static final String SOMETHING_WENT_WRONG = "Something Went Wrong !";
     public static final String CODE = "code";
@@ -26,4 +26,7 @@ public class Variables {
     public static final String ADD_A_SUB_GROUP = "Add a sub group";
     public static final String QUARTER = "quarter";
     public static final String VALUE = "value";
+    public static final String BUSINESS_SUB_CATEGORY_ID = "businessSubCategoryId";
+    public static final String DGF_RATE_ENTRY_ID = "dgfRateEntryId";
+    public static final String PRODUCT_LINE_ID = "productLineId";
 }

@@ -1,6 +1,6 @@
 package com.hp.dgf.service;
 
-public interface ReportService {
+public interface DGFReportService {
     void downloadDGFReport();
     void generateDGFReport();
 }
