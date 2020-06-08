@@ -29,4 +29,5 @@ public class Variables {
     public static final String BUSINESS_SUB_CATEGORY_ID = "businessSubCategoryId";
     public static final String DGF_RATE_ENTRY_ID = "dgfRateEntryId";
     public static final String PRODUCT_LINE_ID = "productLineId";
+    public static final String EFFECTIVE = "Effective";
 }

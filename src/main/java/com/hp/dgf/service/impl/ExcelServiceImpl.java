@@ -5,11 +5,11 @@ import com.hp.dgf.model.DGFRateEntry;
 import com.hp.dgf.repository.DGFRateEntryRepository;
 import com.hp.dgf.service.ExcelService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 @Service
@@ -38,8 +38,7 @@ public class ExcelServiceImpl implements ExcelService {
     }
 
     @Override
-    public InputStreamResource generateExcel() {
-        List<DGFRateEntry> dgfRateEntryList = getDgfEntryData();
-        return null;
+    public ByteArrayInputStream generateExcel(LocalDateTime createdOn) {
+        return excelHelper.generateReport(createdOn);
     }
 }

@@ -5,9 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
-@Transactional(readOnly = true)
 @Repository
 public interface DGFSubGroupLevel3Repository extends JpaRepository<DGFSubGroupLevel3, Integer> {
     @Query(value = "select d from DGFSubGroupLevel3 d where d.dgfSubGroupLevel2Id = :dgfSubGroupLevel2Id and d.baseRate = :name")
