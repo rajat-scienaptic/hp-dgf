@@ -7,10 +7,7 @@ import com.hp.dgf.exception.CustomException;
 import com.hp.dgf.model.BusinessCategory;
 import com.hp.dgf.model.DGFRateEntry;
 import com.hp.dgf.repository.BusinessCategoryRepository;
-import com.hp.dgf.repository.BusinessSubCategoryRepository;
 import com.hp.dgf.repository.DGFRateEntryRepository;
-import com.hp.dgf.repository.ProductLineRepository;
-import com.hp.dgf.utils.MonthService;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -33,15 +30,9 @@ import java.util.List;
 @Service
 public class ExcelHelper {
     @Autowired
-    private BusinessCategoryRepository businessCategoryRepository;
+    BusinessCategoryRepository businessCategoryRepository;
     @Autowired
-    private ProductLineRepository productLineRepository;
-    @Autowired
-    private BusinessSubCategoryRepository businessSubCategoryRepository;
-    @Autowired
-    private MonthService monthService;
-    @Autowired
-    private DGFRateEntryRepository dgfRateEntryRepository;
+    DGFRateEntryRepository dgfRateEntryRepository;
 
     private ExcelHelper() {
     }
@@ -58,10 +49,9 @@ public class ExcelHelper {
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("DGF Sheet");
-            sheet.autoSizeColumn(50);
             createBcRow(businessCategoryNode, workbook, sheet, createdOn);
-            createBscRow(businessCategoryNode, sheet);
-            createPlRow(businessCategoryNode, sheet);
+            createBscRow(businessCategoryNode, workbook, sheet);
+            createPlRow(businessCategoryNode, workbook, sheet);
             workbook.write(out);
             return new ByteArrayInputStream(out.toByteArray());
         } catch (IOException e) {
@@ -71,43 +61,129 @@ public class ExcelHelper {
 
     private void createBcRow(JsonNode businessCategoryNode, Workbook workbook, Sheet sheet, LocalDateTime createdOn) {
         Row row1 = sheet.createRow(0);
+        CellStyle style = workbook.createCellStyle();
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setBorderLeft(BorderStyle.THICK);
+        style.setRightBorderColor(IndexedColors.BLACK.getIndex());
+
+        Font font = workbook.createFont();
+        font.setColor(HSSFColor.HSSFColorPredefined.WHITE.getIndex());
+        font.setFontHeightInPoints((short) 9);
+        font.setBold(true);
+        style.setFont(font);
+
         int columnCount = 1;
         int rowCount = 5;
+        int first = 1;
+        int end = 0;
+
         for (int i = 0; i < businessCategoryNode.size(); i++) {
             String name = businessCategoryNode.get(i).get("name").toString().replaceAll("\"", "");
             row1.createCell(columnCount).setCellValue(name);
-            columnCount = plCountPerBC(businessCategoryNode.get(i), workbook, sheet) + columnCount;
+            row1.getCell(columnCount).setCellStyle(style);
+            columnCount = plCountPerBC(businessCategoryNode.get(i)) + columnCount;
+            int last = plCountPerBC(businessCategoryNode.get(i));
+            end = first - 1 + last;
+            CellRangeAddress cellRangeAddress = new CellRangeAddress(0, 0, first, end);
+            sheet.addMergedRegion(cellRangeAddress);
+            first = last + first;
             createDGFDataRows(businessCategoryNode, workbook, sheet, rowCount, createdOn);
         }
     }
 
-    private void createBscRow(JsonNode businessCategoryNode, Sheet sheet) {
+    private void createBscRow(JsonNode businessCategoryNode, Workbook workbook, Sheet sheet) {
         Row row2 = sheet.createRow(1);
+        CellStyle style = workbook.createCellStyle();
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setBorderLeft(BorderStyle.THICK);
+        style.setRightBorderColor(IndexedColors.BLACK.getIndex());
+
+        Font font = workbook.createFont();
+        font.setColor(HSSFColor.HSSFColorPredefined.WHITE.getIndex());
+        font.setFontHeightInPoints((short) 9);
+        font.setBold(true);
+        style.setFont(font);
+
         int columnCount = 1;
+        int first = 1;
+        int end = 0;
         for (int i = 0; i < businessCategoryNode.size(); i++) {
             JsonNode bscNode = businessCategoryNode.get(i).get(Variables.CHILDREN);
             for (int j = 0; j < bscNode.size(); j++) {
                 String name = bscNode.get(j).get("name").toString().replaceAll("\"", "");
                 row2.createCell(columnCount).setCellValue(name);
+                row2.getCell(columnCount).setCellStyle(style);
                 columnCount = plCountPerBSC(bscNode.get(j)) + columnCount;
+                int last = plCountPerBSC(bscNode.get(j));
+                end = first - 1 + last;
+                CellRangeAddress cellRangeAddress = new CellRangeAddress(1, 1, first, end);
+                sheet.addMergedRegion(cellRangeAddress);
+                first = last + first;
             }
         }
     }
 
-    private void createPlRow(JsonNode businessCategoryNode, Sheet sheet) {
+    private void createPlRow(JsonNode businessCategoryNode, Workbook workbook, Sheet sheet) {
+        CellStyle style = workbook.createCellStyle();
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setFillForegroundColor(IndexedColors.LIGHT_CORNFLOWER_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setBorderLeft(BorderStyle.THICK);
+        style.setRightBorderColor(IndexedColors.BLACK.getIndex());
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBottomBorderColor(IndexedColors.BLACK.getIndex());
+
+        CellStyle style1 = workbook.createCellStyle();
+        style1.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+        style1.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style1.setAlignment(HorizontalAlignment.CENTER);
+        style1.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        CellStyle style2 = workbook.createCellStyle();
+        style2.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        style2.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style2.setAlignment(HorizontalAlignment.CENTER);
+        style2.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        Font font = workbook.createFont();
+        font.setColor(HSSFColor.HSSFColorPredefined.WHITE.getIndex());
+        font.setFontHeightInPoints((short) 9);
+        font.setBold(true);
+
+        Font font1 = workbook.createFont();
+        font1.setColor(HSSFColor.HSSFColorPredefined.BLACK.getIndex());
+        font1.setFontHeightInPoints((short) 9);
+        font1.setBold(true);
+
+        style.setFont(font1);
+        style1.setFont(font);
+        style2.setFont(font);
+
         final LocalDate currentDate = LocalDate.now();
         final String year = String.valueOf(currentDate.getYear());
         final String fyYear = year.substring(year.length() - 2);
 
-        final int quarter = monthService.getQuarter();
         final String headerBaseRateTitle = "BASE RATES FY" + fyYear;
 
         Row row3 = sheet.createRow(2);
         row3.createCell(0).setCellValue("PLs");
+        row3.getCell(0).setCellStyle(style1);
+        row3.getCell(0).setCellStyle(style1);
+
         Row row4 = sheet.createRow(3);
         row4.createCell(0).setCellValue(headerBaseRateTitle);
+        row4.getCell(0).setCellStyle(style2);
+        row4.getCell(0).setCellStyle(style2);
 
         int columnCount = 1;
+
         for (int i = 0; i < businessCategoryNode.size(); i++) {
             JsonNode bscNode = businessCategoryNode.get(i).get(Variables.CHILDREN);
             for (int j = 0; j < bscNode.size(); j++) {
@@ -116,29 +192,13 @@ public class ExcelHelper {
                     String code = productLine.get(k).get("code").toString().replaceAll("\"", "");
                     String baseRate = productLine.get(k).get("baseRate").toString().replaceAll("\"", "");
                     row3.createCell(columnCount).setCellValue(code);
+                    row3.getCell(columnCount).setCellStyle(style);
                     row4.createCell(columnCount).setCellValue(baseRate);
+                    row4.getCell(columnCount).setCellStyle(style);
                     columnCount++;
                 }
             }
         }
-
-//        final String effectiveFirstQuarterTitle = Variables.EFFECTIVE + " " + monthService.getMonthRange(quarter) + " " +
-//                monthService.getYear() + " " + "(" + monthService.getQuarterName(quarter) + ")";
-//        final String effectiveSecondQuarterTitle = Variables.EFFECTIVE + " " + monthService.getMonthRange(quarter + 1) + " " +
-//                year + " " + "(" + monthService.getQuarterName(quarter + 1) + ")";
-//        final String effectiveThirdQuarterTitle = Variables.EFFECTIVE + " " + monthService.getMonthRange(quarter + 2) + " " +
-//                year + " " + "(" + monthService.getQuarterName(quarter + 2) + ")";
-//        final String effectiveFourthQuarterTitle = Variables.EFFECTIVE + " " + monthService.getMonthRange(quarter + 3) + " " +
-//                year + " " + "(" + monthService.getQuarterName(quarter + 3) + ")";
-//
-//        Row row5 = sheet.createRow(4);
-//        row5.createCell(0).setCellValue(effectiveFirstQuarterTitle);
-//        Row row6 = sheet.createRow(5);
-//        row6.createCell(0).setCellValue(effectiveSecondQuarterTitle);
-//        Row row7 = sheet.createRow(6);
-//        row7.createCell(0).setCellValue(effectiveThirdQuarterTitle);
-//        Row row8 = sheet.createRow(7);
-//        row8.createCell(0).setCellValue(effectiveFourthQuarterTitle);
     }
 
     private void createDGFDataRows(JsonNode businessCategoryNode, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
@@ -173,12 +233,21 @@ public class ExcelHelper {
     }
 
     private int createSubGroupLevel1Rows(JsonNode dgfSubGroupLevel1, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
+        CellStyle style = workbook.createCellStyle();
+        style.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        Font font = workbook.createFont();
+        font.setColor(HSSFColor.HSSFColorPredefined.WHITE.getIndex());
+        font.setFontHeightInPoints((short) 9);
+        font.setBold(true);
+        style.setFont(font);
         for (int k = 0; k < dgfSubGroupLevel1.size(); k++) {
             Row dgfSubGroupLevel1Rows = sheet.createRow(rowCount);
             JsonNode dgfSubGroupLevel2 = dgfSubGroupLevel1.get(k).get(Variables.CHILDREN);
             String dgfSubGroupLevel1Name = dgfSubGroupLevel1.get(k).get(Variables.BASE_RATE)
                     .toString().replaceAll("\"", "");
             dgfSubGroupLevel1Rows.createCell(0).setCellValue(dgfSubGroupLevel1Name);
+            dgfSubGroupLevel1Rows.getCell(0).setCellStyle(style);
             rowCount++;
             rowCount = createSubGroupLevel2Rows(dgfSubGroupLevel2, workbook, sheet, rowCount, createdOn);
         }
@@ -187,7 +256,23 @@ public class ExcelHelper {
 
     private int createSubGroupLevel2Rows(JsonNode dgfSubGroupLevel2, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
         CellStyle style = workbook.createCellStyle();
-        style.setAlignment(HorizontalAlignment.CENTER);
+
+        Font font = workbook.createFont();
+        font.setFontHeightInPoints((short) 9);
+        font.setColor(HSSFColor.HSSFColorPredefined.MAROON.getIndex());
+        font.setBold(true);
+        style.setFont(font);
+
+        Font font1 = workbook.createFont();
+        font1.setFontHeightInPoints((short) 9);
+        font1.setColor(HSSFColor.HSSFColorPredefined.BLACK.getIndex());
+        font1.setBold(true);
+
+        CellStyle style1 = workbook.createCellStyle();
+        style1.setAlignment(HorizontalAlignment.CENTER);
+        style1.setVerticalAlignment(VerticalAlignment.CENTER);
+        style1.setFont(font1);
+
         for (int k = 0; k < dgfSubGroupLevel2.size(); k++) {
             JsonNode dgfSubGroupLevel3 = dgfSubGroupLevel2.get(k).get(Variables.CHILDREN);
             Row dgfSubGroupLevel2Rows = sheet.createRow(rowCount);
@@ -203,30 +288,57 @@ public class ExcelHelper {
             for (int m = 1; m < dgfRateEntryList.size(); m++) {
                 String dgfRate = dgfRateEntryList.get(m - 1).getDgfRate().toString().replaceAll("\"", "");
                 dgfSubGroupLevel2Rows.createCell(m).setCellValue(dgfRate);
+                dgfSubGroupLevel2Rows.getCell(m).setCellStyle(style1);
             }
         }
+
         return rowCount;
     }
 
     private int createSubGroupLevel3Rows(JsonNode dgfSubGroupLevel3, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
         CellStyle style = workbook.createCellStyle();
-        style.setAlignment(HorizontalAlignment.RIGHT);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        Font font = workbook.createFont();
+        font.setFontHeightInPoints((short) 9);
+        font.setColor(HSSFColor.HSSFColorPredefined.BLACK.getIndex());
+        font.setBold(true);
+        style.setFont(font);
+
         for (int k = 0; k < dgfSubGroupLevel3.size(); k++) {
             Row dgfSubGroupLevel3Rows = sheet.createRow(rowCount);
             String dgfSubGroupLevel3Name = dgfSubGroupLevel3.get(k).get(Variables.BASE_RATE)
                     .toString().replaceAll("\"", "");
             dgfSubGroupLevel3Rows.createCell(0).setCellValue(dgfSubGroupLevel3Name);
             dgfSubGroupLevel3Rows.getCell(0).setCellStyle(style);
+
             int id = Integer.parseInt(dgfSubGroupLevel3.get(k).get("id").toString());
             List<DGFRateEntry> dgfRateEntryList = dgfRateEntryRepository.
                     findByDgfSubGroupLevel3IdAndCreatedOnBetween(id, createdOn, LocalDateTime.now());
             for (int m = 1; m < dgfRateEntryList.size(); m++) {
                 String dgfRate = dgfRateEntryList.get(m - 1).getDgfRate().toString().replaceAll("\"", "");
                 dgfSubGroupLevel3Rows.createCell(m).setCellValue(dgfRate);
+                dgfSubGroupLevel3Rows.getCell(m).setCellStyle(style);
             }
             rowCount++;
         }
         return rowCount;
+    }
+
+    private int plCountPerBC(JsonNode businessSubCategoryNode) {
+        int count = 0;
+        JsonNode bscNode = businessSubCategoryNode.get(Variables.CHILDREN);
+        for (int j = 0; j < bscNode.size(); j++) {
+            count = bscNode.get(j).get(Variables.COLUMNS).size() + count;
+        }
+        return count;
+    }
+
+    private int plCountPerBSC(JsonNode businessSubCategoryNode) {
+        int count = 0;
+        count = businessSubCategoryNode.get(Variables.COLUMNS).size() + count;
+        return count;
     }
 
     public static List<DGFRateEntry> excelToTDgfRateEntry(InputStream is) {
@@ -310,20 +422,4 @@ public class ExcelHelper {
             throw new CustomException("fail to parse Excel file: " + e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
-
-    private int plCountPerBC(JsonNode businessSubCategoryNode, Workbook workbook, Sheet sheet) {
-        int count = 0;
-        JsonNode bscNode = businessSubCategoryNode.get(Variables.CHILDREN);
-        for (int j = 0; j < bscNode.size(); j++) {
-            count = bscNode.get(j).get(Variables.COLUMNS).size() + count;
-        }
-        return count;
-    }
-
-    private int plCountPerBSC(JsonNode businessSubCategoryNode) {
-        int count = 0;
-        count = businessSubCategoryNode.get(Variables.COLUMNS).size() + count;
-        return count;
-    }
-
 }

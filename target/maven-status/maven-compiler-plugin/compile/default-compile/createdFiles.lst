@@ -45,7 +45,6 @@ com/hp/dgf/dto/response/ApiResponseDTO.class
 com/hp/dgf/service/impl/DGFFileUploadServiceImpl.class
 com/hp/dgf/service/DGFHeaderDataService.class
 com/hp/dgf/model/BusinessSubCategory.class
-com/hp/dgf/config/CORSFilter.class
 com/hp/dgf/repository/ColorCodeRepository.class
 com/hp/dgf/dto/request/AddDgfRateEntryDTO.class
 com/hp/dgf/controller/DGFGroupsController.class

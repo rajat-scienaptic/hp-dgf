@@ -1,7 +1,6 @@
 package com.hp.dgf.repository;
 
 import com.hp.dgf.model.DGFRateEntry;
-import com.hp.dgf.model.ProductLine;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
