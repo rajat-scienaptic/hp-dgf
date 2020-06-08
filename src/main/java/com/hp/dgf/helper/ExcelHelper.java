@@ -58,6 +58,7 @@ public class ExcelHelper {
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("DGF Sheet");
+            sheet.autoSizeColumn(50);
             createBcRow(businessCategoryNode, workbook, sheet, createdOn);
             createBscRow(businessCategoryNode, sheet);
             createPlRow(businessCategoryNode, sheet);
@@ -138,7 +139,6 @@ public class ExcelHelper {
 //        row7.createCell(0).setCellValue(effectiveThirdQuarterTitle);
 //        Row row8 = sheet.createRow(7);
 //        row8.createCell(0).setCellValue(effectiveFourthQuarterTitle);
-
     }
 
     private void createDGFDataRows(JsonNode businessCategoryNode, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
@@ -153,11 +153,11 @@ public class ExcelHelper {
     private int createDGFGroupsRows(JsonNode dgfGroupSet, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
         CellStyle style = workbook.createCellStyle();
         Font font = workbook.createFont();
-        font.setColor(HSSFColor.HSSFColorPredefined.PINK.getIndex());
+        font.setColor(HSSFColor.HSSFColorPredefined.WHITE.getIndex());
         font.setFontHeightInPoints((short) 9);
         font.setBold(true);
         style.setFont(font);
-        style.setFillForegroundColor(IndexedColors.GREEN.getIndex());
+        style.setFillForegroundColor(IndexedColors.BLUE.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         for (int j = 0; j < dgfGroupSet.size(); j++) {
             Row dgfRows = sheet.createRow(rowCount);
@@ -173,8 +173,6 @@ public class ExcelHelper {
     }
 
     private int createSubGroupLevel1Rows(JsonNode dgfSubGroupLevel1, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
-        CellStyle style = workbook.createCellStyle();
-        style.setIndention((short) 5);
         for (int k = 0; k < dgfSubGroupLevel1.size(); k++) {
             Row dgfSubGroupLevel1Rows = sheet.createRow(rowCount);
             JsonNode dgfSubGroupLevel2 = dgfSubGroupLevel1.get(k).get(Variables.CHILDREN);
@@ -188,12 +186,15 @@ public class ExcelHelper {
     }
 
     private int createSubGroupLevel2Rows(JsonNode dgfSubGroupLevel2, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
+        CellStyle style = workbook.createCellStyle();
+        style.setAlignment(HorizontalAlignment.CENTER);
         for (int k = 0; k < dgfSubGroupLevel2.size(); k++) {
             JsonNode dgfSubGroupLevel3 = dgfSubGroupLevel2.get(k).get(Variables.CHILDREN);
             Row dgfSubGroupLevel2Rows = sheet.createRow(rowCount);
             String dgfSubGroupLevel2Name = dgfSubGroupLevel2.get(k).get(Variables.BASE_RATE)
                     .toString().replaceAll("\"", "");
             dgfSubGroupLevel2Rows.createCell(0).setCellValue(dgfSubGroupLevel2Name);
+            dgfSubGroupLevel2Rows.getCell(0).setCellStyle(style);
             rowCount++;
             rowCount = createSubGroupLevel3Rows(dgfSubGroupLevel3, workbook, sheet, rowCount, createdOn);
             int id = Integer.parseInt(dgfSubGroupLevel2.get(k).get("id").toString());
@@ -208,14 +209,14 @@ public class ExcelHelper {
     }
 
     private int createSubGroupLevel3Rows(JsonNode dgfSubGroupLevel3, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
-        CellStyle cellStyle = workbook.createCellStyle();
-        cellStyle.setFillBackgroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-        cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        CellStyle style = workbook.createCellStyle();
+        style.setAlignment(HorizontalAlignment.RIGHT);
         for (int k = 0; k < dgfSubGroupLevel3.size(); k++) {
             Row dgfSubGroupLevel3Rows = sheet.createRow(rowCount);
             String dgfSubGroupLevel3Name = dgfSubGroupLevel3.get(k).get(Variables.BASE_RATE)
                     .toString().replaceAll("\"", "");
             dgfSubGroupLevel3Rows.createCell(0).setCellValue(dgfSubGroupLevel3Name);
+            dgfSubGroupLevel3Rows.getCell(0).setCellStyle(style);
             int id = Integer.parseInt(dgfSubGroupLevel3.get(k).get("id").toString());
             List<DGFRateEntry> dgfRateEntryList = dgfRateEntryRepository.
                     findByDgfSubGroupLevel3IdAndCreatedOnBetween(id, createdOn, LocalDateTime.now());
@@ -225,8 +226,6 @@ public class ExcelHelper {
             }
             rowCount++;
         }
-        Row extraRow = sheet.createRow(rowCount + 1);
-        extraRow.setRowStyle(cellStyle);
         return rowCount;
     }
 

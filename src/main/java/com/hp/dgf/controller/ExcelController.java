@@ -21,7 +21,6 @@ public class ExcelController {
   public final ResponseEntity<InputStreamResource> generateExcel(@PathVariable("createdOn")
                                                                    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime createdOn){
     HttpHeaders headers = new HttpHeaders();
-    System.out.println("sas =="+ createdOn);
     headers.add("Content-Disposition", "attachment; filename=dgf.xlsx");
     return ResponseEntity
             .ok()
