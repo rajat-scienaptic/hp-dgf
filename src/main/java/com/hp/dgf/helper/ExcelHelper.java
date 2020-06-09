@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hp.dgf.constants.Variables;
 import com.hp.dgf.exception.CustomException;
 import com.hp.dgf.model.BusinessCategory;
+import com.hp.dgf.model.DGFRateChangeLog;
 import com.hp.dgf.model.DGFRateEntry;
 import com.hp.dgf.repository.BusinessCategoryRepository;
+import com.hp.dgf.repository.DGFRateChangeLogRepository;
 import com.hp.dgf.repository.DGFRateEntryRepository;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
@@ -33,6 +35,8 @@ public class ExcelHelper {
     BusinessCategoryRepository businessCategoryRepository;
     @Autowired
     DGFRateEntryRepository dgfRateEntryRepository;
+    @Autowired
+    DGFRateChangeLogRepository dgfRateChangeLogRepository;
 
     private ExcelHelper() {
     }
@@ -49,6 +53,7 @@ public class ExcelHelper {
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("DGF Sheet");
+            sheet.setColumnWidth(0, 8000);
             createBcRow(businessCategoryNode, workbook, sheet, createdOn);
             createBscRow(businessCategoryNode, workbook, sheet);
             createPlRow(businessCategoryNode, workbook, sheet);
@@ -64,7 +69,7 @@ public class ExcelHelper {
         CellStyle style = workbook.createCellStyle();
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setVerticalAlignment(VerticalAlignment.CENTER);
-        style.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+        style.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         style.setBorderLeft(BorderStyle.THICK);
         style.setRightBorderColor(IndexedColors.BLACK.getIndex());
@@ -99,7 +104,7 @@ public class ExcelHelper {
         CellStyle style = workbook.createCellStyle();
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setVerticalAlignment(VerticalAlignment.CENTER);
-        style.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        style.setFillForegroundColor(IndexedColors.CORNFLOWER_BLUE.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         style.setBorderLeft(BorderStyle.THICK);
         style.setRightBorderColor(IndexedColors.BLACK.getIndex());
@@ -141,13 +146,13 @@ public class ExcelHelper {
         style.setBottomBorderColor(IndexedColors.BLACK.getIndex());
 
         CellStyle style1 = workbook.createCellStyle();
-        style1.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+        style1.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
         style1.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         style1.setAlignment(HorizontalAlignment.CENTER);
         style1.setVerticalAlignment(VerticalAlignment.CENTER);
 
         CellStyle style2 = workbook.createCellStyle();
-        style2.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        style2.setFillForegroundColor(IndexedColors.CORNFLOWER_BLUE.getIndex());
         style2.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         style2.setAlignment(HorizontalAlignment.CENTER);
         style2.setVerticalAlignment(VerticalAlignment.CENTER);
@@ -212,12 +217,13 @@ public class ExcelHelper {
 
     private int createDGFGroupsRows(JsonNode dgfGroupSet, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
         CellStyle style = workbook.createCellStyle();
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
         Font font = workbook.createFont();
         font.setColor(HSSFColor.HSSFColorPredefined.WHITE.getIndex());
         font.setFontHeightInPoints((short) 9);
         font.setBold(true);
         style.setFont(font);
-        style.setFillForegroundColor(IndexedColors.BLUE.getIndex());
+        style.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         for (int j = 0; j < dgfGroupSet.size(); j++) {
             Row dgfRows = sheet.createRow(rowCount);
@@ -234,7 +240,8 @@ public class ExcelHelper {
 
     private int createSubGroupLevel1Rows(JsonNode dgfSubGroupLevel1, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
         CellStyle style = workbook.createCellStyle();
-        style.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setFillForegroundColor(IndexedColors.CORNFLOWER_BLUE.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         Font font = workbook.createFont();
         font.setColor(HSSFColor.HSSFColorPredefined.WHITE.getIndex());
@@ -256,6 +263,7 @@ public class ExcelHelper {
 
     private int createSubGroupLevel2Rows(JsonNode dgfSubGroupLevel2, Workbook workbook, Sheet sheet, int rowCount, LocalDateTime createdOn) {
         CellStyle style = workbook.createCellStyle();
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
 
         Font font = workbook.createFont();
         font.setFontHeightInPoints((short) 9);
@@ -283,10 +291,14 @@ public class ExcelHelper {
             rowCount++;
             rowCount = createSubGroupLevel3Rows(dgfSubGroupLevel3, workbook, sheet, rowCount, createdOn);
             int id = Integer.parseInt(dgfSubGroupLevel2.get(k).get("id").toString());
-            List<DGFRateEntry> dgfRateEntryList = dgfRateEntryRepository.
-                    findByDgfSubGroupLevel2IdAndCreatedOnBetween(id, createdOn, LocalDateTime.now());
+
+            List<DGFRateEntry> dgfRateEntryList = dgfRateEntryRepository.findEntryIdByDgfSubGroupLevel2Id(id);
+
             for (int m = 1; m < dgfRateEntryList.size(); m++) {
-                String dgfRate = dgfRateEntryList.get(m - 1).getDgfRate().toString().replaceAll("\"", "");
+                String dgfRate = "";
+                if(dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntryList.get(m-1).getId()) != null){
+                    dgfRate = dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntryList.get(m-1).getId()).toString().replaceAll("\"", "");
+                }
                 dgfSubGroupLevel2Rows.createCell(m).setCellValue(dgfRate);
                 dgfSubGroupLevel2Rows.getCell(m).setCellStyle(style1);
             }
@@ -314,13 +326,18 @@ public class ExcelHelper {
             dgfSubGroupLevel3Rows.getCell(0).setCellStyle(style);
 
             int id = Integer.parseInt(dgfSubGroupLevel3.get(k).get("id").toString());
-            List<DGFRateEntry> dgfRateEntryList = dgfRateEntryRepository.
-                    findByDgfSubGroupLevel3IdAndCreatedOnBetween(id, createdOn, LocalDateTime.now());
+
+            List<DGFRateEntry> dgfRateEntryList = dgfRateEntryRepository.findEntryIdByDgfSubGroupLevel3Id(id);
+
             for (int m = 1; m < dgfRateEntryList.size(); m++) {
-                String dgfRate = dgfRateEntryList.get(m - 1).getDgfRate().toString().replaceAll("\"", "");
+                String dgfRate = "";
+                if(dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntryList.get(m-1).getId()) != null){
+                    dgfRate = dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntryList.get(m-1).getId()).toString().replaceAll("\"", "");
+                }
                 dgfSubGroupLevel3Rows.createCell(m).setCellValue(dgfRate);
                 dgfSubGroupLevel3Rows.getCell(m).setCellStyle(style);
             }
+
             rowCount++;
         }
         return rowCount;

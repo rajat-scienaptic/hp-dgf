@@ -17,6 +17,7 @@ public class Variables {
     public static final String DGF_RATE_ENTRY = "dgfRateEntry";
     public static final String DGF_RATE = "dgfRate";
     public static final String REQUEST_BODY_ERROR = "Required request body is missing";
+    public static final String INVALID_FILE_TYPE_ERROR = "Only Pdf files are allowed to upload !";
     public static final String ACCESS_DENIED = "Access Denied";
     public static final String SOMETHING_WENT_WRONG = "Something Went Wrong !";
     public static final String CODE = "code";
@@ -30,4 +31,5 @@ public class Variables {
     public static final String DGF_RATE_ENTRY_ID = "dgfRateEntryId";
     public static final String PRODUCT_LINE_ID = "productLineId";
     public static final String EFFECTIVE = "Effective";
+    public static final String PROD_URL = "http://omnihpi010.auth.hpicorp.net:9002/uploads/";
 }

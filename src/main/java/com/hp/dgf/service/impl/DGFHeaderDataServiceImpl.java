@@ -148,6 +148,8 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
         final Map<String, Object> headerBaseRateMap = new LinkedHashMap<>();
         final Map<String, Object> effectiveFirstQuarterMap = new LinkedHashMap<>();
         final Map<String, Object> effectiveSecondQuarterMap = new LinkedHashMap<>();
+        final Map<String, Object> effectiveThirdQuarterMap = new LinkedHashMap<>();
+        final Map<String, Object> effectiveFourthQuarterMap = new LinkedHashMap<>();
 
         headerBaseRateMap.put(MapKeys.BASE_RATE, headerBaseRateTitle);
 
@@ -160,6 +162,17 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
                 year + " " + "(" + monthService.getQuarterName(quarter + 1) + ")";
 
         effectiveSecondQuarterMap.put(MapKeys.BASE_RATE, effectiveSecondQuarterTitle);
+
+        final String effectiveThirdQuarterTitle = "Effective " + monthService.getMonthRange(quarter + 2) + " " +
+                year + " " + "(" + monthService.getQuarterName(quarter + 2) + ")";
+
+        effectiveThirdQuarterMap.put(MapKeys.BASE_RATE, effectiveThirdQuarterTitle);
+
+
+        final String effectiveFourthQuarterTitle = "Effective " + monthService.getMonthRange(quarter + 3) + " " +
+                year + " " + "(" + monthService.getQuarterName(quarter + 3) + ")";
+
+        effectiveFourthQuarterMap.put(MapKeys.BASE_RATE, effectiveFourthQuarterTitle);
 
         //Getting Set of All Sub Categories
         final Set<BusinessSubCategory> businessSubCategorySet = businessCategory.getChildren();

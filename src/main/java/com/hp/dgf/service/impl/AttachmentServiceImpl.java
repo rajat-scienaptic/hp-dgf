@@ -4,6 +4,7 @@ import com.hp.dgf.exception.CustomException;
 import com.hp.dgf.model.FileStorageProperties;
 import com.hp.dgf.repository.AttachmentRepository;
 import com.hp.dgf.service.AttachmentService;
+import com.hp.dgf.utils.FileExtensionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,8 +34,8 @@ import java.util.Objects;
 public class AttachmentServiceImpl implements AttachmentService {
     @Autowired
     private AttachmentRepository attachmentRepository;
-
-    private static final Logger logger = LoggerFactory.getLogger(AttachmentServiceImpl.class);
+    @Autowired
+    private FileExtensionService fileExtensionService;
 
     private final Path root;
 
@@ -49,31 +50,36 @@ public class AttachmentServiceImpl implements AttachmentService {
         }
     }
 
-    public String save(MultipartFile file) {
+    @Override
+    public String saveAttachment(MultipartFile file) {
         // Normalize file name
-        String fileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
-        String uniqueFileName = fileName+"_"+LocalDateTime.now()+"."+getFileExtension(file);
+        // Normalize file name
+        String[] fileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename())).split("\\.");
+        String uniqueFileName = fileName[0]+"_"+LocalDateTime.now()+"."+fileName[1];
 
         try {
             // Check if the file's name contains invalid characters
             if(file.getOriginalFilename().contains("..")) {
-                throw new CustomException("Sorry! Filename contains invalid path sequence " + fileName, HttpStatus.BAD_REQUEST);
+                throw new CustomException("Sorry! Filename contains invalid path sequence " + uniqueFileName, HttpStatus.BAD_REQUEST);
             }
             // Copy file to the target location (Replacing existing file with the same name)
-            Path targetLocation = this.root.resolve(fileName);
+            Path targetLocation = this.root.resolve(uniqueFileName);
 
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-            return ServletUriComponentsBuilder.fromCurrentContextPath()
+            ServletUriComponentsBuilder.fromCurrentContextPath()
                     .path("/"+root+"/")
                     .path(uniqueFileName)
                     .toUriString();
+
+            return uniqueFileName;
         } catch (IOException ex) {
-            throw new CustomException("Could not store file " + fileName + ". Make sure the uploads directory exists !", HttpStatus.BAD_REQUEST);
+            throw new CustomException("Could not store file " + uniqueFileName + ". Make sure the uploads directory exists !", HttpStatus.BAD_REQUEST);
         }
     }
 
-    private Resource loadFileAsResource(String fileName) {
+    @Override
+    public Resource loadFileAsResource(String fileName) {
         try {
             Path filePath = this.root.resolve(fileName).normalize();
             Resource resource = new UrlResource(filePath.toUri());
@@ -85,35 +91,5 @@ public class AttachmentServiceImpl implements AttachmentService {
         } catch (MalformedURLException ex) {
             throw new CustomException("File not found " + fileName, HttpStatus.NOT_FOUND);
         }
-    }
-
-    private ResponseEntity<Resource> downloadFile(@PathVariable String fileName, HttpServletRequest request) {
-        // Load file as Resource
-        Resource resource = loadFileAsResource(fileName);
-
-        // Try to determine file's content type
-        String contentType = null;
-        try {
-            contentType = request.getServletContext().getMimeType(resource.getFile().getAbsolutePath());
-        } catch (IOException ex) {
-            logger.info("Could not determine file type.");
-        }
-
-        // Fallback to the default content type if type could not be determined
-        if(contentType == null) {
-            contentType = "application/octet-stream";
-        }
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
-                .body(resource);
-    }
-
-    private String getFileExtension(MultipartFile file) {
-        String fileName = file.getName();
-        if(fileName.lastIndexOf('.') != -1 && fileName.lastIndexOf('.') != 0)
-            return fileName.substring(fileName.lastIndexOf('.')+1);
-        else return "";
     }
 }

@@ -12,6 +12,7 @@ import com.hp.dgf.repository.*;
 import com.hp.dgf.service.AttachmentService;
 import com.hp.dgf.service.DGFRateEntryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -268,6 +269,6 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
     }
 
     private String saveAttachment(final MultipartFile file){
-        return attachmentService.save(file);
+        return attachmentService.saveAttachment(file);
     }
 }
