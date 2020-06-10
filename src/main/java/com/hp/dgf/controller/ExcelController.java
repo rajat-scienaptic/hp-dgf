@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/v1/")
 @RestController
 public class ExcelController {

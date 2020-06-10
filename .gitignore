@@ -135,3 +135,15 @@ gradle-app.setting
 **/build/
 
 # End of https://www.gitignore.io/api/java,gradle,intellij
+src/test/
+target/classes/public/precache-manifest.688ef5461236dfe2132cce4e02f34fd6.js
+target/classes/public/static/css/main.ce8d2ab2.chunk.css
+target/classes/public/static/css/main.ce8d2ab2.chunk.css.map
+target/classes/public/static/js/2.4b007a56.chunk.js
+target/classes/public/static/js/2.4b007a56.chunk.js.map
+target/classes/public/static/js/main.44a40d0c.chunk.js
+target/classes/public/static/js/main.44a40d0c.chunk.js.map
+target/generated-sources/
+target/generated-test-sources/
+target/test-classes/
+uploads/

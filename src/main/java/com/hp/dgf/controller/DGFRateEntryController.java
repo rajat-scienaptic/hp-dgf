@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/v1")
 @RestController
 public class DGFRateEntryController {

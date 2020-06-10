@@ -27,7 +27,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.Objects;
 
 @Service
@@ -55,7 +57,7 @@ public class AttachmentServiceImpl implements AttachmentService {
         // Normalize file name
         // Normalize file name
         String[] fileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename())).split("\\.");
-        String uniqueFileName = fileName[0]+"_"+LocalDateTime.now()+"."+fileName[1];
+        String uniqueFileName = fileName[0]+"_"+new SimpleDateFormat("yyyyMMddHHmm").format(new Date())+"."+fileName[1];
 
         try {
             // Check if the file's name contains invalid characters
