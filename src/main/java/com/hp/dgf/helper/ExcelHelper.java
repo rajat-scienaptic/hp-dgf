@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hp.dgf.constants.Variables;
 import com.hp.dgf.exception.CustomException;
 import com.hp.dgf.model.BusinessCategory;
-import com.hp.dgf.model.DGFRateChangeLog;
 import com.hp.dgf.model.DGFRateEntry;
 import com.hp.dgf.repository.BusinessCategoryRepository;
 import com.hp.dgf.repository.DGFRateChangeLogRepository;

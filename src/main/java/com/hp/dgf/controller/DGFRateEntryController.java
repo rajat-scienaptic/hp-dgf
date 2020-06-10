@@ -8,8 +8,6 @@ import com.hp.dgf.dto.response.ApiResponseDTO;
 import com.hp.dgf.exception.CustomException;
 import com.hp.dgf.service.AttachmentService;
 import com.hp.dgf.service.DGFRateEntryService;
-import com.hp.dgf.service.impl.AttachmentServiceImpl;
-import com.hp.dgf.utils.FileExtensionService;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
@@ -30,7 +28,6 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 @RequestMapping("/api/v1")
 @RestController
@@ -40,8 +37,6 @@ public class DGFRateEntryController {
     private DGFRateEntryService dgfRateEntryService;
     @Autowired
     private AttachmentService attachmentService;
-    @Autowired
-    private FileExtensionService fileExtensionService;
 
     private static final Logger logger = LoggerFactory.getLogger(DGFRateEntryController.class);
 

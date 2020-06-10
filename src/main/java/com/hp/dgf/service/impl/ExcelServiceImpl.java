@@ -5,12 +5,9 @@ import com.hp.dgf.model.DGFRateEntry;
 import com.hp.dgf.repository.DGFRateEntryRepository;
 import com.hp.dgf.service.ExcelService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayInputStream;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
