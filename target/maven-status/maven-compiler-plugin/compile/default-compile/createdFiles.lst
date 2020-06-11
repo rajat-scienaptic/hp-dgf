@@ -43,7 +43,6 @@ com/hp/dgf/model/DGFSubGroupLevel1.class
 com/hp/dgf/dto/request/UpdateDGFRateEntryDTO.class
 com/hp/dgf/model/DGFRateChangeLog.class
 com/hp/dgf/service/DGFReportService.class
-com/hp/dgf/utils/FileExtensionService.class
 com/hp/dgf/HpDgfApplication.class
 com/hp/dgf/exception/CustomException.class
 com/hp/dgf/dto/response/DGFRateChangeLogDTO.class

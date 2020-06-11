@@ -214,7 +214,33 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
     @Override
     public final ApiResponseDTO addPL(final AddPLRequestDTO addPlRequestDTO, final HttpServletRequest request) {
         try {
-            checkIfPLAlreadyExists(addPlRequestDTO.getCode());
+            ProductLine productLine = productLineRepository.checkIfPlExists(addPlRequestDTO.getCode());
+
+            if (productLine != null) {
+                if (productLine.getIsActive() == 1) {
+                    throw new CustomException("PL with code : " + addPlRequestDTO.getCode() + " already exists !", HttpStatus.BAD_REQUEST);
+                } else if (productLine.getIsActive() == 0) {
+                    productLine.setIsActive((byte) 1);
+                    productLine.setBaseRate(addPlRequestDTO.getBaseRate());
+                    productLineRepository.save(productLine);
+                    if (request != null) {
+                        dgfLogRepository.save(DGFLogs.builder()
+                                .ip(request.getRemoteAddr())
+                                .endpoint(request.getRequestURI())
+                                .type(request.getMethod())
+                                .status(Variables.SUCCESS)
+                                .message("PL with code : " + addPlRequestDTO.getCode() + " and id : " + productLine.getId() + " has been successfully reactivated !")
+                                .createTime(LocalDateTime.now())
+                                .build());
+                    }
+                    return ApiResponseDTO.builder()
+                            .timestamp(LocalDateTime.now())
+                            .status(HttpStatus.CREATED.value())
+                            .message("PL with code : " + addPlRequestDTO.getCode() + " and id : " + productLine.getId() + " has been successfully reactivated !")
+                            .build();
+                }
+            }
+
             final int productLineId = productLineRepository.save(ProductLine.builder()
                     .code(addPlRequestDTO.getCode())
                     .businessSubCategoryId(addPlRequestDTO.getBusinessSubCategoryId())
@@ -239,6 +265,7 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
                     .status(HttpStatus.CREATED.value())
                     .message("PL with code : " + addPlRequestDTO.getCode() + " and id : " + productLineId + " has been successfully created !")
                     .build();
+
 
         } catch (Exception e) {
             if (request != null) {
@@ -350,10 +377,4 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
         }
     }
 
-    private void checkIfPLAlreadyExists(String code) {
-        ProductLine productLine = productLineRepository.checkIfPlExists(code);
-        if (productLine != null) {
-            throw new CustomException("PL with code : " + code + " already exists !", HttpStatus.BAD_REQUEST);
-        }
-    }
 }

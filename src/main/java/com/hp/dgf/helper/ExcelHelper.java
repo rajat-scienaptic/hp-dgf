@@ -357,7 +357,7 @@ public class ExcelHelper {
         return count;
     }
 
-    public static List<DGFRateEntry> excelToTDgfRateEntry(InputStream is) {
+    private static List<DGFRateEntry> excelToTDgfRateEntry(InputStream is) {
         try {
             Workbook workbook = new XSSFWorkbook(is);
 

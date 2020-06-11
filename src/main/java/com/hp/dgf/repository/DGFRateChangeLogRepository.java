@@ -18,8 +18,8 @@ public interface DGFRateChangeLogRepository extends JpaRepository<DGFRateChangeL
     List<DGFRateChangeLog> getDGFRateChangeLogByRateEntryId(@Param("dgfRateEntryId") int dgfRateEntryId);
 
     @Query(value = "SELECT dgf_rate FROM " +
-            "dgf.dgf_rate_change_log s1 where created_on = (SELECT MAX(created_on) " +
-            "FROM dgf.dgf_rate_change_log s2 WHERE " +
+            "dgf_sandbox.dgf_rate_change_log s1 where created_on = (SELECT MAX(created_on) " +
+            "FROM dgf_sandbox.dgf_rate_change_log s2 WHERE " +
             "s1.dgf_rate_entry_id = s2.dgf_rate_entry_id) " +
             "and created_on <= :createdOn and dgf_rate_entry_id = :id " +
             "ORDER BY dgf_rate_entry_id, created_on", nativeQuery = true)
