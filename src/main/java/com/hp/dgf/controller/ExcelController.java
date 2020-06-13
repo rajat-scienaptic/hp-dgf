@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/v1/")
 @RestController
 public class ExcelController {
@@ -34,13 +33,5 @@ public class ExcelController {
             .ok()
             .headers(headers)
             .body(new InputStreamResource(excelService.generateExcel(createdOn)));
-  }
-
-  @GetMapping("/getData/{id}/{createdOn}")
-  public final ResponseEntity<Object> getData(@PathVariable("id") int id, @PathVariable("createdOn")
-                                                                 @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime createdOn){
-    return ResponseEntity
-            .ok()
-            .body(dgfRateChangeLogRepository.getLatestData(createdOn, id));
   }
 }
