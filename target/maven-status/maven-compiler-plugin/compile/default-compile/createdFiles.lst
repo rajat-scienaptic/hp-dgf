@@ -19,7 +19,6 @@ com/hp/dgf/repository/ProductLineRepository.class
 com/hp/dgf/service/impl/DGFHeaderDataServiceImpl.class
 com/hp/dgf/model/DGFSubGroupLevel2.class
 com/hp/dgf/dto/response/DGFRateEntryResponseDTO$DGFRateEntryResponseDTOBuilder.class
-com/hp/dgf/config/CORSFilter.class
 com/hp/dgf/model/BusinessCategory.class
 com/hp/dgf/constants/Variables.class
 com/hp/dgf/model/DGFLogs$DGFLogsBuilder.class

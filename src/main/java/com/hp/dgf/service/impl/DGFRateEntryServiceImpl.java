@@ -19,9 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class DGFRateEntryServiceImpl implements DGFRateEntryService {
@@ -67,14 +65,26 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
                     .build();
 
             if(addDgfRateEntryDTO.getDgfSubGroupLevel3Id() != null){
+                checkIfDgfRateEntryForSubGroupLevel3Exists(addDgfRateEntryDTO.getDgfSubGroupLevel3Id(), productLine.getId());
+                checkIfDgfRateForSubGroupLevel3IsNotBiggerThanThatOfSubGroupLevel2(addDgfRateEntryDTO.getDgfSubGroupLevel3Id(), productLine.getId(), addDgfRateEntryDTO.getDgfRate());
                 dgfRateEntry.setDgfSubGroupLevel3Id(addDgfRateEntryDTO.getDgfSubGroupLevel3Id());
             }
 
             if(addDgfRateEntryDTO.getDgfSubGroupLevel2Id() != null){
+                checkIfDgfRateEntryForSubGroupLevel2Exists(addDgfRateEntryDTO.getDgfSubGroupLevel2Id(), productLine.getId());
                 dgfRateEntry.setDgfSubGroupLevel2Id(addDgfRateEntryDTO.getDgfSubGroupLevel2Id());
             }
 
             int dgfRateEntryId = dgfRateEntryRepository.save(dgfRateEntry).getId();
+
+            dgfRateChangeLogRepository.save(DGFRateChangeLog.builder()
+                    .attachmentId(1)
+                    .createdBy(addDgfRateEntryDTO.getCreatedBy())
+                    .createdOn(LocalDateTime.now())
+                    .dgfRate(addDgfRateEntryDTO.getDgfRate())
+                    .oldDgfRate(addDgfRateEntryDTO.getDgfRate())
+                    .dgfRateEntryId(dgfRateEntryId)
+                    .build());
 
             if (request != null) {
                 dgfLogRepository.save(DGFLogs.builder()
@@ -116,11 +126,24 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
                         throw new CustomException("DGF Rate Entry with id : "+dgfRateEntryId+" does not exist !", HttpStatus.NOT_FOUND);
                     });
 
+            BigDecimal currentDgfRate = dgfRateEntry.getDgfRate();
+            BigDecimal newDgfRate = updateDGFRateEntryDTO.getDgfRate();
+
+            if(currentDgfRate.compareTo(newDgfRate) == 0){
+                throw new CustomException("New Dgf Rate cannot be same as the current Dgf Rate !", HttpStatus.BAD_REQUEST);
+            }
+
+            if(dgfRateEntry.getDgfSubGroupLevel3Id() != null){
+                checkIfDgfRateForSubGroupLevel3IsNotBiggerThanThatOfSubGroupLevel2(dgfRateEntry.getDgfSubGroupLevel3Id(), dgfRateEntry.getProductLineId(), updateDGFRateEntryDTO.getDgfRate());
+            }
+
+            if(dgfRateEntry.getDgfSubGroupLevel2Id() != null){
+                checkIfDgfRateForSubGroupLevel2IsNotSmallerThanThatOfSubGroupLevel3(dgfRateEntry.getDgfSubGroupLevel2Id(), dgfRateEntry.getProductLineId(), updateDGFRateEntryDTO.getDgfRate());
+            }
+
             final int attachmentId = attachmentRepository.save(Attachment.builder()
                     .attachmentPath(saveAttachment(file))
                     .build()).getId();
-
-            final BigDecimal previousBaseRate = dgfRateEntry.getDgfRate();
 
             dgfRateEntry.setAttachmentId(attachmentId);
             dgfRateEntry.setNote(updateDGFRateEntryDTO.getNote());
@@ -132,7 +155,8 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
                     .attachmentId(attachmentId)
                     .createdBy(updateDGFRateEntryDTO.getCreatedBy())
                     .createdOn(LocalDateTime.now())
-                    .dgfRate(previousBaseRate)
+                    .oldDgfRate(currentDgfRate)
+                    .dgfRate(newDgfRate)
                     .dgfRateEntryId(dgfRateEntryId)
                     .note(updateDGFRateEntryDTO.getNote())
                     .build());
@@ -152,6 +176,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
                     .timestamp(LocalDateTime.now())
                     .status(HttpStatus.CREATED.value())
                     .message("DGF Rate Entry with id : " + dgfRateEntryId + " has been successfully updated !")
+                    .body(getDgfRateEntryDataById(dgfRateEntryId))
                     .build();
         } catch (Exception e) {
             if (request != null) {
@@ -163,6 +188,9 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
                         .message(e.getMessage())
                         .createTime(LocalDateTime.now())
                         .build());
+            }
+            if(e.getClass().equals(CustomException.class)){
+                throw new CustomException(e.getMessage(), ((CustomException) e).getBody(), HttpStatus.BAD_REQUEST);
             }
             throw new CustomException(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
@@ -251,7 +279,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
                     .modifiedBy(dgfRateChangeLog.getCreatedBy())
                     .notes(dgfRateChangeLog.getNote())
                     .date(dgfRateChangeLog.getCreatedOn())
-                    .baseRate(dgfRateChangeLog.getDgfRate())
+                    .baseRate(dgfRateChangeLog.getOldDgfRate())
                     .build());
         });
 
@@ -270,4 +298,75 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
     private String saveAttachment(final MultipartFile file){
         return attachmentService.saveAttachment(file);
     }
+
+    private void checkIfDgfRateForSubGroupLevel3IsNotBiggerThanThatOfSubGroupLevel2(int dgfSubGroupLevel3Id, int productLineId, BigDecimal dgfRateOfSubGroupLevel3){
+        final int dgfSubGroupLevel2Id = dgfSubGroupLevel3Repository.getDgfSubGroupLevel2Id(dgfSubGroupLevel3Id);
+        final BigDecimal dgfRateOfSubGroupLevel2 = dgfRateEntryRepository.getDgfRateOfSubGroupLevel2(dgfSubGroupLevel2Id, productLineId);
+        final List<Integer> dgfSubGroupLevel3IdList = dgfSubGroupLevel3Repository.getDgfSubGroupLevel3IdList(dgfSubGroupLevel2Id);
+
+        if(dgfSubGroupLevel3IdList.isEmpty()){
+            if(dgfRateOfSubGroupLevel3.compareTo(dgfRateOfSubGroupLevel2) > 0){
+                throw new CustomException("Dgf Rate of Sub Group Level 3 cannot be bigger than the Dgf Rate of Sub Group Level 2", HttpStatus.BAD_REQUEST);
+            }
+        }else {
+            final List<DGFRateEntry> dgfRateEntryList = new LinkedList<>();
+            for(int id : dgfSubGroupLevel3IdList){
+                final DGFRateEntry dgfRateEntry = dgfRateEntryRepository.findByDgfSubGroupLevel3IdAndProductLineId(id, productLineId);
+                if(dgfRateEntry != null){
+                    dgfRateEntryList.add(dgfRateEntry);
+                }
+                if(id == dgfSubGroupLevel3Id){
+                    dgfRateEntryList.remove(dgfRateEntry);
+                }
+            }
+            final BigDecimal existingTotal = dgfRateEntryList.stream()
+                    .map(DGFRateEntry::getDgfRate)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            final BigDecimal newTotal = existingTotal.add(dgfRateOfSubGroupLevel3);
+            if(newTotal.compareTo(dgfRateOfSubGroupLevel2) > 0){
+                final BigDecimal maxValueAllowed = dgfRateOfSubGroupLevel2.subtract(existingTotal);
+                final Map<String, Object> errorMap = new LinkedHashMap<>();
+                String message = "Sum of Existing Sub Group Level 3 members Dgf Rates cannot be bigger than the Dgf Rate of Sub Group Level 2.";
+                errorMap.put("existingTotal", existingTotal);
+                errorMap.put("newTotal", newTotal);
+                errorMap.put("maxValueAllowed", maxValueAllowed);
+                throw new CustomException(message, errorMap, HttpStatus.BAD_REQUEST);
+            }
+        }
+    }
+
+    private void checkIfDgfRateForSubGroupLevel2IsNotSmallerThanThatOfSubGroupLevel3(int dgfSubGroupLevel2Id, int productLineId, BigDecimal dgfRateOfSubGroupLevel2){
+        final List<Integer> dgfSubGroupLevel3IdList = dgfSubGroupLevel3Repository.getDgfSubGroupLevel3IdList(dgfSubGroupLevel2Id);
+
+        if(!dgfSubGroupLevel3IdList.isEmpty()){
+            final List<DGFRateEntry> dgfRateEntryList = new LinkedList<>();
+            for(int id : dgfSubGroupLevel3IdList){
+                final DGFRateEntry dgfRateEntry = dgfRateEntryRepository.findByDgfSubGroupLevel3IdAndProductLineId(id, productLineId);
+                if(dgfRateEntry != null){
+                    dgfRateEntryList.add(dgfRateEntry);
+                }
+            }
+            final BigDecimal existingTotal = dgfRateEntryList.stream()
+                    .map(DGFRateEntry::getDgfRate)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            if(existingTotal.compareTo(dgfRateOfSubGroupLevel2) > 0){
+                throw new CustomException("Dgf Rate Value of Sub Group Level 2 cannot be smaller than the sum of it's children Dgf Rate Values !", HttpStatus.BAD_REQUEST);
+            }
+        }
+    }
+
+    private void checkIfDgfRateEntryForSubGroupLevel3Exists(int dgfSubGroupLevel3Id, int productLineId){
+        DGFRateEntry dgfRateEntry = dgfRateEntryRepository.findByDgfSubGroupLevel3IdAndProductLineId(dgfSubGroupLevel3Id, productLineId);
+        if(dgfRateEntry != null){
+            throw new CustomException("Dgf Rate Entry already exists for DgfSubGroupLevel3 with id : "+dgfSubGroupLevel3Id, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private void checkIfDgfRateEntryForSubGroupLevel2Exists(int dgfSubGroupLevel2Id, int productLineId){
+        DGFRateEntry dgfRateEntry = dgfRateEntryRepository.findByDgfSubGroupLevel2IdAndProductLineId(dgfSubGroupLevel2Id, productLineId);
+        if(dgfRateEntry != null){
+            throw new CustomException("Dgf Rate Entry already exists for DgfSubGroupLevel2 with id : "+dgfSubGroupLevel2Id, HttpStatus.BAD_REQUEST);
+        }
+    }
+
 }

@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.ConstraintViolationException;
@@ -32,6 +35,26 @@ import static org.springframework.http.HttpStatus.BAD_REQUEST;
 public final class GlobalExceptionHandlerController {
     private final Logger LOG = LoggerFactory.getLogger(getClass());
 
+    //StandardServletMultipartResolver
+    @ExceptionHandler(MultipartException.class)
+    public final ResponseEntity<ApiResponseDTO> handleError1(MultipartException e, RedirectAttributes redirectAttributes) {
+        return new ResponseEntity<>(ApiResponseDTO.builder()
+                .timestamp(LocalDateTime.now())
+                .status(403)
+                .message(e.getCause().getMessage())
+                .build(), HttpStatus.valueOf(403));
+    }
+
+    //CommonsMultipartResolver
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponseDTO> handleError2(MaxUploadSizeExceededException e, RedirectAttributes redirectAttributes) {
+        return new ResponseEntity<>(ApiResponseDTO.builder()
+                .timestamp(LocalDateTime.now())
+                .status(403)
+                .message("Max file upload limit (20MB) exceeded !")
+                .build(), HttpStatus.valueOf(403));
+
+    }
     public final void handleCustomException(HttpServletResponse res, CustomException e) throws IOException {
         LOG.error("ERROR", e);
         res.sendError(e.getHttpStatus().value(), e.getMessage());
@@ -62,6 +85,7 @@ public final class GlobalExceptionHandlerController {
                 .timestamp(LocalDateTime.now())
                 .status(e.getHttpStatus().value())
                 .message(e.getMessage())
+                .body(e.getBody())
                 .build(), e.getHttpStatus());
     }
 

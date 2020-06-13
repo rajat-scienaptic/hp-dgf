@@ -27,8 +27,10 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+@CrossOrigin(origins = "*", maxAge = 3600)
 @RequestMapping("/api/v1")
 @RestController
 public class DGFRateEntryController {
@@ -80,6 +82,10 @@ public class DGFRateEntryController {
         ObjectMapper mapper = new ObjectMapper();
 
         UpdateDGFRateEntryDTO updateDGFRateEntryDTO = mapper.readValue(jsonData, UpdateDGFRateEntryDTO.class);
+
+        if(updateDGFRateEntryDTO.getDgfRate().compareTo(BigDecimal.ZERO) < 0){
+            throw new CustomException("Dgf Rate cannot be negative !", HttpStatus.BAD_REQUEST);
+        }
 
         return new ResponseEntity<>(dgfRateEntryService.updateDGFRateEntry(updateDGFRateEntryDTO, dgfRateEntryId, request, file), HttpStatus.OK);
     }

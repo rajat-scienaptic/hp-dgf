@@ -13,4 +13,5 @@ public final class ApiResponseDTO {
     private LocalDateTime timestamp;
     private int status;
     private String message;
+    private Object body;
 }

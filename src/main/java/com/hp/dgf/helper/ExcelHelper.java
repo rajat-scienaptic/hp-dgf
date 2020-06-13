@@ -24,9 +24,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class ExcelHelper {
@@ -42,6 +40,10 @@ public class ExcelHelper {
 
     private static final String SHEET = "DGF Tool";
 
+    Map<Integer, Integer> subGroupLevel2IdAndRowNumberMap = new LinkedHashMap<>();
+    Map<Integer, Integer> subGroupLevel3IdAndRowNumberMap = new LinkedHashMap<>();
+    Map<Integer, Integer> productLineAndColumnNumberMap = new LinkedHashMap<>();
+
     public ByteArrayInputStream generateReport(LocalDateTime createdOn) {
         final List<BusinessCategory> headerBusinessCategory = businessCategoryRepository.findAll();
 
@@ -56,6 +58,7 @@ public class ExcelHelper {
             createBcRow(businessCategoryNode, workbook, sheet, createdOn);
             createBscRow(businessCategoryNode, workbook, sheet);
             createPlRow(businessCategoryNode, workbook, sheet);
+            fillDgfSubGroupLevel2And3Rows(productLineAndColumnNumberMap, sheet, createdOn, workbook);
             workbook.write(out);
             return new ByteArrayInputStream(out.toByteArray());
         } catch (IOException e) {
@@ -195,8 +198,13 @@ public class ExcelHelper {
                 for (int k = 0; k < productLine.size(); k++) {
                     String code = productLine.get(k).get("code").toString().replaceAll("\"", "");
                     String baseRate = productLine.get(k).get("baseRate").toString().replaceAll("\"", "");
+                    int productLineId = Integer.parseInt(productLine.get(k).get("id").toString());
+
                     row3.createCell(columnCount).setCellValue(code);
                     row3.getCell(columnCount).setCellStyle(style);
+
+                    productLineAndColumnNumberMap.put(productLineId, columnCount);
+
                     row4.createCell(columnCount).setCellValue(baseRate);
                     row4.getCell(columnCount).setCellStyle(style);
                     columnCount++;
@@ -282,25 +290,15 @@ public class ExcelHelper {
 
         for (int k = 0; k < dgfSubGroupLevel2.size(); k++) {
             JsonNode dgfSubGroupLevel3 = dgfSubGroupLevel2.get(k).get(Variables.CHILDREN);
+            int dgfSubGroupLevel2Id = Integer.parseInt(dgfSubGroupLevel2.get(k).get("id").toString());
             Row dgfSubGroupLevel2Rows = sheet.createRow(rowCount);
+            subGroupLevel2IdAndRowNumberMap.put(rowCount, dgfSubGroupLevel2Id);
             String dgfSubGroupLevel2Name = dgfSubGroupLevel2.get(k).get(Variables.BASE_RATE)
                     .toString().replaceAll("\"", "");
             dgfSubGroupLevel2Rows.createCell(0).setCellValue(dgfSubGroupLevel2Name);
             dgfSubGroupLevel2Rows.getCell(0).setCellStyle(style);
             rowCount++;
             rowCount = createSubGroupLevel3Rows(dgfSubGroupLevel3, workbook, sheet, rowCount, createdOn);
-            int id = Integer.parseInt(dgfSubGroupLevel2.get(k).get("id").toString());
-
-            List<DGFRateEntry> dgfRateEntryList = dgfRateEntryRepository.findEntryIdByDgfSubGroupLevel2Id(id);
-
-            for (int m = 1; m < dgfRateEntryList.size(); m++) {
-                String dgfRate = "";
-                if(dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntryList.get(m-1).getId()) != null){
-                    dgfRate = dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntryList.get(m-1).getId()).toString().replaceAll("\"", "");
-                }
-                dgfSubGroupLevel2Rows.createCell(m).setCellValue(dgfRate);
-                dgfSubGroupLevel2Rows.getCell(m).setCellStyle(style1);
-            }
         }
 
         return rowCount;
@@ -321,21 +319,12 @@ public class ExcelHelper {
             Row dgfSubGroupLevel3Rows = sheet.createRow(rowCount);
             String dgfSubGroupLevel3Name = dgfSubGroupLevel3.get(k).get(Variables.BASE_RATE)
                     .toString().replaceAll("\"", "");
+
+            int dgfSubGroupLevel3Id = Integer.parseInt(dgfSubGroupLevel3.get(k).get("id").toString());
+            subGroupLevel3IdAndRowNumberMap.put(rowCount, dgfSubGroupLevel3Id);
+
             dgfSubGroupLevel3Rows.createCell(0).setCellValue(dgfSubGroupLevel3Name);
             dgfSubGroupLevel3Rows.getCell(0).setCellStyle(style);
-
-            int id = Integer.parseInt(dgfSubGroupLevel3.get(k).get("id").toString());
-
-            List<DGFRateEntry> dgfRateEntryList = dgfRateEntryRepository.findEntryIdByDgfSubGroupLevel3Id(id);
-
-            for (int m = 1; m < dgfRateEntryList.size(); m++) {
-                String dgfRate = "";
-                if(dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntryList.get(m-1).getId()) != null){
-                    dgfRate = dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntryList.get(m-1).getId()).toString().replaceAll("\"", "");
-                }
-                dgfSubGroupLevel3Rows.createCell(m).setCellValue(dgfRate);
-                dgfSubGroupLevel3Rows.getCell(m).setCellStyle(style);
-            }
 
             rowCount++;
         }
@@ -355,6 +344,45 @@ public class ExcelHelper {
         int count = 0;
         count = businessSubCategoryNode.get(Variables.COLUMNS).size() + count;
         return count;
+    }
+
+    private void fillDgfSubGroupLevel2And3Rows(Map<Integer, Integer> productLineAndColumnNumberMap, Sheet sheet, LocalDateTime createdOn, Workbook workbook) {
+
+        Font font = workbook.createFont();
+        font.setFontHeightInPoints((short) 9);
+        font.setColor(HSSFColor.HSSFColorPredefined.BLACK.getIndex());
+        font.setBold(true);
+
+        CellStyle style = workbook.createCellStyle();
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setFont(font);
+
+        productLineAndColumnNumberMap.forEach((k,v) -> {
+            subGroupLevel2IdAndRowNumberMap.forEach((x, y) -> {
+                DGFRateEntry dgfRateEntry = dgfRateEntryRepository.findByDgfSubGroupLevel2IdAndProductLineId(y, k);
+                if (dgfRateEntry != null) {
+                    String dgfRate = "";
+                    if (dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntry.getId()) != null) {
+                        dgfRate = dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntry.getId()).toString().replaceAll("\"", "");
+                    }
+                    sheet.getRow(x).createCell(v).setCellValue(dgfRate);
+                    sheet.getRow(x).getCell(v).setCellStyle(style);
+                }
+            });
+
+            subGroupLevel3IdAndRowNumberMap.forEach((x, y) -> {
+                DGFRateEntry dgfRateEntry = dgfRateEntryRepository.findByDgfSubGroupLevel3IdAndProductLineId(y, k);
+                if (dgfRateEntry != null) {
+                    String dgfRate = "";
+                    if (dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntry.getId()) != null) {
+                        dgfRate = dgfRateChangeLogRepository.getLatestData(createdOn, dgfRateEntry.getId()).toString().replaceAll("\"", "");
+                    }
+                    sheet.getRow(x).createCell(v).setCellValue(dgfRate);
+                    sheet.getRow(x).getCell(v).setCellStyle(style);
+                }
+            });
+        });
     }
 
     private static List<DGFRateEntry> excelToTDgfRateEntry(InputStream is) {
@@ -438,4 +466,5 @@ public class ExcelHelper {
             throw new CustomException("fail to parse Excel file: " + e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
+
 }

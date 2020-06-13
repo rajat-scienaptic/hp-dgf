@@ -646,6 +646,14 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         throw new CustomException("Deletion failed, DGF Sub Group Level 2 not found for id : " + dgfSubGroupLevel2Id, HttpStatus.BAD_REQUEST);
                     });
             dgfSubGroupLevel2.setIsActive((byte) 0);
+
+            List<DGFRateEntry> dgfRateEntryList = dgfRateEntryRepository.findEntryIdByDgfSubGroupLevel2Id(dgfSubGroupLevel2Id);
+
+            dgfRateEntryList.forEach(dgfRateEntry -> {
+                dgfRateEntry.setDgfSubGroupLevel2Id(null);
+                dgfRateEntryRepository.save(dgfRateEntry);
+            });
+
             dgfSubGroupLevel2Repository.save(dgfSubGroupLevel2);
 
             JsonNode dgfSubGroupLevel2Node = mapper.convertValue(dgfSubGroupLevel2, JsonNode.class);
@@ -696,6 +704,14 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         throw new CustomException("Deletion failed, DGF Sub Group Level 3 not found for id : " + dgfSubGroupLevel3Id, HttpStatus.BAD_REQUEST);
                     });
             dgfSubGroupLevel3.setIsActive((byte) 0);
+
+            List<DGFRateEntry> dgfRateEntryList = dgfRateEntryRepository.findEntryIdByDgfSubGroupLevel3Id(dgfSubGroupLevel3Id);
+
+            dgfRateEntryList.forEach(dgfRateEntry -> {
+                dgfRateEntry.setDgfSubGroupLevel3Id(null);
+                dgfRateEntryRepository.save(dgfRateEntry);
+            });
+
             dgfSubGroupLevel3Repository.save(dgfSubGroupLevel3);
 
             if (request != null) {

@@ -30,6 +30,8 @@ public final class DGFRateChangeLog {
     private LocalDateTime createdOn;
     @Column(name = "dgf_rate")
     private BigDecimal dgfRate;
+    @Column(name = "old_dgf_rate")
+    private BigDecimal oldDgfRate;
     @Column(name = "dgf_rate_entry_id")
     private Integer dgfRateEntryId;
     @Column(name = "note")
