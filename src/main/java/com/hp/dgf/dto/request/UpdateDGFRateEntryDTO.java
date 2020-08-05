@@ -13,6 +13,4 @@ public class UpdateDGFRateEntryDTO {
     private BigDecimal dgfRate;
     @NotNull @NotBlank
     private String note;
-    @NotNull @NotBlank
-    private String createdBy;
 }

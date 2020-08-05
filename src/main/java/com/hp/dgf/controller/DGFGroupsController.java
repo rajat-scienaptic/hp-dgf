@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
+//@CrossOrigin(origins = "*")
 @RequestMapping("/api/v1")
 @RestController
 public final class DGFGroupsController {
@@ -41,8 +42,10 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PostMapping("/addDgfGroup")
-    public final ResponseEntity<Object> addDgfGroup(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO, HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.addDgfGroup(dgfGroupDTO, request), HttpStatus.CREATED);
+    public final ResponseEntity<Object> addDgfGroup(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO,
+                                                    HttpServletRequest request,
+                                                    @RequestHeader(value = "Cookie", required = false) String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.addDgfGroup(dgfGroupDTO, request, cookie), HttpStatus.CREATED);
     }
 
     @ApiOperation(value = "To add a new dgf sub group level 1", response = Iterable.class)
@@ -54,8 +57,10 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PostMapping("/addDgfSubGroupLevel1")
-    public final ResponseEntity<Object> addDgfSubGroupLevel1(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.addDgfSubGroupLevel1(dgfGroupDTO, request), HttpStatus.CREATED);
+    public final ResponseEntity<Object> addDgfSubGroupLevel1(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO,
+                                                             final HttpServletRequest request,
+                                                             @RequestHeader(value = "Cookie", required = false) String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.addDgfSubGroupLevel1(dgfGroupDTO, request, cookie), HttpStatus.CREATED);
     }
 
     @ApiOperation(value = "To add a new dgf sub group level 2", response = Iterable.class)
@@ -67,8 +72,10 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PostMapping("/addDgfSubGroupLevel2")
-    public final ResponseEntity<Object> addDgfSubGroupLevel2(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.addDgfSubGroupLevel2(dgfGroupDTO, request), HttpStatus.CREATED);
+    public final ResponseEntity<Object> addDgfSubGroupLevel2(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO,
+                                                             final HttpServletRequest request,
+                                                             @RequestHeader(value = "Cookie", required = false) String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.addDgfSubGroupLevel2(dgfGroupDTO, request, cookie), HttpStatus.CREATED);
     }
 
     @ApiOperation(value = "To add a new dgf sub group level 3", response = Iterable.class)
@@ -80,8 +87,10 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PostMapping("/addDgfSubGroupLevel3")
-    public final ResponseEntity<Object> addDgfSubGroupLevel3(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.addDgfSubGroupLevel3(dgfGroupDTO, request), HttpStatus.CREATED);
+    public final ResponseEntity<Object> addDgfSubGroupLevel3(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO,
+                                                             final HttpServletRequest request,
+                                                             @RequestHeader(value = "Cookie", required = false) String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.addDgfSubGroupLevel3(dgfGroupDTO, request, cookie), HttpStatus.CREATED);
     }
 
     @ApiOperation(value = "To delete a dgf group by id", response = Iterable.class)
@@ -93,8 +102,10 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @DeleteMapping("/deleteDgFGroup/{dgfGroupId}")
-    public final ResponseEntity<Object> deleteDgFGroup(@PathVariable ("dgfGroupId") final int dgfGroupId, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.deleteDgfGroup(dgfGroupId, request), HttpStatus.OK);
+    public final ResponseEntity<Object> deleteDgFGroup(@PathVariable ("dgfGroupId") final int dgfGroupId,
+                                                       final HttpServletRequest request,
+                                                       @RequestHeader(value = "Cookie", required = false) String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.deleteDgfGroup(dgfGroupId, request, cookie), HttpStatus.OK);
     }
 
     @ApiOperation(value = "To delete a dgf sub group level 1 by id", response = Iterable.class)
@@ -106,8 +117,10 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @DeleteMapping("/deleteDgfSubGroupLevel1/{dgfSubGroupLevel1Id}")
-    public final ResponseEntity<Object> deleteDgfSubGroupLevel1(@PathVariable ("dgfSubGroupLevel1Id") final int dgfSubGroupLevel1Id, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.deleteDgfSubGroupLevel1(dgfSubGroupLevel1Id, request), HttpStatus.OK);
+    public final ResponseEntity<Object> deleteDgfSubGroupLevel1(@PathVariable ("dgfSubGroupLevel1Id") final int dgfSubGroupLevel1Id,
+                                                                final HttpServletRequest request,
+                                                                @RequestHeader(value = "Cookie", required = false) String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.deleteDgfSubGroupLevel1(dgfSubGroupLevel1Id, request, cookie), HttpStatus.OK);
     }
 
     @ApiOperation(value = "To delete a dgf sub group level 2 by id", response = Iterable.class)
@@ -119,8 +132,10 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @DeleteMapping("/deleteDgfSubGroupLevel2/{dgfSubGroupLevel2Id}")
-    public final ResponseEntity<Object> deleteDgfSubGroupLevel2(@PathVariable ("dgfSubGroupLevel2Id") final int dgfSubGroupLevel2Id, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.deleteDgfSubGroupLevel2(dgfSubGroupLevel2Id, request), HttpStatus.OK);
+    public final ResponseEntity<Object> deleteDgfSubGroupLevel2(@PathVariable ("dgfSubGroupLevel2Id") final int dgfSubGroupLevel2Id,
+                                                                final HttpServletRequest request,
+                                                                @RequestHeader(value = "Cookie", required = false) String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.deleteDgfSubGroupLevel2(dgfSubGroupLevel2Id, request, cookie), HttpStatus.OK);
     }
 
 
@@ -133,8 +148,10 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @DeleteMapping("/deleteDgfSubGroupLevel3/{dgfSubGroupLevel3Id}")
-    public final ResponseEntity<Object> deleteDgfSubGroupLevel3(@PathVariable ("dgfSubGroupLevel3Id") final int dgfSubGroupLevel3Id, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.deleteDgfSubGroupLevel3(dgfSubGroupLevel3Id, request), HttpStatus.OK);
+    public final ResponseEntity<Object> deleteDgfSubGroupLevel3(@PathVariable ("dgfSubGroupLevel3Id") final int dgfSubGroupLevel3Id,
+                                                                final HttpServletRequest request,
+                                                                @RequestHeader(value = "Cookie", required = false) String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.deleteDgfSubGroupLevel3(dgfSubGroupLevel3Id, request, cookie), HttpStatus.OK);
     }
 
     @ApiOperation(value = "To update an existing DGF Group", response = Iterable.class)
@@ -146,8 +163,11 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PutMapping("/updateDgfGroup/{dgfGroupsId}")
-    public final ResponseEntity<Object> updateDgfGroup(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO, @PathVariable ("dgfGroupsId") final int dgfGroupsId, final HttpServletRequest request){
-      return new ResponseEntity<>(dgfGroupDataService.updateDgfGroup(dgfGroupDTO, dgfGroupsId, request), HttpStatus.OK);
+    public final ResponseEntity<Object> updateDgfGroup(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO,
+                                                       @PathVariable ("dgfGroupsId") final int dgfGroupsId,
+                                                       final HttpServletRequest request,
+                                                       @RequestHeader(value = "Cookie", required = false) String cookie){
+      return new ResponseEntity<>(dgfGroupDataService.updateDgfGroup(dgfGroupDTO, dgfGroupsId, request, cookie), HttpStatus.OK);
     }
 
     @ApiOperation(value = "To update an existing DGF Sub Group Level 1", response = Iterable.class)
@@ -159,8 +179,11 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PutMapping("/updateDgfSubGroupLevel1/{dgfSubGroupLevel1Id}")
-    public final ResponseEntity<Object> updateDgfSubGroupLevel1(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO, @PathVariable ("dgfGroupsId") final int dgfGroupsId, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.updateDgfSubGroupLevel1(dgfGroupDTO, dgfGroupsId, request), HttpStatus.OK);
+    public final ResponseEntity<Object> updateDgfSubGroupLevel1(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO,
+                                                                @PathVariable ("dgfGroupsId") final int dgfGroupsId,
+                                                                final HttpServletRequest request,
+                                                                @RequestHeader(value = "Cookie", required = false) String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.updateDgfSubGroupLevel1(dgfGroupDTO, dgfGroupsId, request, cookie), HttpStatus.OK);
     }
 
     @ApiOperation(value = "To update an existing DGF Sub Group Level 2", response = Iterable.class)
@@ -172,8 +195,11 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PutMapping("/updateDgfSubGroupLevel2/{dgfSubGroupLevel2Id}")
-    public final ResponseEntity<Object> updateDgfSubGroupLevel2(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO, @PathVariable ("dgfGroupsId") final int dgfGroupsId, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.updateDgfSubGroupLevel2(dgfGroupDTO, dgfGroupsId, request), HttpStatus.OK);
+    public final ResponseEntity<Object> updateDgfSubGroupLevel2(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO,
+                                                                @PathVariable ("dgfGroupsId") final int dgfGroupsId,
+                                                                final HttpServletRequest request,
+                                                                @RequestHeader(value = "Cookie", required = false) String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.updateDgfSubGroupLevel2(dgfGroupDTO, dgfGroupsId, request, cookie), HttpStatus.OK);
     }
 
     @ApiOperation(value = "To update an existing DGF Sub Group Level 3", response = Iterable.class)
@@ -185,7 +211,10 @@ public final class DGFGroupsController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PutMapping("/updateDgfGroup/{dgfSubGroupLevel3Id}")
-    public final ResponseEntity<Object> updateDgfSubGroupLevel3(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO, @PathVariable ("dgfGroupsId") final int dgfGroupsId, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfGroupDataService.updateDgfSubGroupLevel3(dgfGroupDTO, dgfGroupsId, request), HttpStatus.OK);
+    public final ResponseEntity<Object> updateDgfSubGroupLevel3(@RequestBody @Valid final DGFGroupDTO dgfGroupDTO,
+                                                                @PathVariable ("dgfGroupsId") final int dgfGroupsId,
+                                                                final HttpServletRequest request,
+                                                                @RequestHeader(value = "Cookie", required = false) final String cookie){
+        return new ResponseEntity<>(dgfGroupDataService.updateDgfSubGroupLevel3(dgfGroupDTO, dgfGroupsId, request, cookie), HttpStatus.OK);
     }
 }

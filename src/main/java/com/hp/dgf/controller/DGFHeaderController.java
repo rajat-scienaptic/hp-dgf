@@ -4,6 +4,7 @@ import com.hp.dgf.constants.Variables;
 import com.hp.dgf.dto.request.AddPLRequestDTO;
 import com.hp.dgf.dto.request.UpdatePLRequestDTO;
 import com.hp.dgf.dto.response.ApiResponseDTO;
+import com.hp.dgf.exception.CustomException;
 import com.hp.dgf.service.DGFHeaderDataService;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
@@ -15,8 +16,10 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+//@CrossOrigin(origins = "*")
 @RequestMapping("/api/v1")
 @RestController
 public class DGFHeaderController {
@@ -45,7 +48,9 @@ public class DGFHeaderController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PostMapping("/addPL")
-    public final ResponseEntity<Object> addProductLine(@RequestBody(required = false) @Valid final AddPLRequestDTO addPlRequestDTO, final HttpServletRequest request) {
+    public final ResponseEntity<Object> addProductLine(@RequestBody(required = false) @Valid final AddPLRequestDTO addPlRequestDTO,
+                                                       final HttpServletRequest request,
+                                                       @RequestHeader(value = "Cookie", required = false) final String cookie) {
         if (addPlRequestDTO == null) {
             return new ResponseEntity<>(ApiResponseDTO.builder()
                     .status(HttpStatus.BAD_REQUEST.value())
@@ -53,7 +58,10 @@ public class DGFHeaderController {
                     .timestamp(LocalDateTime.now())
                     .build(), HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(dgfHeaderDataService.addPL(addPlRequestDTO, request), HttpStatus.CREATED);
+        if (addPlRequestDTO.getBaseRate().compareTo(BigDecimal.ZERO) < 0) {
+            throw new CustomException("PL base rate cannot be negative !", HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(dgfHeaderDataService.addPL(addPlRequestDTO, request, cookie), HttpStatus.CREATED);
     }
 
     @ApiOperation(value = "To update an existing product line", response = Iterable.class)
@@ -65,7 +73,10 @@ public class DGFHeaderController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PutMapping("/updatePL/{productLineId}")
-    public final ResponseEntity<Object> updateProductLine(@RequestBody(required = false) @Valid UpdatePLRequestDTO updatePLRequestDTO, @PathVariable("productLineId") final int productLineId, HttpServletRequest request) {
+    public final ResponseEntity<Object> updateProductLine(@RequestBody(required = false) @Valid UpdatePLRequestDTO updatePLRequestDTO,
+                                                          @PathVariable("productLineId") final int productLineId,
+                                                          final HttpServletRequest request,
+                                                          @RequestHeader(value = "Cookie", required = false) final String cookie) {
         if (updatePLRequestDTO == null) {
             return new ResponseEntity<>(ApiResponseDTO.builder()
                     .status(HttpStatus.BAD_REQUEST.value())
@@ -73,7 +84,12 @@ public class DGFHeaderController {
                     .timestamp(LocalDateTime.now())
                     .build(), HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(dgfHeaderDataService.updatePL(updatePLRequestDTO, productLineId, request), HttpStatus.OK);
+
+        if (updatePLRequestDTO.getBaseRate() != null && updatePLRequestDTO.getBaseRate().compareTo(BigDecimal.ZERO) < 0) {
+            throw new CustomException("PL base rate cannot be negative !", HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(dgfHeaderDataService.updatePL(updatePLRequestDTO, productLineId, request, cookie), HttpStatus.OK);
     }
 
     @ApiOperation(value = "To delete a product line by id", response = Iterable.class)
@@ -85,8 +101,10 @@ public class DGFHeaderController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @DeleteMapping("/deletePL/{productLineId}")
-    public final ResponseEntity<Object> deletePL(@PathVariable ("productLineId") final int productLineId, final HttpServletRequest request){
-        return new ResponseEntity<>(dgfHeaderDataService.deletePL(productLineId, request), HttpStatus.OK);
+    public final ResponseEntity<Object> deletePL(@PathVariable("productLineId") final int productLineId,
+                                                 final HttpServletRequest request,
+                                                 @RequestHeader(value = "Cookie", required = false) final String cookie) {
+        return new ResponseEntity<>(dgfHeaderDataService.deletePL(productLineId, request, cookie), HttpStatus.OK);
     }
 
 }

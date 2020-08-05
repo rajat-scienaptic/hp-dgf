@@ -9,6 +9,7 @@ import com.hp.dgf.model.DGFRateEntry;
 import com.hp.dgf.repository.BusinessCategoryRepository;
 import com.hp.dgf.repository.DGFRateChangeLogRepository;
 import com.hp.dgf.repository.DGFRateEntryRepository;
+import lombok.NoArgsConstructor;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
@@ -26,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
+@NoArgsConstructor
 @Service
 public class ExcelHelper {
     @Autowired
@@ -34,9 +36,6 @@ public class ExcelHelper {
     DGFRateEntryRepository dgfRateEntryRepository;
     @Autowired
     DGFRateChangeLogRepository dgfRateChangeLogRepository;
-
-    private ExcelHelper() {
-    }
 
     private static final String SHEET = "DGF Tool";
 

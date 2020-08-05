@@ -29,7 +29,7 @@ public final class BusinessCategory {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime lastModifiedTimestamp;
     @Column(name = "modified_by")
-    private Integer modifiedBy;
+    private String modifiedBy;
     @Column(name = "name")
     private String name;
 

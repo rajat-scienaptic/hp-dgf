@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <project name="maven-antrun-" default="main"  >
 <target name="main">
-  <copy todir="/home/rajat/IdeaProjects/HP/HP-DGF/target/classes/public">
-    <fileset dir="/home/rajat/IdeaProjects/HP/HP-DGF/src/main/resources/build"/>
+  <copy todir="C:\Users\rajat\Documents\Projects\Scienaptic\HP-DGF\target/classes/public">
+    <fileset dir="C:\Users\rajat\Documents\Projects\Scienaptic\HP-DGF/src/main/resources/build"/>
   </copy>
 </target>
 </project>

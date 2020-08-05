@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+//@CrossOrigin(origins = "*")
 @RequestMapping("/api/v1")
 @RestController
 public class DGFRateEntryController {
@@ -50,7 +51,9 @@ public class DGFRateEntryController {
             @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
     })
     @PostMapping("/addDgfRateEntry")
-    public final ResponseEntity<Object> addNewDGFRateEntry(@RequestBody(required = false) @Valid final AddDgfRateEntryDTO addDgfRateEntryDTO, final HttpServletRequest request) {
+    public final ResponseEntity<Object> addNewDGFRateEntry(@RequestBody(required = false) @Valid final AddDgfRateEntryDTO addDgfRateEntryDTO,
+                                                           final HttpServletRequest request,
+                                                           @RequestHeader(value = "Cookie", required = false) final String cookie) {
         if (addDgfRateEntryDTO == null) {
             return new ResponseEntity<>(ApiResponseDTO.builder()
                     .status(HttpStatus.BAD_REQUEST.value())
@@ -58,7 +61,12 @@ public class DGFRateEntryController {
                     .timestamp(LocalDateTime.now())
                     .build(), HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(dgfRateEntryService.addDGFRateEntry(addDgfRateEntryDTO, request), HttpStatus.CREATED);
+
+        if(addDgfRateEntryDTO.getDgfRate().compareTo(BigDecimal.ZERO) < 0){
+            throw new CustomException("Dgf rate cannot be negative !", HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(dgfRateEntryService.addDGFRateEntry(addDgfRateEntryDTO, request, cookie), HttpStatus.CREATED);
     }
 
     @ApiOperation(value = "To update an existing dgf rate entry", response = Iterable.class)
@@ -73,7 +81,8 @@ public class DGFRateEntryController {
     public final ResponseEntity<Object> updateDGFRateEntry(@RequestParam("jsonData") String jsonData,
                                                            @PathVariable("dgfRateEntryId") final int dgfRateEntryId,
                                                            final HttpServletRequest request,
-                                                           @RequestParam("file") @Valid @NotNull @NotBlank MultipartFile file) throws IOException {
+                                                           @RequestParam("file") @Valid @NotNull @NotBlank MultipartFile file,
+                                                           @RequestHeader(value = "Cookie", required = false) final String cookie) throws IOException {
         if (jsonData == null || jsonData.isEmpty()) {
             throw new CustomException(Variables.REQUEST_BODY_ERROR, HttpStatus.BAD_REQUEST);
         }
@@ -86,7 +95,7 @@ public class DGFRateEntryController {
             throw new CustomException("Dgf Rate cannot be negative !", HttpStatus.BAD_REQUEST);
         }
 
-        return new ResponseEntity<>(dgfRateEntryService.updateDGFRateEntry(updateDGFRateEntryDTO, dgfRateEntryId, request, file), HttpStatus.OK);
+        return new ResponseEntity<>(dgfRateEntryService.updateDGFRateEntry(updateDGFRateEntryDTO, dgfRateEntryId, request, file, cookie), HttpStatus.OK);
     }
 
     @ApiOperation(value = "To get dgf entry data for specific dgfEntryId", response = Iterable.class)

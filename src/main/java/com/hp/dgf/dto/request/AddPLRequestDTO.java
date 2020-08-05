@@ -16,7 +16,6 @@ public final class AddPLRequestDTO {
     private Integer colorCodeId;
     @NotNull @Min(value = 0)
     private BigDecimal baseRate;
-    private Integer modifiedBy;
     private Integer dgfSubGroup2Id;
     private Integer dgfSubGroup3Id;
 }

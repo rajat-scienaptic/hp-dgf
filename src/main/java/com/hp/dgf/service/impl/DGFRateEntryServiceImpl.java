@@ -11,6 +11,7 @@ import com.hp.dgf.model.*;
 import com.hp.dgf.repository.*;
 import com.hp.dgf.service.AttachmentService;
 import com.hp.dgf.service.DGFRateEntryService;
+import com.hp.dgf.service.UserValidationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,30 +25,34 @@ import java.util.*;
 @Service
 public class DGFRateEntryServiceImpl implements DGFRateEntryService {
     @Autowired
-    private DGFRateEntryRepository dgfRateEntryRepository;
+    DGFRateEntryRepository dgfRateEntryRepository;
     @Autowired
-    private DGFLogRepository dgfLogRepository;
+    DGFLogRepository dgfLogRepository;
     @Autowired
-    private DGFSubGroupLevel1Repository dgfSubGroupLevel1Repository;
+    DGFSubGroupLevel1Repository dgfSubGroupLevel1Repository;
     @Autowired
-    private DGFSubGroupLevel2Repository dgfSubGroupLevel2Repository;
+    DGFSubGroupLevel2Repository dgfSubGroupLevel2Repository;
     @Autowired
-    private DGFSubGroupLevel3Repository dgfSubGroupLevel3Repository;
+    DGFSubGroupLevel3Repository dgfSubGroupLevel3Repository;
     @Autowired
-    private ProductLineRepository productLineRepository;
+    ProductLineRepository productLineRepository;
     @Autowired
-    private BusinessSubCategoryRepository businessSubCategoryRepository;
+    BusinessSubCategoryRepository businessSubCategoryRepository;
     @Autowired
-    private BusinessCategoryRepository businessCategoryRepository;
+    BusinessCategoryRepository businessCategoryRepository;
     @Autowired
-    private DGFRateChangeLogRepository dgfRateChangeLogRepository;
+    DGFRateChangeLogRepository dgfRateChangeLogRepository;
     @Autowired
-    private AttachmentRepository attachmentRepository;
+    AttachmentRepository attachmentRepository;
     @Autowired
-    private AttachmentService attachmentService;
+    AttachmentService attachmentService;
+    @Autowired
+    UserValidationService userValidationService;
 
     @Override
-    public ApiResponseDTO addDGFRateEntry(AddDgfRateEntryDTO addDgfRateEntryDTO, HttpServletRequest request) {
+    public ApiResponseDTO addDGFRateEntry(final AddDgfRateEntryDTO addDgfRateEntryDTO,
+                                          final HttpServletRequest request,
+                                          final String cookie) {
         try {
 
             ProductLine productLine = productLineRepository.checkIfPlExists(addDgfRateEntryDTO.getProductLineName());
@@ -58,7 +63,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
             }
 
             DGFRateEntry dgfRateEntry = DGFRateEntry.builder()
-                    .createdBy(addDgfRateEntryDTO.getCreatedBy())
+                    .createdBy(userValidationService.getUserNameFromCookie(cookie))
                     .createdOn(LocalDateTime.now())
                     .dgfRate(addDgfRateEntryDTO.getDgfRate())
                     .productLineId(productLine.getId())
@@ -79,7 +84,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
 
             dgfRateChangeLogRepository.save(DGFRateChangeLog.builder()
                     .attachmentId(1)
-                    .createdBy(addDgfRateEntryDTO.getCreatedBy())
+                    .createdBy(userValidationService.getUserNameFromCookie(cookie))
                     .createdOn(LocalDateTime.now())
                     .dgfRate(addDgfRateEntryDTO.getDgfRate())
                     .oldDgfRate(addDgfRateEntryDTO.getDgfRate())
@@ -92,6 +97,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Rate Entry with id : " + dgfRateEntryId + " has been successfully created !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -109,6 +115,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
                         .ip(request.getRemoteAddr())
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
                         .createTime(LocalDateTime.now())
@@ -119,10 +126,14 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
     }
 
     @Override
-    public ApiResponseDTO updateDGFRateEntry(UpdateDGFRateEntryDTO updateDGFRateEntryDTO, int dgfRateEntryId, HttpServletRequest request, MultipartFile file) {
+    public ApiResponseDTO updateDGFRateEntry(final UpdateDGFRateEntryDTO updateDGFRateEntryDTO,
+                                             final int dgfRateEntryId,
+                                             final HttpServletRequest request,
+                                             final MultipartFile file,
+                                             final String cookie) {
         try{
             final DGFRateEntry dgfRateEntry = dgfRateEntryRepository.findById(dgfRateEntryId)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("DGF Rate Entry with id : "+dgfRateEntryId+" does not exist !", HttpStatus.NOT_FOUND);
                     });
 
@@ -153,7 +164,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
 
             dgfRateChangeLogRepository.save(DGFRateChangeLog.builder()
                     .attachmentId(attachmentId)
-                    .createdBy(updateDGFRateEntryDTO.getCreatedBy())
+                    .createdBy(userValidationService.getUserNameFromCookie(cookie))
                     .createdOn(LocalDateTime.now())
                     .oldDgfRate(currentDgfRate)
                     .dgfRate(newDgfRate)
@@ -167,6 +178,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Rate Entry with id : " + dgfRateEntryId + " has been successfully updated !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -185,6 +197,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message(e.getMessage())
                         .createTime(LocalDateTime.now())
                         .build());
@@ -202,19 +215,19 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
         String dgfGroup = null;
 
         final DGFRateEntry dgfRateEntry = dgfRateEntryRepository.findById(dgfRateEntryId)
-                .orElseThrow(() -> {
+                .<CustomException>orElseThrow(() -> {
                     throw new CustomException("DGF Rate Entry not found for id : "+dgfRateEntryId, HttpStatus.NOT_FOUND);
                 });
 
         if(dgfRateEntry.getDgfSubGroupLevel2Id() != null && dgfRateEntry.getDgfSubGroupLevel3Id() == null){
             final DGFSubGroupLevel2 dgfSubGroupLevel2 = dgfSubGroupLevel2Repository.findById(dgfRateEntry.getDgfSubGroupLevel2Id())
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("DGF Sub Group Level 2 not found for id : "+dgfRateEntry.getDgfSubGroupLevel2Id(), HttpStatus.NOT_FOUND);
                     });
             seller = dgfSubGroupLevel2.getBaseRate();
 
             final DGFSubGroupLevel1 dgfSubGroupLevel1 = dgfSubGroupLevel1Repository.findById(dgfSubGroupLevel2.getDgfSubGroupLevel1Id())
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("DGF Sub Group Level 1 not found for id : "
                                 +dgfSubGroupLevel2.getDgfSubGroupLevel1Id(), HttpStatus.NOT_FOUND);
                     });
@@ -223,7 +236,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
 
         }else if(dgfRateEntry.getDgfSubGroupLevel2Id() == null && dgfRateEntry.getDgfSubGroupLevel3Id() != null){
             final DGFSubGroupLevel3 dgfSubGroupLevel3 = dgfSubGroupLevel3Repository.findById(dgfRateEntry.getDgfSubGroupLevel3Id())
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("DGF Sub Group Level 3 not found for id : "+dgfRateEntry.getDgfSubGroupLevel3Id(), HttpStatus.NOT_FOUND);
                     });
 
@@ -231,14 +244,14 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
 
             final DGFSubGroupLevel2 dgfSubGroupLevel2 = dgfSubGroupLevel2Repository.
                     findById(dgfSubGroupLevel3.getDgfSubGroupLevel2Id())
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("DGF Sub Group Level 2 not found for id : "
                                 +dgfSubGroupLevel3.getDgfSubGroupLevel2Id(), HttpStatus.NOT_FOUND);
                     });
 
             final DGFSubGroupLevel1 dgfSubGroupLevel1 = dgfSubGroupLevel1Repository
                     .findById(dgfSubGroupLevel2.getDgfSubGroupLevel1Id())
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("DGF Sub Group Level 1 not found for id : "
                                 +dgfSubGroupLevel2.getDgfSubGroupLevel1Id(), HttpStatus.NOT_FOUND);
                     });
@@ -247,19 +260,19 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
         }
 
         final ProductLine productLineObject = productLineRepository.findById(dgfRateEntry.getProductLineId())
-                .orElseThrow(() -> {
+                .<CustomException>orElseThrow(() -> {
                     throw new CustomException("Product Line not found for id : "+dgfRateEntry.getProductLineId(), HttpStatus.NOT_FOUND);
                 });
 
         final String productLine = productLineObject.getCode();
 
         final BusinessSubCategory businessSubCategory = businessSubCategoryRepository.findById(productLineObject.getBusinessSubCategoryId())
-                .orElseThrow(() -> {
+                .<CustomException>orElseThrow(() -> {
                     throw new CustomException("Business Sub Category not found for id : "+productLineObject.getBusinessSubCategoryId(), HttpStatus.NOT_FOUND);
                 });
 
         final BusinessCategory businessCategory = businessCategoryRepository.findById(businessSubCategory.getBusinessCategoryId())
-                .orElseThrow(() -> {
+                .<CustomException>orElseThrow(() -> {
                     throw new CustomException("Business Category not found for id : "+businessSubCategory.getBusinessCategoryId(), HttpStatus.NOT_FOUND);
                 });
 
@@ -270,7 +283,7 @@ public class DGFRateEntryServiceImpl implements DGFRateEntryService {
 
         dgfRateChangeLogList.forEach(dgfRateChangeLog -> {
             Attachment attachment = attachmentRepository.findById(dgfRateChangeLog.getAttachmentId())
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                        throw new CustomException("No Attachment was " +
                                "found for id :"+dgfRateChangeLog.getAttachmentId(), HttpStatus.NOT_FOUND);
                     });

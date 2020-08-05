@@ -12,8 +12,6 @@ public class DGFGroupDTO {
     private Integer dgfGroupsId;
     private Integer dgfSubGroupLevel1Id;
     private Integer dgfSubGroupLevel2Id;
-    @NotNull
-    private Integer modifiedBy;
     @NotNull @NotBlank
     private String name;
 }

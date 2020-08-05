@@ -1,14 +1,18 @@
 package com.hp.dgf.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder(toBuilder = true)
 @Data
 @Entity
@@ -22,6 +26,9 @@ public final class DGFLogs {
     @NotNull @NotBlank
     @Column(name = "ip")
     private String ip;
+    @NotNull @NotBlank
+    @Column(name = "username")
+    private String username;
     @NotNull @NotBlank
     @Column(name = "endpoint")
     private String endpoint;

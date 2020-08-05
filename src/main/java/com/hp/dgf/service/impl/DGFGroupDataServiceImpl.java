@@ -10,6 +10,7 @@ import com.hp.dgf.exception.CustomException;
 import com.hp.dgf.model.*;
 import com.hp.dgf.repository.*;
 import com.hp.dgf.service.DGFGroupDataService;
+import com.hp.dgf.service.UserValidationService;
 import com.hp.dgf.utils.MonthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,25 +24,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Service
 public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     @Autowired
-    private BusinessCategoryRepository businessCategoryRepository;
+    BusinessCategoryRepository businessCategoryRepository;
     @Autowired
-    private DGFRateChangeLogRepository dgfRateChangeLogRepository;
+    ProductLineRepository productLineRepository;
     @Autowired
-    private ProductLineRepository productLineRepository;
+    MonthService monthService;
     @Autowired
-    private MonthService monthService;
+    DGFGroupsRepository dgfGroupsRepository;
     @Autowired
-    private DGFGroupsRepository dgfGroupsRepository;
+    DGFSubGroupLevel1Repository dgfSubGroupLevel1Repository;
     @Autowired
-    private DGFSubGroupLevel1Repository dgfSubGroupLevel1Repository;
+    DGFSubGroupLevel2Repository dgfSubGroupLevel2Repository;
     @Autowired
-    private DGFSubGroupLevel2Repository dgfSubGroupLevel2Repository;
+    DGFSubGroupLevel3Repository dgfSubGroupLevel3Repository;
     @Autowired
-    private DGFSubGroupLevel3Repository dgfSubGroupLevel3Repository;
+    DGFLogRepository dgfLogRepository;
     @Autowired
-    private DGFLogRepository dgfLogRepository;
+    DGFRateEntryRepository dgfRateEntryRepository;
     @Autowired
-    private DGFRateEntryRepository dgfRateEntryRepository;
+    UserValidationService userValidationService;
 
     //Initialized Object Mapper to Map Json Object
     private final ObjectMapper mapper = new ObjectMapper();
@@ -51,7 +52,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
         //Getting List of Business Categories
         BusinessCategory businessCategory = businessCategoryRepository
                 .findById(businessCategoryId)
-                .orElseThrow(() -> {
+                .<CustomException>orElseThrow(() -> {
                     throw new CustomException("No Business Category Found for ID : " + businessCategoryId, HttpStatus.BAD_REQUEST);
                 });
 
@@ -176,7 +177,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                             int plId = Integer.parseInt(data.get("productLineId").toString());
 
                             ProductLine pl = productLineRepository.findById(plId)
-                                    .orElseThrow(() -> {
+                                    .<CustomException>orElseThrow(() -> {
                                         throw new CustomException("PL Not Found", HttpStatus.BAD_REQUEST);
                                     });
 
@@ -207,7 +208,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
 
                                 int plId = Integer.parseInt(data.get("productLineId").toString());
                                 ProductLine pl = productLineRepository.findById(plId)
-                                        .orElseThrow(() -> {
+                                        .<CustomException>orElseThrow(() -> {
                                             throw new CustomException("PL Not Found", HttpStatus.BAD_REQUEST);
                                         });
 
@@ -255,7 +256,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO addDgfGroup(DGFGroupDTO dgfGroupDTO, HttpServletRequest request) {
+    public ApiResponseDTO addDgfGroup(DGFGroupDTO dgfGroupDTO, HttpServletRequest request, String cookie) {
         try {
             DGFGroups dgfGroups = dgfGroupsRepository.getDGFGroup(dgfGroupDTO.getBusinessCategoryId(), dgfGroupDTO.getName());
 
@@ -273,6 +274,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                                 .endpoint(request.getRequestURI())
                                 .type(request.getMethod())
                                 .status(Variables.SUCCESS)
+                                .username(userValidationService.getUserNameFromCookie(cookie))
                                 .message("DGF Group with name : " + dgfGroupDTO.getName() + " and id : " + dgfGroups.getId() + " has been successfully reactivated !")
                                 .createTime(LocalDateTime.now())
                                 .build());
@@ -288,7 +290,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
             int dgfGroupId = dgfGroupsRepository.save(DGFGroups.builder()
                     .baseRate(dgfGroupDTO.getName())
                     .businessCategoryId(dgfGroupDTO.getBusinessCategoryId())
-                    .modifiedBy(dgfGroupDTO.getModifiedBy())
+                    .modifiedBy(userValidationService.getUserNameFromCookie(cookie))
                     .isActive((byte) 1)
                     .lastModifiedTimestamp(LocalDateTime.now())
                     .build()).getId();
@@ -300,6 +302,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Group with name : " + dgfGroupDTO.getName() + " and id : " + dgfGroupId + " has been successfully created !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -319,6 +322,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
@@ -327,7 +331,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO addDgfSubGroupLevel1(DGFGroupDTO dgfGroupDTO, HttpServletRequest request) {
+    public ApiResponseDTO addDgfSubGroupLevel1(DGFGroupDTO dgfGroupDTO, HttpServletRequest request, String cookie) {
         try {
             DGFSubGroupLevel1 dgfSubGroupLevel1 = dgfSubGroupLevel1Repository.getDGFSubGroupLevel1(dgfGroupDTO.getDgfGroupsId(), dgfGroupDTO.getName());
 
@@ -345,6 +349,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                                 .endpoint(request.getRequestURI())
                                 .type(request.getMethod())
                                 .status(Variables.SUCCESS)
+                                .username(userValidationService.getUserNameFromCookie(cookie))
                                 .message("DGF Sub Group Level 1 with name : " + dgfGroupDTO.getName() + " and id : " + dgfSubGroupLevel1.getId() + " has been successfully reactivated !")
                                 .createTime(LocalDateTime.now())
                                 .build());
@@ -360,7 +365,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
             int dgfSubGroupLevel1Id = dgfSubGroupLevel1Repository.save(DGFSubGroupLevel1.builder()
                     .baseRate(dgfGroupDTO.getName())
                     .dgfGroupsId(dgfGroupDTO.getDgfGroupsId())
-                    .modifiedBy(dgfGroupDTO.getModifiedBy())
+                    .modifiedBy(userValidationService.getUserNameFromCookie(cookie))
                     .isActive((byte) 1)
                     .lastModifiedTimestamp(LocalDateTime.now())
                     .build()).getId();
@@ -371,6 +376,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Sub Group Level 1 with name : " + dgfGroupDTO.getName() + " and id : " + dgfSubGroupLevel1Id + " has been successfully created !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -390,6 +396,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
@@ -398,7 +405,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO addDgfSubGroupLevel2(DGFGroupDTO dgfGroupDTO, HttpServletRequest request) {
+    public ApiResponseDTO addDgfSubGroupLevel2(DGFGroupDTO dgfGroupDTO, HttpServletRequest request, String cookie) {
         try {
             DGFSubGroupLevel2 dgfSubGroupLevel2 = dgfSubGroupLevel2Repository.getDGFSubGroupLevel2(dgfGroupDTO.getDgfSubGroupLevel1Id(), dgfGroupDTO.getName());
 
@@ -416,6 +423,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                                 .endpoint(request.getRequestURI())
                                 .type(request.getMethod())
                                 .status(Variables.SUCCESS)
+                                .username(userValidationService.getUserNameFromCookie(cookie))
                                 .message("DGF Sub Group Level 2 with name : " + dgfGroupDTO.getName() + " and id : " + dgfSubGroupLevel2.getId() + " has been successfully reactivated !")
                                 .createTime(LocalDateTime.now())
                                 .build());
@@ -430,7 +438,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
             int dgfSubGroupLevel2Id = dgfSubGroupLevel2Repository.save(DGFSubGroupLevel2.builder()
                     .baseRate(dgfGroupDTO.getName())
                     .dgfSubGroupLevel1Id(dgfGroupDTO.getDgfSubGroupLevel1Id())
-                    .modifiedBy(dgfGroupDTO.getModifiedBy())
+                    .modifiedBy(userValidationService.getUserNameFromCookie(cookie))
                     .isActive((byte) 1)
                     .lastModifiedTimestamp(LocalDateTime.now())
                     .build()).getId();
@@ -441,6 +449,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Sub Group Level 2 with name : " + dgfGroupDTO.getName() + " and id : " + dgfSubGroupLevel2Id + " has been successfully created !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -460,6 +469,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
@@ -468,7 +478,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO addDgfSubGroupLevel3(DGFGroupDTO dgfGroupDTO, HttpServletRequest request) {
+    public ApiResponseDTO addDgfSubGroupLevel3(DGFGroupDTO dgfGroupDTO, HttpServletRequest request, String cookie) {
         try {
             DGFSubGroupLevel3 dgfSubGroupLevel3 = dgfSubGroupLevel3Repository.getDGFSubGroupLevel3(dgfGroupDTO.getDgfSubGroupLevel2Id(), dgfGroupDTO.getName());
 
@@ -486,6 +496,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                                 .endpoint(request.getRequestURI())
                                 .type(request.getMethod())
                                 .status(Variables.SUCCESS)
+                                .username(userValidationService.getUserNameFromCookie(cookie))
                                 .message("DGF Sub Group Level 3 with name : " + dgfGroupDTO.getName() + " and id : " + dgfSubGroupLevel3.getId() + " has been successfully reactivated !")
                                 .createTime(LocalDateTime.now())
                                 .build());
@@ -501,7 +512,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
             int dgfSubGroupLevel3Id = dgfSubGroupLevel3Repository.save(DGFSubGroupLevel3.builder()
                     .baseRate(dgfGroupDTO.getName())
                     .dgfSubGroupLevel2Id(dgfGroupDTO.getDgfSubGroupLevel2Id())
-                    .modifiedBy(dgfGroupDTO.getModifiedBy())
+                    .modifiedBy(userValidationService.getUserNameFromCookie(cookie))
                     .isActive((byte) 1)
                     .lastModifiedTimestamp(LocalDateTime.now())
                     .build()).getId();
@@ -512,6 +523,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Sub Group Level 3 with name : " + dgfGroupDTO.getName() + " and id : " + dgfSubGroupLevel3Id + " has been successfully created !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -530,6 +542,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message(e.getMessage())
                         .createTime(LocalDateTime.now())
                         .build());
@@ -539,10 +552,10 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO deleteDgfGroup(int dgfGroupId, HttpServletRequest request) {
+    public ApiResponseDTO deleteDgfGroup(int dgfGroupId, HttpServletRequest request, String cookie) {
         try {
             DGFGroups dgfGroups = dgfGroupsRepository.findById(dgfGroupId)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("Deletion failed, DGF Group not found for id : " + dgfGroupId, HttpStatus.BAD_REQUEST);
                     });
             dgfGroups.setIsActive((byte) 0);
@@ -552,9 +565,9 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
 
             JsonNode dgfSubGroupLevel1Node = dgfGroupNode.get(Variables.CHILDREN);
 
-            for(JsonNode dgfSubGroupLevel1 : dgfSubGroupLevel1Node){
+            for (JsonNode dgfSubGroupLevel1 : dgfSubGroupLevel1Node) {
                 int dgfSubGroupLevel1Id = Integer.parseInt(dgfSubGroupLevel1.get("id").toString());
-                deleteDgfSubGroupLevel1(dgfSubGroupLevel1Id, request);
+                deleteDgfSubGroupLevel1(dgfSubGroupLevel1Id, request, cookie);
             }
 
             if (request != null) {
@@ -562,6 +575,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .ip(request.getRemoteAddr())
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .status(Variables.SUCCESS)
                         .message("DGF Group with id : " + dgfGroupId + " has been successfully deleted !")
                         .createTime(LocalDateTime.now())
@@ -581,6 +595,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
@@ -589,10 +604,10 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO deleteDgfSubGroupLevel1(int dgfSubGroupLevel1Id, HttpServletRequest request) {
+    public ApiResponseDTO deleteDgfSubGroupLevel1(int dgfSubGroupLevel1Id, HttpServletRequest request, String cookie) {
         try {
             DGFSubGroupLevel1 dgfSubGroupLevel1 = dgfSubGroupLevel1Repository.findById(dgfSubGroupLevel1Id)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("Deletion failed, DGF Sub Group Level 1 not found for id : " + dgfSubGroupLevel1Id, HttpStatus.BAD_REQUEST);
                     });
             dgfSubGroupLevel1.setIsActive((byte) 0);
@@ -602,9 +617,9 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
 
             JsonNode dgfSubGroupLevel2Node = dgfSubGroupLevel1Node.get(Variables.CHILDREN);
 
-            for(JsonNode dgfSubGroupLevel2 : dgfSubGroupLevel2Node){
+            for (JsonNode dgfSubGroupLevel2 : dgfSubGroupLevel2Node) {
                 int dgfSubGroupLevel2Id = Integer.parseInt(dgfSubGroupLevel2.get("id").toString());
-                deleteDgfSubGroupLevel2(dgfSubGroupLevel2Id, request);
+                deleteDgfSubGroupLevel2(dgfSubGroupLevel2Id, request, cookie);
             }
 
             if (request != null) {
@@ -613,6 +628,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Sub Group Level 1 with id : " + dgfSubGroupLevel1Id + " has been successfully deleted !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -631,6 +647,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
@@ -639,10 +656,10 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO deleteDgfSubGroupLevel2(int dgfSubGroupLevel2Id, HttpServletRequest request) {
+    public ApiResponseDTO deleteDgfSubGroupLevel2(int dgfSubGroupLevel2Id, HttpServletRequest request, String cookie) {
         try {
             DGFSubGroupLevel2 dgfSubGroupLevel2 = dgfSubGroupLevel2Repository.findById(dgfSubGroupLevel2Id)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("Deletion failed, DGF Sub Group Level 2 not found for id : " + dgfSubGroupLevel2Id, HttpStatus.BAD_REQUEST);
                     });
             dgfSubGroupLevel2.setIsActive((byte) 0);
@@ -660,9 +677,9 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
 
             JsonNode dgfSubGroupLevel3Node = dgfSubGroupLevel2Node.get(Variables.CHILDREN);
 
-            for(JsonNode dgfSubGroupLevel3 : dgfSubGroupLevel3Node){
-               int dgfSubGroupLevel3Id = Integer.parseInt(dgfSubGroupLevel3.get("id").toString());
-               deleteDgfSubGroupLevel3(dgfSubGroupLevel3Id, request);
+            for (JsonNode dgfSubGroupLevel3 : dgfSubGroupLevel3Node) {
+                int dgfSubGroupLevel3Id = Integer.parseInt(dgfSubGroupLevel3.get("id").toString());
+                deleteDgfSubGroupLevel3(dgfSubGroupLevel3Id, request, cookie);
             }
 
             if (request != null) {
@@ -671,6 +688,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Sub Group Level 2 with id : " + dgfSubGroupLevel2Id + " has been successfully deleted !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -687,6 +705,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .ip(request.getRemoteAddr())
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
                         .createTime(LocalDateTime.now())
@@ -697,10 +716,10 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO deleteDgfSubGroupLevel3(int dgfSubGroupLevel3Id, HttpServletRequest request) {
+    public ApiResponseDTO deleteDgfSubGroupLevel3(int dgfSubGroupLevel3Id, HttpServletRequest request, String cookie) {
         try {
             DGFSubGroupLevel3 dgfSubGroupLevel3 = dgfSubGroupLevel3Repository.findById(dgfSubGroupLevel3Id)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("Deletion failed, DGF Sub Group Level 3 not found for id : " + dgfSubGroupLevel3Id, HttpStatus.BAD_REQUEST);
                     });
             dgfSubGroupLevel3.setIsActive((byte) 0);
@@ -720,6 +739,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Sub Group Level 3 with id : " + dgfSubGroupLevel3Id + " has been successfully deleted !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -738,6 +758,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
@@ -746,10 +767,10 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO updateDgfGroup(DGFGroupDTO dgfGroupDTO, int dgfGroupId, HttpServletRequest request) {
+    public ApiResponseDTO updateDgfGroup(DGFGroupDTO dgfGroupDTO, int dgfGroupId, HttpServletRequest request, String cookie) {
         try {
             DGFGroups dgfGroups = dgfGroupsRepository.findById(dgfGroupId)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("DGF Group not found for id : " + dgfGroupId, HttpStatus.BAD_REQUEST);
                     });
             dgfGroups.setBaseRate(dgfGroupDTO.getName());
@@ -759,6 +780,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .ip(request.getRemoteAddr())
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .status(Variables.SUCCESS)
                         .message("DGF Group with id : " + dgfGroupId + " has been successfully updated !")
                         .createTime(LocalDateTime.now())
@@ -779,6 +801,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
@@ -787,10 +810,10 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO updateDgfSubGroupLevel1(DGFGroupDTO dgfGroupDTO, int dgfSubGroupLevel1Id, HttpServletRequest request) {
+    public ApiResponseDTO updateDgfSubGroupLevel1(DGFGroupDTO dgfGroupDTO, int dgfSubGroupLevel1Id, HttpServletRequest request, String cookie) {
         try {
             DGFSubGroupLevel1 dgfSubGroupLevel1 = dgfSubGroupLevel1Repository.findById(dgfSubGroupLevel1Id)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("DGF Sub Group Level 1 not found for id : " + dgfSubGroupLevel1Id, HttpStatus.BAD_REQUEST);
                     });
             dgfSubGroupLevel1.setBaseRate(dgfGroupDTO.getName());
@@ -801,6 +824,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Sub Group Level 1 with id : " + dgfSubGroupLevel1Id + " has been successfully updated !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -819,6 +843,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .ip(request.getRemoteAddr())
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
                         .createTime(LocalDateTime.now())
@@ -829,10 +854,10 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO updateDgfSubGroupLevel2(DGFGroupDTO dgfGroupDTO, int dgfSubGroupLevel2Id, HttpServletRequest request) {
+    public ApiResponseDTO updateDgfSubGroupLevel2(DGFGroupDTO dgfGroupDTO, int dgfSubGroupLevel2Id, HttpServletRequest request, String cookie) {
         try {
             DGFSubGroupLevel2 dgfSubGroupLevel2 = dgfSubGroupLevel2Repository.findById(dgfSubGroupLevel2Id)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("DGF Sub Group Level 2 not found for id : " + dgfSubGroupLevel2Id, HttpStatus.BAD_REQUEST);
                     });
             dgfSubGroupLevel2.setBaseRate(dgfGroupDTO.getName());
@@ -843,6 +868,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Sub Group Level 2 with id : " + dgfSubGroupLevel2Id + " has been successfully updated !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -863,6 +889,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
@@ -871,10 +898,10 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
     }
 
     @Override
-    public ApiResponseDTO updateDgfSubGroupLevel3(DGFGroupDTO dgfGroupDTO, int dgfSubGroupLevel3Id, HttpServletRequest request) {
+    public ApiResponseDTO updateDgfSubGroupLevel3(DGFGroupDTO dgfGroupDTO, int dgfSubGroupLevel3Id, HttpServletRequest request, String cookie) {
         try {
             DGFSubGroupLevel3 dgfSubGroupLevel3 = dgfSubGroupLevel3Repository.findById(dgfSubGroupLevel3Id)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("DGF Sub Group Level 3 not found for id : " + dgfSubGroupLevel3Id, HttpStatus.BAD_REQUEST);
                     });
             dgfSubGroupLevel3.setBaseRate(dgfGroupDTO.getName());
@@ -885,6 +912,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("DGF Sub Group Level 3 with id : " + dgfSubGroupLevel3Id + " has been successfully updated !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -904,6 +932,7 @@ public final class DGFGroupDataServiceImpl implements DGFGroupDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message(e.getMessage())
                         .createTime(LocalDateTime.now())
                         .build());

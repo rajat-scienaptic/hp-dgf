@@ -25,11 +25,11 @@ public final class DGFGroups {
 
     @Column(name = "is_active")
     private Byte isActive;
-    @Column(name = "last_modified_timestamp")
+    @Column(name = "last_modified_by")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime lastModifiedTimestamp;
     @Column(name = "modified_by")
-    private Integer modifiedBy;
+    private String modifiedBy;
     @Column(name = "name")
     private String baseRate;
     @Column(name = "business_category_id")

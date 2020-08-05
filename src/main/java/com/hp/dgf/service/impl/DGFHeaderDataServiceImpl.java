@@ -14,9 +14,9 @@ import com.hp.dgf.model.DGFLogs;
 import com.hp.dgf.model.ProductLine;
 import com.hp.dgf.repository.BusinessCategoryRepository;
 import com.hp.dgf.repository.DGFLogRepository;
-import com.hp.dgf.repository.DGFRateChangeLogRepository;
 import com.hp.dgf.repository.ProductLineRepository;
 import com.hp.dgf.service.DGFHeaderDataService;
+import com.hp.dgf.service.UserValidationService;
 import com.hp.dgf.utils.MonthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -30,21 +30,21 @@ import java.util.*;
 @Service
 public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
     @Autowired
-    private ProductLineRepository productLineRepository;
+    ProductLineRepository productLineRepository;
     @Autowired
-    private DGFLogRepository dgfLogRepository;
+    DGFLogRepository dgfLogRepository;
     @Autowired
-    private BusinessCategoryRepository businessCategoryRepository;
+    BusinessCategoryRepository businessCategoryRepository;
     @Autowired
-    private DGFRateChangeLogRepository dgfRateChangeLogRepository;
+    MonthService monthService;
     @Autowired
-    private MonthService monthService;
+    UserValidationService userValidationService;
 
     @Override
     public final List<Object> getHeaderData(int businessCategoryId) {
         final BusinessCategory businessCategory = businessCategoryRepository
                 .findById(businessCategoryId)
-                .orElseThrow(() -> {
+                .<CustomException>orElseThrow(() -> {
                     throw new CustomException("Business category with id : " + businessCategoryId + " does not exists !", HttpStatus.NOT_FOUND);
                 });
 
@@ -141,7 +141,7 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
         //Getting business category data based on id
         final BusinessCategory businessCategory = businessCategoryRepository
                 .findById(businessCategoryId)
-                .orElseThrow(() -> {
+                .<CustomException>orElseThrow(() -> {
                     throw new CustomException("No data found for id : " + businessCategoryId, HttpStatus.NOT_FOUND);
                 });
 
@@ -212,7 +212,9 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
     }
 
     @Override
-    public final ApiResponseDTO addPL(final AddPLRequestDTO addPlRequestDTO, final HttpServletRequest request) {
+    public final ApiResponseDTO addPL(final AddPLRequestDTO addPlRequestDTO,
+                                      final HttpServletRequest request,
+                                      final String cookie) {
         try {
             ProductLine productLine = productLineRepository.checkIfPlExists(addPlRequestDTO.getCode());
 
@@ -229,6 +231,7 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
                                 .endpoint(request.getRequestURI())
                                 .type(request.getMethod())
                                 .status(Variables.SUCCESS)
+                                .username(userValidationService.getUserNameFromCookie(cookie))
                                 .message("PL with code : " + addPlRequestDTO.getCode() + " and id : " + productLine.getId() + " has been successfully reactivated !")
                                 .createTime(LocalDateTime.now())
                                 .build());
@@ -255,6 +258,7 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("PL with code : " + addPlRequestDTO.getCode() + " and id : " + productLineId + " has been successfully created !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -275,6 +279,7 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
@@ -283,11 +288,14 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
     }
 
     @Override
-    public final ApiResponseDTO updatePL(final UpdatePLRequestDTO updatePLRequestDTO, final int productLineId, final HttpServletRequest request) {
+    public final ApiResponseDTO updatePL(final UpdatePLRequestDTO updatePLRequestDTO,
+                                         final int productLineId,
+                                         final HttpServletRequest request,
+                                         final String cookie) {
         try {
             ProductLine productLine = productLineRepository
                     .findById(productLineId)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("Update failed, PL with id : " + productLineId + " doesn't exist !", HttpStatus.NOT_FOUND);
                     });
 
@@ -313,6 +321,7 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("PL with id : " + productLineId + " has been successfully updated !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -331,6 +340,7 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
@@ -339,10 +349,10 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
     }
 
     @Override
-    public ApiResponseDTO deletePL(int productLineId, HttpServletRequest request) {
+    public ApiResponseDTO deletePL(final int productLineId, final HttpServletRequest request, final String cookie) {
         try {
             ProductLine productLine = productLineRepository.findById(productLineId)
-                    .orElseThrow(() -> {
+                    .<CustomException>orElseThrow(() -> {
                         throw new CustomException("Deletion failed, PL not found for id : " + productLineId, HttpStatus.BAD_REQUEST);
                     });
             productLine.setIsActive((byte) 0);
@@ -353,6 +363,7 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
                         .endpoint(request.getRequestURI())
                         .type(request.getMethod())
                         .status(Variables.SUCCESS)
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .message("PL with id : " + productLineId + " has been successfully deleted !")
                         .createTime(LocalDateTime.now())
                         .build());
@@ -370,6 +381,7 @@ public class DGFHeaderDataServiceImpl implements DGFHeaderDataService {
                         .type(request.getMethod())
                         .status(Variables.FAILURE)
                         .message(e.getMessage())
+                        .username(userValidationService.getUserNameFromCookie(cookie))
                         .createTime(LocalDateTime.now())
                         .build());
             }
